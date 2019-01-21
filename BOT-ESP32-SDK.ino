@@ -55,15 +55,14 @@ pinMode(LED_BUILTIN, OUTPUT);
 
 void loop() {
 
-  // put your main code here, to run repeatedly:
+  //touch ESP32 Pin D4 to trigger this action
   touch_value = touchRead(TOUTCH_PIN);
   if (touch_value < 40){
     postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
   }
 
-  // read the state of the pushbutton value:
+  // Press the boot button for a second , to trigger this action
     buttonPressed=digitalRead(0);
-
   if (buttonPressed==0){
      postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "0.90") ;
   }
