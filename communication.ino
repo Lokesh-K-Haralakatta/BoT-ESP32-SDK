@@ -49,7 +49,6 @@ void postAction(String action, String value) {
 
   if (i_action_response.indexOf("OK") != -1)
     blinkLED();
-
 }
 
 

@@ -1,10 +1,10 @@
 #include <WiFi.h>
 
 int touch_value = 100;
-int LED_BUILTIN=2;
+int LED_BUILTIN = 2;
 #define TOUTCH_PIN T0 // ESP32 Pin D4
 
-int buttonPressed=1; // the reset button is NOT pressed
+int buttonPressed = 1; // the reset button is NOT pressed
 
 
 const char* ssid = "The Office Operators";
@@ -21,52 +21,75 @@ String i_status = "";
 
 
 void setup() {
-    Serial.begin(115200);
-    delay(10);
+  blinkLED();
+  initDisplay();
+  displayIdle();
+  Serial.begin(115200);
+  delay(10);
 
-    // We start by connecting to a WiFi network
+  // We start by connecting to a WiFi network
 
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
 
-    WiFi.begin(ssid, password);
+  WiFi.begin(ssid, password);
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
 
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 
   startBLE();
   getPairing();
   getActions();
-  postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
 
 
-pinMode(LED_BUILTIN, OUTPUT);
+  //postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
+  //displayMessage("action triggered", padLeft("12.01e"));
+
+
+  pinMode(LED_BUILTIN, OUTPUT);
 
 }
-
+int loopPacer = 0;
 void loop() {
 
   //touch ESP32 Pin D4 to trigger this action
   touch_value = touchRead(TOUTCH_PIN);
-  if (touch_value < 40){
+  if (touch_value < 40) {
     postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
+    displayMessage("pay gas", padLeft("54.01e"));
+
   }
 
   // Press the boot button for a second , to trigger this action
-    buttonPressed=digitalRead(0);
-  if (buttonPressed==0){
-     postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "0.90") ;
+  buttonPressed = digitalRead(0);
+  if (buttonPressed == 0) {
+    postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "0.90") ;
+    displayMessage("toll road 3km", padLeft("3.22e"));
   }
-  
+
+  //every 60 sec pay per use
+  if (loopPacer % 60 == 0) {
+    postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "0.90") ;
+    displayMessage("pay per use 1min", padLeft("0.60e"));
+  }
+
+
+  //every 5 sec change message
+  if (loopPacer % 5 == 0) {
+    displayIdle();
+    loopPacer = 0;
+  }
+
+
+  loopPacer++;
   delay(1000);
-  
 }
