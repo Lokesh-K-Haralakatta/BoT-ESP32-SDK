@@ -41,7 +41,7 @@ void displayIdle() {
     return;
   }
     if (counterDisplayOption == 3) {
-    displayMessage("I pay per use", "       0.01e/min");
+    displayMessage("I pay per use", "       0.02e/min");
     counterDisplayOption = 0;
     return;
   }

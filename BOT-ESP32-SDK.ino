@@ -1,11 +1,13 @@
 #include <WiFi.h>
 
 int touch_value = 100;
+int touch_button = 0;
 int LED_BUILTIN = 2;
 #define TOUTCH_PIN T0 // ESP32 Pin D4
+#define TOUTCH_BUTTON T3 // ESP32 Pin D15
 
 int buttonPressed = 1; // the reset button is NOT pressed
-
+boolean payperuse = false;
 
 const char* ssid = "The Office Operators";
 const char* password = "2019TOO!";
@@ -63,11 +65,29 @@ void loop() {
 
   //touch ESP32 Pin D4 to trigger this action
   touch_value = touchRead(TOUTCH_PIN);
+  // touch ESP32 capacitive button at D15 to set this from 0 to 1
+  touch_button = touchRead(TOUTCH_BUTTON);
+
+  // use the touch pin value (0-100)
   if (touch_value < 40) {
     postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
     displayMessage("pay gas", padLeft("54.01e"));
-
   }
+
+  // use the touch button value 0 or 1
+  if (touch_button == 1 && !payperuse) {
+    Serial.println("Pay per use enabled!");
+    postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
+    displayMessage("pay per use ON", padLeft("0.20e"));
+    payperuse = true;
+  }
+  if (touch_button == 0 && payperuse) {
+    Serial.println("Pay per use disabled!");
+    //    postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
+    displayMessage("pay per use OFF", padLeft("payments stopped"));
+    payperuse = false;
+  }
+
 
   // Press the boot button for a second , to trigger this action
   buttonPressed = digitalRead(0);
@@ -77,9 +97,9 @@ void loop() {
   }
 
   //every 60 sec pay per use
-  if (loopPacer % 60 == 0) {
+  if (loopPacer % 60 == 0 && payperuse) {
     postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "0.90") ;
-    displayMessage("pay per use 1min", padLeft("0.60e"));
+    displayMessage("pay per use 1min", padLeft("0.02e"));
   }
 
 
