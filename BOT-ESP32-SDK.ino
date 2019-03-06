@@ -49,6 +49,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   startBLE();
+  displayMessage("Bluetooth start", padLeft("check app"));
   getPairing();
   getActions();
 
