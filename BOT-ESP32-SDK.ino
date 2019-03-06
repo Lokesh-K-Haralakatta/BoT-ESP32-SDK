@@ -1,4 +1,6 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include "key.h";
 
 int touch_value = 100;
 int touch_button = 0;
@@ -11,6 +13,7 @@ boolean payperuse = false;
 
 const char* ssid = "The Office Operators";
 const char* password = "2019TOO!";
+const char* server = "api-dev.bankingofthings.io";  // Server URL
 
 std::string makerID = "185d8549-0091-463e-90fe-eda6ae15dc91";
 std::string deviceID = "edfc7678-cacf-44f0-a2c6-1be15abef444";
@@ -20,14 +23,13 @@ std::string publicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60+EWKVdGO1
 
 String i_actions = "";
 String i_status = "";
-
-
+WiFiClientSecure client;
 void setup() {
   blinkLED();
   initDisplay();
   displayIdle();
   Serial.begin(115200);
-  delay(10);
+  delay(100);
 
   // We start by connecting to a WiFi network
 
@@ -39,7 +41,7 @@ void setup() {
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(1000);
     Serial.print(".");
   }
 
@@ -48,12 +50,17 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
+  //doithere();
+
+
+
   startBLE();
+  displayMessage("Started Bluetooth ...", padLeft("check app"));
   getPairing();
   getActions();
 
 
-  //postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
+  postAction("77189283-A963-4E2E-BD12-18D1681A00EE", "12.01") ;
   //displayMessage("action triggered", padLeft("12.01e"));
 
 

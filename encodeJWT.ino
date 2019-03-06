@@ -2,7 +2,7 @@
 #include <mbedtls/error.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
-#include "key.h"
+
 
 static char* mbedtlsError(int errnum) {
   static char buffer[200];
@@ -37,7 +37,7 @@ String encodeJWT(char* header, char* payload) {
 
   mbedtls_pk_context pk_context;
   mbedtls_pk_init(&pk_context);
-  Serial.println("1113");
+  Serial.print("MBEDTLS:1");
   int rc = mbedtls_pk_parse_key(
              &pk_context,
              SIGNING_PUB_KEY,
@@ -48,12 +48,12 @@ String encodeJWT(char* header, char* payload) {
     printf("Failed to mbedtls_pk_parse_key: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
     return "";
   }
-  Serial.println("222");
+  Serial.print("2");
   mbedtls_rsa_context *rsa;
 
   rsa = mbedtls_pk_rsa(pk_context);
 
-  Serial.println("3333");
+  Serial.print("3");
   uint8_t oBuf[500];
 
   mbedtls_entropy_context entropy;
@@ -62,14 +62,14 @@ String encodeJWT(char* header, char* payload) {
   mbedtls_entropy_init(&entropy);
 
   const char* pers = "MyEntropy";
-  Serial.println("333");
+  Serial.print("4");
   mbedtls_ctr_drbg_seed(
     &ctr_drbg,
     mbedtls_entropy_func,
     &entropy,
     (const unsigned char*)pers,
     strlen(pers));
-  Serial.println("4444");
+  Serial.print("5");
 
 
   uint8_t digest[32];
@@ -79,7 +79,7 @@ String encodeJWT(char* header, char* payload) {
     return "";
   }
 
-  Serial.println("5555");
+  Serial.print("6");
 
 
   size_t retSize;
@@ -90,7 +90,7 @@ String encodeJWT(char* header, char* payload) {
   }
 
 
-  Serial.println("6666");
+  Serial.print("7");
 
 
   char base64Signature[600];
@@ -100,7 +100,7 @@ String encodeJWT(char* header, char* payload) {
   char* retData = (char*)malloc(strlen((char*)headerAndPayload) + 1 + strlen((char*)base64Signature) + 1);
 
   sprintf(retData, "%s.%s", headerAndPayload, base64Signature);
-  Serial.println("7777");
+  Serial.println("8-finish!");
   delay(100);
   mbedtls_pk_free(&pk_context);
   return retData;
