@@ -27,6 +27,18 @@ void setup(){
   if(store.isAPIKeyLoaded()){
     LOG("\n API Key Contents: \n%s\n", store.getAPIPublicKey());
   }
+
+  store.setDeviceState(DEVICE_NEW);
+  delay(1000);
+  LOG("\nDeviceState: %d", store.getDeviceState());
+
+  store.setDeviceState(DEVICE_ACTIVE);
+  delay(1000);
+  LOG("\nDeviceState: %d", store.getDeviceState());
+
+  store.resetDeviceState();
+  delay(1000);
+  LOG("\nDeviceState: %d", store.getDeviceState());
 }
 
 void loop(){

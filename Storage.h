@@ -12,6 +12,7 @@
 #define API_KEY_FILE "/api.pem"
 #define NOT_LOADED 0
 #define LOADED 1
+#define DEVICE_STATE_ADDR 0
 class KeyStore {
   public:
     KeyStore();
@@ -28,8 +29,9 @@ class KeyStore {
     const char* getDevicePrivateKey();
     const char* getDevicePublicKey();
     const char* getAPIPublicKey();
-    void setDeviceStatus(int);
-    const int getDeviceStatus();
+    void setDeviceState(int);
+    void resetDeviceState();
+    const int getDeviceState();
   private:
     String *wifiSSID;
     String *wifiPASSWD;
@@ -38,7 +40,6 @@ class KeyStore {
     String *privateKey;
     String *publicKey;
     String *apiKey;
-    byte deviceStatus;
     byte jsonCfgLoadStatus;
     byte privateKeyLoadStatus;
     byte publicKeyLoadStatus;

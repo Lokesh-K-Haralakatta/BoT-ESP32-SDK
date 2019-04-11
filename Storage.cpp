@@ -14,11 +14,24 @@ KeyStore :: KeyStore(){
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
-  deviceStatus = 0;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
   apiKeyLoadStatus = NOT_LOADED;
+}
+
+void KeyStore :: setDeviceState(int state){
+  EEPROM.write(DEVICE_STATE_ADDR, state);
+  EEPROM.commit();
+}
+
+void KeyStore :: resetDeviceState(){
+  EEPROM.write(DEVICE_STATE_ADDR, DEVICE_NEW);
+  EEPROM.commit();
+}
+
+const int KeyStore :: getDeviceState(){
+  return EEPROM.read(DEVICE_STATE_ADDR);
 }
 
 bool KeyStore :: isJSONConfigLoaded(){
@@ -101,6 +114,7 @@ bool KeyStore :: isAPIKeyLoaded(){
 }
 
 void KeyStore :: retrieveAllKeys(){
+  EEPROM.begin(EEPROM_SIZE);
   if(!isPrivateKeyLoaded()){
     loadFileContents(PRIVATE_KEY_FILE,1);
   }

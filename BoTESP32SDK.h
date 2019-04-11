@@ -14,5 +14,10 @@
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 #include <EEPROM.h>
+#define EEPROM_SIZE 1
+#define DEVICE_NEW  0
+#define DEVICE_PAIRED 1
+#define DEVICE_ACTIVE 2
+#define DEVICE_MULTIPAIR 3
 #define LOG Serial.printf
 #endif
