@@ -5,7 +5,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
 ### Getting Started instructions for ESP-32 Dev Kit Module
 - **Setting up of ESP-32 Dev Module**
   - Hardware Requirements
-    - ESP-32 Devkit Board
+    - [ESP-32 Devkit Board](https://www.espressif.com/en/products/hardware/esp32-devkitc/overview)
+    - Laptop with Windows, Linux or Mac OS
   - Software Requirements
     - [Setup Arduino IDE](https://www.arduino.cc/en/Guide/HomePage)
     - [Install ESP32 Library through Arduino IDE](https://randomnerdtutorials.com/installing-the-esp32-board-in-arduino-ide-mac-and-linux-instructions/)
