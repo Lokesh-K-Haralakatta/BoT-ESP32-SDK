@@ -15,7 +15,7 @@
 #define DEVICE_STATE_ADDR 0
 class KeyStore {
   public:
-    KeyStore();
+    static KeyStore* getKeyStoreInstance();
     void loadJSONConfiguration();
     bool isJSONConfigLoaded();
     void retrieveAllKeys();
@@ -33,6 +33,7 @@ class KeyStore {
     void resetDeviceState();
     const int getDeviceState();
   private:
+    static KeyStore *store;
     String *wifiSSID;
     String *wifiPASSWD;
     String *makerID;
@@ -45,6 +46,7 @@ class KeyStore {
     byte publicKeyLoadStatus;
     byte apiKeyLoadStatus;
     void loadFileContents(const char* filePath, byte keyType);
+    KeyStore();
 };
 
 #endif

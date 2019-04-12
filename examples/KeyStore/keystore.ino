@@ -6,39 +6,40 @@
 
 #include <Storage.h>
 
-KeyStore store;
+KeyStore* store;
 
 void setup(){
   //Serial.begin(115200);
-  store.loadJSONConfiguration();
-  if(store.isJSONConfigLoaded()){
-    LOG("\n WiFi SSID: %s", store.getWiFiSSID());
-    LOG("\n WiFi Passwd: %s", store.getWiFiPasswd());
-    LOG("\n Maker ID: %s", store.getMakerID());
-    LOG("\n Device ID: %s", store.getDeviceID());
+  store = KeyStore::getKeyStoreInstance();
+  store->loadJSONConfiguration();
+  if(store->isJSONConfigLoaded()){
+    LOG("\n WiFi SSID: %s", store->getWiFiSSID());
+    LOG("\n WiFi Passwd: %s", store->getWiFiPasswd());
+    LOG("\n Maker ID: %s", store->getMakerID());
+    LOG("\n Device ID: %s", store->getDeviceID());
   }
-  store.retrieveAllKeys();
-  if(store.isPrivateKeyLoaded()){
-    LOG("\n Private Key Contents: \n%s\n", store.getDevicePrivateKey());
+  store->retrieveAllKeys();
+  if(store->isPrivateKeyLoaded()){
+    LOG("\n Private Key Contents: \n%s\n", store->getDevicePrivateKey());
   }
-  if(store.isPublicKeyLoaded()){
-    LOG("\n Public Key Contents: \n%s\n", store.getDevicePublicKey());
+  if(store->isPublicKeyLoaded()){
+    LOG("\n Public Key Contents: \n%s\n", store->getDevicePublicKey());
   }
-  if(store.isAPIKeyLoaded()){
-    LOG("\n API Key Contents: \n%s\n", store.getAPIPublicKey());
+  if(store->isAPIKeyLoaded()){
+    LOG("\n API Key Contents: \n%s\n", store->getAPIPublicKey());
   }
 
-  store.setDeviceState(DEVICE_NEW);
+  store->setDeviceState(DEVICE_NEW);
   delay(1000);
-  LOG("\nDeviceState: %d", store.getDeviceState());
+  LOG("\nDeviceState: %d", store->getDeviceState());
 
-  store.setDeviceState(DEVICE_ACTIVE);
+  store->setDeviceState(DEVICE_ACTIVE);
   delay(1000);
-  LOG("\nDeviceState: %d", store.getDeviceState());
+  LOG("\nDeviceState: %d", store->getDeviceState());
 
-  store.resetDeviceState();
+  store->resetDeviceState();
   delay(1000);
-  LOG("\nDeviceState: %d", store.getDeviceState());
+  LOG("\nDeviceState: %d", store->getDeviceState());
 }
 
 void loop(){

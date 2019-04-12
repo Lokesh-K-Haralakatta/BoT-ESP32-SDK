@@ -7,6 +7,7 @@
 
 #ifndef BoTESP32SDK_h
 #define BoTESP32SDK_h
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -14,10 +15,16 @@
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 #include <EEPROM.h>
+#include <HTTPClient.h>
+#include <mbedtls/pk.h>
+#include <mbedtls/error.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/ctr_drbg.h>
 #define EEPROM_SIZE 1
 #define DEVICE_NEW  0
 #define DEVICE_PAIRED 1
 #define DEVICE_ACTIVE 2
 #define DEVICE_MULTIPAIR 3
 #define LOG Serial.printf
+
 #endif

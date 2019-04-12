@@ -26,7 +26,7 @@ Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd){
     configStatus = LOADED;
   }
   else {
-    store = new KeyStore();
+    store = KeyStore::getKeyStoreInstance();
   }
 }
 

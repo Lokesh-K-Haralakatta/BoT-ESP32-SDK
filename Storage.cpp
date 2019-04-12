@@ -5,6 +5,17 @@
 */
 
 #include "Storage.h"
+
+KeyStore* KeyStore::store = NULL;
+
+KeyStore* KeyStore:: getKeyStoreInstance(){
+  if(store == NULL){
+    store = new KeyStore();
+  }
+
+  return store;
+}
+
 KeyStore :: KeyStore(){
   Serial.begin(115200);
   wifiSSID = NULL;
