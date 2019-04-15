@@ -5,6 +5,7 @@
 */
 
 #include "BoTService.h"
+#include "key.h"
 
 BoTService :: BoTService(const char* host, const char* uri, const int port){
   hostURL = new char[strlen(host)+1];
@@ -33,41 +34,42 @@ const char* BoTService :: mbedtlsError(int errnum) {
 }
 
 String BoTService :: encodeJWT(const char* header, const char* payload) {
-  char* base64Header = new char[strlen(header)+1];
+  char base64Header[100];
 
   base64url_encode(
     (unsigned char *)header,   // Data to encode.
     strlen(header),            // Length of data to encode.
     base64Header);             // Base64 encoded data.
 
-  char* base64Payload = new char[strlen(payload)+1];
+  char base64Payload[100];
   base64url_encode(
     (unsigned char *)payload,  // Data to encode.
     strlen(payload),           // Length of data to encode.
     base64Payload);            // Base64 encoded data.
 
-  char* headerAndPayload = new char[strlen(base64Header)+strlen(base64Payload)+1];
+  uint8_t headerAndPayload[800];
   sprintf((char*)headerAndPayload, "%s.%s", base64Header, base64Payload);
-
-  delete base64Header;
-  delete base64Payload;
+  LOG("\nBoTService :: encodeJWT: headerAndPayload contents: %s", (char*)headerAndPayload);
 
   mbedtls_pk_context pk_context;
   mbedtls_pk_init(&pk_context);
   int rc = mbedtls_pk_parse_key(
              &pk_context,
-             (unsigned char *)store->getDevicePrivateKey(),
-             strlen((const char*)store->getDevicePrivateKey()) + 1,
+             (unsigned char *)SIGNING_KEY,
+             strlen((const char*)SIGNING_KEY) + 1,
+             //(unsigned char*) store->getDevicePrivateKey(),
+             //strlen((const char*)store->getDevicePrivateKey())+1,
              nullptr,
              0);
   if (rc != 0) {
     LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_parse_key: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
     return "";
   }
+  LOG("\nBoTService :: encodeJWT: Signing Key is parsed");
 
   mbedtls_rsa_context *rsa;
-
   rsa = mbedtls_pk_rsa(pk_context);
+  LOG("\nBoTService :: encodeJWT: RSA context loaded");
 
   mbedtls_entropy_context entropy;
   mbedtls_ctr_drbg_context ctr_drbg;
@@ -81,31 +83,34 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
     &entropy,
     (const unsigned char*)pers,
     strlen(pers));
+  LOG("\nBoTService :: encodeJWT: mbedtls_ctr_drbg_seed is completed");
 
-  char digest[32];
-  rc = mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), (unsigned char*)headerAndPayload, strlen((char*)headerAndPayload), (unsigned char*)digest);
+  uint8_t digest[32];
+  rc = mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), headerAndPayload, strlen((char*)headerAndPayload), digest);
   if (rc != 0) {
     LOG("\nBoTService :: encodeJWT: Failed to mbedtls_md: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
     return "";
   }
+  LOG("\nBoTService :: encodeJWT: mbedtls_md is completed");
 
-  char oBuf[500];
   size_t retSize;
-  rc = mbedtls_pk_sign(&pk_context, MBEDTLS_MD_SHA256, (unsigned char*)digest, sizeof(digest), (unsigned char*)oBuf, &retSize, mbedtls_ctr_drbg_random, &ctr_drbg);
+  uint8_t oBuf[500];
+  rc = mbedtls_pk_sign(&pk_context, MBEDTLS_MD_SHA256, digest, sizeof(digest), oBuf, &retSize, mbedtls_ctr_drbg_random, &ctr_drbg);
   if (rc != 0) {
-    printf("Failed to mbedtls_pk_sign: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
+    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_sign: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
     return "";
   }
+  LOG("\nBoTService :: encodeJWT: mbedtls_pk_sign is completed");
 
   char base64Signature[600];
-
   base64url_encode((unsigned char *)oBuf, retSize, base64Signature);
-
-  char* retData = new char[strlen((char*)headerAndPayload) + 1 + strlen((char*)base64Signature) + 1];
-
+  char* retData = (char*)malloc(strlen((char*)headerAndPayload) + 1 + strlen((char*)base64Signature) + 1);
   sprintf(retData, "%s.%s", headerAndPayload, base64Signature);
+  LOG("\nBoTService :: encodeJWT: encoded return data is ready");
+
   delay(100);
   mbedtls_pk_free(&pk_context);
+
   return retData;
 }
 
@@ -164,7 +169,7 @@ String BoTService :: decodePayload(String encodedPayload){
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(decoded);
   String botValue = root["bot"];
-  LOG("\nBoTService :: decodePayload: pairStatus after decode: %s",botValue.c_str());
+  LOG("\nBoTService :: decodePayload: response value: %s",botValue.c_str());
 
   return botValue;
 }
@@ -172,13 +177,18 @@ String BoTService :: decodePayload(String encodedPayload){
 String BoTService :: post(const char* endPoint, const char* payload){
 
   char* jwtHeader = "{\"alg\":\"RS256\",\"typ\":\"JWT\"}";
+  LOG("\nBoTService :: post: jwtHeader: %s", jwtHeader);
+  LOG("\nBoTService :: post: Given Payload: %s", payload);
+
   String botJWT = encodeJWT(jwtHeader, payload);
   String body = (String)"{\"bot\": \"" + botJWT +   "\"}";
 
+  LOG("\nBoTService :: post: body contents after encoding: %s", body.c_str());
   String *fullURI = new String(uriPath);
   fullURI->concat(endPoint);
 
   if(WiFi.status() == WL_CONNECTED){
+    LOG("\nBoTService :: post: Everything good to make POST Call to BoT Service: %s", fullURI->c_str());
     httpClient->begin(hostURL,PORT,fullURI->c_str());
     httpClient->addHeader("makerID", store->getMakerID());
     httpClient->addHeader("deviceID", store->getDeviceID());

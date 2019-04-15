@@ -1,0 +1,19 @@
+#ifndef __KEY_H__
+#define __KEY_H__
+
+static const unsigned char * const SIGNING_KEY = (unsigned char *)"-----BEGIN RSA PRIVATE KEY-----\n"\
+"MIICXAIBAAKBgQC3RG1KJiAuPb7xqaWsysJQGTHLERqJwrW8TbquDBQh4qsg0x9PumAI2p9o\n"\
+"Z8ZJ0JAEd/hEDjIVsX/oMU/Ko107VFrGH7P8yqHTjaA9EBZOr5AXMXHCHst0mxN3nbzVURlh\n"\
+"ntTD4tG/rrhZgfCqaMwvymrOjuZm1RJI29/IbhZzQwIDAQABAoGBAIbwpEQHhIRnxHNuBWYQ\n"\
+"OTj/BBHQOykaK/RFi2Hh1OUKYBSgPxrWUSXTy7H1TyREo/YWW7/IcApXEqXlwSmkVd088EJ+\n"\
+"oDUN1klH5dnXCGK+tPbuQ7jvtVkvPV0kiJOX3abyXWDwui96Y2bCnPteWm+CJf9fId1OtAiL\n"\
+"21kAPkzRAkEA5lqXMP3nif2ROzEaBI3RUSJTeTJb1CzpM0S3hQfQyQqf/Jz8a9xGr0LOmpse\n"\
+"7qOwvvwH6tpgWzdkhYRY2XTiGwJBAMurzXjf9qxjLh/T3f5sRdbg4KnUgUrbRe5zDIB3ei/O\n"\
+"H+6/jV9rVK0AeRrTyqTRZEmmGcAnA/wgYf2J9ni0BfkCQC2jFQEnzI+SJQvNFpKAZk/ktRT1\n"\
+"3SuUGj+GBbXdbofmCvxJPdlAsuBWJAiNYvt0grfTxt3Ilf58YvXw2ol6lrECQHDJ6pbGyG78\n"\
+"2b0sciKESUTO8ft6wEL5HUgIlGLMR3ET4CEyGRM/d/v6aBaQNQeDIdubTWVY9d74++sRLNn5\n"\
+"L9kCQCoo03Le8D2Mdj533DUkw8FU1HCzbDcCY+PXhI8gocUYgT4R2nYJKhk85LjV/WO1esvm\n"\
+"DyW8KYRg1+rtDOeMhT4=\n"\
+"-----END RSA PRIVATE KEY-----\n\0";
+
+#endif

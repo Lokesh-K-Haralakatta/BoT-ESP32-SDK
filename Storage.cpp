@@ -22,6 +22,7 @@ KeyStore :: KeyStore(){
   wifiPASSWD = NULL;
   makerID = NULL;
   deviceID = NULL;
+  queueID = NULL;
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
@@ -91,6 +92,8 @@ void KeyStore :: loadJSONConfiguration(){
     makerID = new String(mId);
     const char* dId = json["device_id"];
     deviceID = new String(dId);
+    const char* qId = json["queue_id"];
+    queueID = new String(qId);
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
   }
@@ -110,6 +113,10 @@ const char* KeyStore :: getMakerID(){
 
 const char* KeyStore :: getDeviceID(){
   return deviceID->c_str();
+}
+
+const char* KeyStore :: getQueueID(){
+  return queueID->c_str();
 }
 
 bool KeyStore :: isPrivateKeyLoaded(){
@@ -154,8 +161,15 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       return;
     }*/
 
-    char *buffer = new char[size];
+    char *buffer = new char[size+1];
     file.readBytes(buffer,size);
+    buffer[size] = '\0';
+    /*int i=0;
+    while(file.available()){
+        buffer[i++] = file.read();
+    }
+    buffer[i]='\0';*/
+
     file.close();
 
     switch(kType){
@@ -170,6 +184,7 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
               break;
     }
 
+    delete buffer;
     LOG("\nKeyStore :: loadFileContents: Key Contents loaded from file - %s", filePath);
 }
 
