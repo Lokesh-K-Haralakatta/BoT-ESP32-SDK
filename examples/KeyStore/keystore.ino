@@ -29,6 +29,7 @@ void setup(){
     LOG("\n API Key Contents: \n%s\n", store->getAPIPublicKey());
   }
 
+  store->initializeEEPROM();
   store->setDeviceState(DEVICE_NEW);
   delay(1000);
   LOG("\nDeviceState: %d", store->getDeviceState());

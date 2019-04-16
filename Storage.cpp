@@ -131,8 +131,11 @@ bool KeyStore :: isAPIKeyLoaded(){
   return((apiKeyLoadStatus == LOADED)?true:false);
 }
 
-void KeyStore :: retrieveAllKeys(){
+void KeyStore :: initializeEEPROM(){
   EEPROM.begin(EEPROM_SIZE);
+}
+
+void KeyStore :: retrieveAllKeys(){
   if(!isPrivateKeyLoaded()){
     loadFileContents(PRIVATE_KEY_FILE,1);
   }

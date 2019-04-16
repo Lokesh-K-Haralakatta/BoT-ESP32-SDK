@@ -40,7 +40,8 @@ void setup() {
   LOG("\nIP address: ");
   Serial.println(WiFi.localIP());
 
-  bot = new BoTService(host,uri,port);
+  //bot = new BoTService(host,uri,port);
+  bot = new BoTService();
 
   //Sample GET calls
   LOG("\nPair Status: %s", bot->get("/pair").c_str());

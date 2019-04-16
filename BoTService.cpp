@@ -5,19 +5,30 @@
 */
 
 #include "BoTService.h"
-#include "key.h"
 
-BoTService :: BoTService(const char* host, const char* uri, const int port){
+BoTService :: BoTService(){
+  hostURL = new char[strlen(HOST)+1];
+  strcpy(hostURL,HOST);
+
+  uriPath = new char[strlen(URI)+1];
+  strcpy(uriPath,URI);
+
+  port = HTTP_PORT;
+
+  httpClient = new HTTPClient();
+  store = KeyStore :: getKeyStoreInstance();
+}
+
+BoTService :: BoTService(const char* host, const char* uri, const int p){
   hostURL = new char[strlen(host)+1];
   strcpy(hostURL,host);
 
   uriPath = new char[strlen(uri)+1];
   strcpy(uriPath,uri);
 
-  PORT = port;
+  port = p;
 
   httpClient = new HTTPClient();
-
   store = KeyStore :: getKeyStoreInstance();
 }
 
@@ -35,7 +46,7 @@ const char* BoTService :: mbedtlsError(int errnum) {
 
 String BoTService :: encodeJWT(const char* header, const char* payload) {
   char base64Header[100];
-
+  store->retrieveAllKeys();
   base64url_encode(
     (unsigned char *)header,   // Data to encode.
     strlen(header),            // Length of data to encode.
@@ -55,10 +66,10 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
   mbedtls_pk_init(&pk_context);
   int rc = mbedtls_pk_parse_key(
              &pk_context,
-             (unsigned char *)SIGNING_KEY,
-             strlen((const char*)SIGNING_KEY) + 1,
-             //(unsigned char*) store->getDevicePrivateKey(),
-             //strlen((const char*)store->getDevicePrivateKey())+1,
+             //(unsigned char *)SIGNING_KEY,
+             //strlen((const char*)SIGNING_KEY) + 1,
+             (unsigned char*) store->getDevicePrivateKey(),
+             strlen((const char*)store->getDevicePrivateKey())+1,
              nullptr,
              0);
   if (rc != 0) {
@@ -120,7 +131,7 @@ String BoTService :: get(const char* endPoint){
   fullURI->concat(endPoint);
 
   if(WiFi.status() == WL_CONNECTED){
-    httpClient->begin(hostURL,PORT,fullURI->c_str());
+    httpClient->begin(hostURL,port,fullURI->c_str());
     httpClient->addHeader("makerID", store->getMakerID());
     httpClient->addHeader("deviceID", store->getDeviceID());
 
@@ -130,7 +141,7 @@ String BoTService :: get(const char* endPoint){
 
     if(httpCode > 0) {
 
-      LOG("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d\n", endPoint, httpCode);
+      LOG("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
       String payload = httpClient->getString();
       httpClient->end();
 
@@ -143,12 +154,12 @@ String BoTService :: get(const char* endPoint){
         }
       }
       else {
-        LOG("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s\n", endPoint, errorMSG);
+        LOG("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s", endPoint, errorMSG);
         return errorMSG;
       }
     }
     else {
-      LOG("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s\n", endPoint, errorMSG);
+      LOG("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s", endPoint, errorMSG);
       return errorMSG;
     }
   }
@@ -189,7 +200,7 @@ String BoTService :: post(const char* endPoint, const char* payload){
 
   if(WiFi.status() == WL_CONNECTED){
     LOG("\nBoTService :: post: Everything good to make POST Call to BoT Service: %s", fullURI->c_str());
-    httpClient->begin(hostURL,PORT,fullURI->c_str());
+    httpClient->begin(hostURL,port,fullURI->c_str());
     httpClient->addHeader("makerID", store->getMakerID());
     httpClient->addHeader("deviceID", store->getDeviceID());
     httpClient->addHeader("Content-Type", "application/json");

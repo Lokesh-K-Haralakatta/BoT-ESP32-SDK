@@ -15,7 +15,6 @@ Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd){
   server = NULL;
   store = NULL;
   serverStatus = NOT_STARTED;
-  configStatus = NOT_LOADED;
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
   Serial.begin(115200);
@@ -23,28 +22,20 @@ Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd){
   if(loadConfig == false){
     WiFi_SSID = new String(ssid);
     WiFi_Passwd = new String(passwd);
-    configStatus = LOADED;
   }
-  else {
-    store = KeyStore::getKeyStoreInstance();
-  }
-}
-
-void Webserver :: loadConfiguration(){
-  store->loadJSONConfiguration();
-  if(store->isJSONConfigLoaded()){
-    WiFi_SSID = new String(store->getWiFiSSID());
-    WiFi_Passwd = new String(store->getWiFiPasswd());
-    configStatus = LOADED;
-  }
-}
-bool Webserver :: isConfigLoaded(){
-  return (configStatus == LOADED?true:false);
 }
 
 void Webserver :: connectWiFi(){
-  if(isConfigLoaded()){
-    WiFi.disconnect(true);
+  if(WiFi_SSID == NULL || WiFi_Passwd == NULL){
+    store = KeyStore::getKeyStoreInstance();
+    store->loadJSONConfiguration();
+    WiFi_SSID = new String(store->getWiFiSSID());
+    WiFi_Passwd = new String(store->getWiFiPasswd());
+  }
+
+  LOG("\nWebserver :: connectWiFi: Connecting to WiFi SSID: %s", WiFi_SSID->c_str());
+  if(WiFi_SSID != NULL && WiFi_Passwd != NULL){
+    //WiFi.disconnect(true);
     WiFi.begin(WiFi_SSID->c_str(), WiFi_Passwd->c_str());
 
     while (WiFi.status() != WL_CONNECTED) {

@@ -4,14 +4,21 @@
   Released into the repository BoT-ESP32-SDK.
 */
 
-#ifndef BoTEService_h
-#define BoTEService_h
+#ifndef BoTService_h
+#define BoTService_h
 
 #include "BoTESP32SDK.h"
 #include "base64url.h"
 #include "Storage.h"
+
+#define HOST "api-dev.bankingofthings.io"
+#define URI "/bot_iot"
+#define HTTP_PORT 80
+#define HTTPS_PORT 443
+
 class BoTService {
   public:
+    BoTService();
     BoTService(const char* host, const char* uri, const int port);
     ~BoTService();
     String get(const char* endPoint);
@@ -19,7 +26,7 @@ class BoTService {
   private:
     char* hostURL;
     char* uriPath;
-    int PORT;
+    int port;
     HTTPClient* httpClient;
     KeyStore* store;
     const char* mbedtlsError(int errnum);

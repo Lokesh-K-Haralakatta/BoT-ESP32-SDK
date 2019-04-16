@@ -15,8 +15,6 @@ class Webserver
 {
   public:
     Webserver(bool loadConfig, const char *ssid = NULL, const char *passwd = NULL);
-    void loadConfiguration();
-    bool isConfigLoaded();
     bool isWiFiConnected();
     bool isServerAvailable();
     void blinkLED();
@@ -27,7 +25,6 @@ class Webserver
     int port;
     int ledPin;
     int serverStatus;
-    int configStatus;
     String *WiFi_SSID;
     String *WiFi_Passwd;
     KeyStore *store;

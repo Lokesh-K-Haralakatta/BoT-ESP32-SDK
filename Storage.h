@@ -17,6 +17,7 @@ class KeyStore {
   public:
     static KeyStore* getKeyStoreInstance();
     void loadJSONConfiguration();
+    void initializeEEPROM();
     bool isJSONConfigLoaded();
     void retrieveAllKeys();
     bool isPrivateKeyLoaded();
