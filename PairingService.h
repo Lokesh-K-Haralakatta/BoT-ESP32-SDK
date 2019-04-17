@@ -9,9 +9,10 @@
 #include "BoTESP32SDK.h"
 #include "Storage.h"
 #include "BoTService.h"
+#include "ActivationService.h"
 #define POLLING_INTERVAL_IN_MILLISECONDS 10000
 #define MAXIMUM_TRIES 10
-#define END_POINT "/pair"
+#define PAIRING_END_POINT "/pair"
 
 class PairingService {
   public:
@@ -20,6 +21,7 @@ class PairingService {
   private:
     KeyStore *store;
     BoTService *bot;
+    ActivationService *actService;
     bool isPairable();
     bool isMultipair();
     String getPairingStatus();

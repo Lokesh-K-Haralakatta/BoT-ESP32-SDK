@@ -1,5 +1,5 @@
 /*
-  PairingService.h - Class and Methods to poll for pairing status with BoT Service
+  PairingService.cpp - Class and Methods to poll for pairing status with BoT Service
   Created by Lokesh H K, April 16, 2019.
   Released into the repository BoT-ESP32-SDK.
 */
@@ -9,6 +9,7 @@
 PairingService :: PairingService(){
   store = KeyStore :: getKeyStoreInstance();
   bot = new BoTService();
+  actService = new ActivationService();
 }
 
 bool PairingService :: isMultipair(){
@@ -23,7 +24,7 @@ bool PairingService :: isPairable(){
 }
 
 String PairingService :: getPairingStatus(){
-  return bot->get(END_POINT);
+  return bot->get(PAIRING_END_POINT);
 }
 
 bool PairingService :: pollPairingStatus(){
@@ -62,8 +63,11 @@ void PairingService :: pairDevice(){
         return;
     }
     store->setDeviceState(DEVICE_PAIRED);
-    LOG("\nPairingService :: pollPairingStatus: Device successfully paired. Ready to activate.");
+    LOG("\nPairingService :: pairDevice: Device successfully paired. Ready to activate.");
     //Remove Device publickey from SPIFFS
-    //Call ActivationService.activateevice()
+    actService->activateDevice();
+  }
+  else {
+    LOG("\nPairingService :: pairDevice: Device pairing not yet completed.Try again...");
   }
 }

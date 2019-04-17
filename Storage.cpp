@@ -1,5 +1,5 @@
 /*
-  Storage.h - KeyStore Class Methods definition to retrieve and store configuration data for BoT Service
+  Storage.cpp - KeyStore Class Methods definition to retrieve and store configuration data for BoT Service
   Created by Lokesh H K, April 9, 2019.
   Released into the repository BoT-ESP32-SDK.
 */

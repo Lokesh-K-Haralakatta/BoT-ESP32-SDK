@@ -1,6 +1,6 @@
 /*
-  BoTService.h - BoTService Class and Methods to make Secure HTTP Calls to BoT Service.
-  Created by Lokesh H K, April 12, 2019.
+  BoTService.cpp - BoTService Class and Methods to make Secure HTTP Calls to BoT Service.
+  Created by Lokesh H K, April 12, 2019
   Released into the repository BoT-ESP32-SDK.
 */
 
