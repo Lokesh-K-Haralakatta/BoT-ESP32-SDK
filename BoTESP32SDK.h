@@ -20,6 +20,8 @@
 #include <mbedtls/error.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 #define EEPROM_SIZE 1
 #define DEVICE_NEW  0
 #define DEVICE_PAIRED 1
