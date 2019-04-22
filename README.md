@@ -17,6 +17,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download Zip [AsyncTCP Library](https://github.com/me-no-dev/AsyncTCP) and include in Arduino IDE
   - Download Zip [ESPAsyncWebServer Library](https://github.com/me-no-dev/ESPAsyncWebServer) and include in Arduino IDE
   - Download Zip [ArduinoJson Version 5.13.0](https://github.com/bblanchon/ArduinoJson/releases/tag/v5.13.0) and include in Arduino IDE
+  - Download Zip [NTP Client](https://github.com/taranais/NTPClient/releases) and include in Arduino IDE
 
 - **Setting up of BoT-ESP32-SDK Library on Arduino IDE**
   - Download ZIP from repository and install through Arduino IDE
