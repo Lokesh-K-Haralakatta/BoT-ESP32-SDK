@@ -1,5 +1,5 @@
 /*
-  Actionervice.h - Class and Methods to trigger and get actions with BoT Service
+  ActionService.h - Class and Methods to trigger and get actions with BoT Service
   Created by Lokesh H K, April 17, 2019.
   Released into the repository BoT-ESP32-SDK.
 */

@@ -22,6 +22,7 @@ KeyStore :: KeyStore(){
   wifiPASSWD = NULL;
   makerID = NULL;
   deviceID = NULL;
+  altDeviceID = NULL;
   queueID = NULL;
   privateKey = NULL;
   publicKey = NULL;
@@ -76,7 +77,7 @@ void KeyStore :: loadJSONConfiguration(){
     file.readBytes(buffer,size);
     file.close();
 
-    StaticJsonBuffer <1024>jsonBuffer;
+    DynamicJsonBuffer jsonBuffer;
     JsonObject& json = jsonBuffer.parseObject(buffer);
     if(! json.success()){
       jsonCfgLoadStatus = NOT_LOADED;
@@ -92,6 +93,8 @@ void KeyStore :: loadJSONConfiguration(){
     makerID = new String(mId);
     const char* dId = json["device_id"];
     deviceID = new String(dId);
+    const char* adId = json["alt_device_id"];
+    altDeviceID = new String(adId);
     const char* qId = json["queue_id"];
     queueID = new String(qId);
     jsonCfgLoadStatus = LOADED;
@@ -113,6 +116,10 @@ const char* KeyStore :: getMakerID(){
 
 const char* KeyStore :: getDeviceID(){
   return deviceID->c_str();
+}
+
+const char* KeyStore :: getAlternateDeviceID(){
+  return altDeviceID->c_str();
 }
 
 const char* KeyStore :: getQueueID(){

@@ -28,6 +28,7 @@ class KeyStore {
     const char* getMakerID();
     const char* getDeviceID();
     const char* getQueueID();
+    const char* getAlternateDeviceID();
     const char* getDevicePrivateKey();
     const char* getDevicePublicKey();
     const char* getAPIPublicKey();
@@ -40,6 +41,7 @@ class KeyStore {
     String *wifiPASSWD;
     String *makerID;
     String *deviceID;
+    String *altDeviceID;
     String *queueID;
     String *privateKey;
     String *publicKey;

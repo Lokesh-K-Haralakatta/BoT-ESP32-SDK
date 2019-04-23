@@ -227,16 +227,16 @@ String BoTService :: post(const char* endPoint, const char* payload){
       }
       else {
         LOG("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s\n", endPoint, errorMSG);
-        return errorMSG;
+        return String(errorMSG);
       }
     }
     else {
       LOG("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s\n", endPoint, errorMSG);
-      return errorMSG;
+      return String(errorMSG);
     }
   }
   else {
     LOG("\nBoTService :: post: Board Not Connected to WiFi...");
-    return "Board Not Connected to WiFi...";
+    return String("Board Not Connected to WiFi...");
   }
 }

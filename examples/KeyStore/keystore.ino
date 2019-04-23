@@ -10,13 +10,15 @@ KeyStore* store;
 
 void setup(){
   //Serial.begin(115200);
-  store = KeyStore::getKeyStoreInstance();
+  store = KeyStore :: getKeyStoreInstance();
+
   store->loadJSONConfiguration();
   if(store->isJSONConfigLoaded()){
     LOG("\n WiFi SSID: %s", store->getWiFiSSID());
     LOG("\n WiFi Passwd: %s", store->getWiFiPasswd());
     LOG("\n Maker ID: %s", store->getMakerID());
     LOG("\n Device ID: %s", store->getDeviceID());
+    LOG("\n Altternate Device ID: %s", store->getAlternateDeviceID());
   }
   store->retrieveAllKeys();
   if(store->isPrivateKeyLoaded()){
@@ -28,19 +30,6 @@ void setup(){
   if(store->isAPIKeyLoaded()){
     LOG("\n API Key Contents: \n%s\n", store->getAPIPublicKey());
   }
-
-  store->initializeEEPROM();
-  store->setDeviceState(DEVICE_NEW);
-  delay(1000);
-  LOG("\nDeviceState: %d", store->getDeviceState());
-
-  store->setDeviceState(DEVICE_ACTIVE);
-  delay(1000);
-  LOG("\nDeviceState: %d", store->getDeviceState());
-
-  store->resetDeviceState();
-  delay(1000);
-  LOG("\nDeviceState: %d", store->getDeviceState());
 }
 
 void loop(){

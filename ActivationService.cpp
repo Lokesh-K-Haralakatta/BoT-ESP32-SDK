@@ -32,7 +32,7 @@ bool ActivationService :: pollActivationStatus(){
 String ActivationService :: sendActivationRequest(){
   const char* deviceID = store->getDeviceID();
 
-  StaticJsonBuffer<100> jsonBuffer;
+  DynamicJsonBuffer jsonBuffer;
   JsonObject& doc = jsonBuffer.createObject();
   JsonObject& botData = doc.createNestedObject("bot");
   botData["deviceID"] = deviceID;

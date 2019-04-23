@@ -10,11 +10,11 @@ ActionService :: ActionService(){
   bot = new BoTService();
   store = KeyStore :: getKeyStoreInstance();
   timeClient = new NTPClient(ntpUDP);
-  timeClient->begin();
 }
 
 String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
   String response = "";
+  timeClient->begin();
   if(isValidAction(actionID)){
     store->initializeEEPROM();
     store->loadJSONConfiguration();
@@ -22,7 +22,7 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
     const char* deviceID = store->getDeviceID();
     const char* queueID = store->getQueueID();
 
-    StaticJsonBuffer<200> jsonBuffer;
+    DynamicJsonBuffer jsonBuffer;
     JsonObject& doc = jsonBuffer.createObject();
     JsonObject& botData = doc.createNestedObject("bot");
     botData["deviceID"] = deviceID;
