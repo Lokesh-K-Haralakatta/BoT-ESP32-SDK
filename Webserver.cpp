@@ -29,6 +29,7 @@ void Webserver :: connectWiFi(){
   if(WiFi_SSID == NULL || WiFi_Passwd == NULL){
     store = KeyStore::getKeyStoreInstance();
     store->loadJSONConfiguration();
+    store->initializeEEPROM();
     WiFi_SSID = new String(store->getWiFiSSID());
     WiFi_Passwd = new String(store->getWiFiPasswd());
   }
@@ -78,10 +79,20 @@ void Webserver :: startServer(){
         AsyncJsonResponse * response = new AsyncJsonResponse();
         response->addHeader("Server","ESP-32 Dev Module Async Web Server");
         JsonObject& root = response->getRoot();
-        root["heap"] = ESP.getFreeHeap();
-        root["ssid"] = WiFi.SSID();
+        root["actionsEndPoint"] = "/actions";
+        root["pairingEndPoint"] = "/pairing";
         response->setLength();
         request->send(response);
+      });
+
+      server->on("/actions", HTTP_GET, [](AsyncWebServerRequest *request){
+         ControllerService cs;
+         cs.getActions(request);
+      });
+
+      server->on("/pairing", HTTP_GET, [](AsyncWebServerRequest *request){
+         ControllerService cs;
+         cs.pairDevice(request);
       });
 
       server->begin();

@@ -9,11 +9,17 @@
 
 //Webserver server(false,WIFI_SSID, WIFI_PASSWD);
 Webserver server(true);
-
+KeyStore* store;
 void setup()
 {
   server.connectWiFi();
   if(server.isWiFiConnected()){
+
+    store = KeyStore::getKeyStoreInstance();
+    store->initializeEEPROM();
+    //For device state as NEW, /pairing will wait for maxPairAttempts and return the response
+    store->setDeviceState(DEVICE_NEW);
+
     server.startServer();
   }
   else {
@@ -24,8 +30,8 @@ void setup()
 
 void loop()
 {
-  if(server.isServerAvailable()){
+  /*if(server.isServerAvailable()){
     server.blinkLED();
-  }
+  }*/
 
 }

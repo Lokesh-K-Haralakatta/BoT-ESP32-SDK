@@ -10,8 +10,8 @@
 #include "Storage.h"
 #include "BoTService.h"
 #include "ActivationService.h"
-#define POLLING_INTERVAL_IN_MILLISECONDS 10000
-#define MAXIMUM_TRIES 10
+#define POLLING_INTERVAL_IN_MILLISECONDS 5000
+#define MAXIMUM_TRIES 2
 #define PAIRING_END_POINT "/pair"
 
 class PairingService {
