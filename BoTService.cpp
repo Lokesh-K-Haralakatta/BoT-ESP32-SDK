@@ -126,16 +126,21 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
 }
 
 String BoTService :: get(const char* endPoint){
-
+  store->loadJSONConfiguration();
   String *fullURI = new String(uriPath);
   fullURI->concat(endPoint);
+  LOG("\nBoTService :: get: URI: %s", fullURI->c_str());
 
   if(WiFi.status() == WL_CONNECTED){
+    LOG("\nBoTService :: get: WiFi Status: Connected");
     httpClient->begin(hostURL,port,fullURI->c_str());
     httpClient->addHeader("makerID", store->getMakerID());
     httpClient->addHeader("deviceID", store->getDeviceID());
 
+    LOG("\nBoTService :: get: Making httpClient->GET call");
     int httpCode = httpClient->GET();
+    LOG("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
+
     const char* errorMSG = httpClient->errorToString(httpCode).c_str();
     delete fullURI;
 

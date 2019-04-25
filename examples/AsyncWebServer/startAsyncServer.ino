@@ -18,7 +18,24 @@ void setup()
     store = KeyStore::getKeyStoreInstance();
     store->initializeEEPROM();
     //For device state as NEW, /pairing will wait for maxPairAttempts and return the response
-    store->setDeviceState(DEVICE_NEW);
+    //store->setDeviceState(DEVICE_NEW);
+
+    //For triggering the action, hit /actions with post method
+
+    //For device with NEW, PAIRED state, we should see 403 Device not activated message as response
+    //store->setDeviceState(DEVICE_NEW);
+
+    //For device with MULTIPAIR state, json missing alternateID should get 400 Missing parameter
+    //store->setDeviceState(DEVICE_MULTIPAIR);
+
+    //For ACTIVE state device, missing actionID in json body should return 400 Missing parameter
+    store->setDeviceState(DEVICE_ACTIVE);
+
+    //For Active state device, json body containing invalid actionID, we should see 404
+
+    //For invalid combination of makerID, device ID and actionID, we should see 503 code
+
+    //If everything OK, we should see 200 Ok with Action triggerred message
 
     server.startServer();
   }

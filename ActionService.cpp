@@ -14,7 +14,9 @@ ActionService :: ActionService(){
 
 String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
   String response = "";
+  LOG("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
+  LOG("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
   if(isValidAction(actionID)){
     store->initializeEEPROM();
     store->loadJSONConfiguration();
@@ -54,6 +56,7 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
 
 String ActionService :: getActions(){
   String actions = bot->get(ACTIONS_END_POINT);
+  LOG("\nActionService :: getActions: %s", actions.c_str());
   if(actions.indexOf("[") != -1 && actions.indexOf("]") != -1){
     DynamicJsonBuffer jsonBuffer;
     JsonArray& actionsArray = jsonBuffer.parseArray(actions);

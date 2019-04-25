@@ -95,6 +95,12 @@ void Webserver :: startServer(){
          cs.pairDevice(request);
       });
 
+      AsyncCallbackJsonWebHandler* actionHandler = new AsyncCallbackJsonWebHandler("/actions", [](AsyncWebServerRequest *request, JsonVariant &json) {
+        ControllerService cs;
+        cs.triggerAction(request,json);
+      });
+      server->addHandler(actionHandler);
+
       server->begin();
       serverStatus = STARTED;
       LOG("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://", port);
