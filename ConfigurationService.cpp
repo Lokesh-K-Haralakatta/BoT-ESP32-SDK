@@ -21,6 +21,7 @@ void ConfigurationService :: initialize(){
   store->retrieveAllKeys();
   //generateAndSaveQRCode();
   store->setDeviceState(DEVICE_NEW);
+  LOG("\nConfigurationService :: initialize: Configuration successfully initialized");
 }
 
 String* ConfigurationService :: getDeviceInfo(){

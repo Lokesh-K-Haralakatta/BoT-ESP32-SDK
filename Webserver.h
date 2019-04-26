@@ -9,6 +9,7 @@
 #include "BoTESP32SDK.h"
 #include "Storage.h"
 #include "ControllerService.h"
+#include "ConfigurationService.h"
 #define STARTED 1
 #define NOT_STARTED 0
 
@@ -30,6 +31,7 @@ class Webserver
     String *WiFi_Passwd;
     KeyStore *store;
     AsyncWebServer *server;
+    ConfigurationService *config;
 };
 
 #endif

@@ -14,6 +14,7 @@ Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd){
   WiFi_Passwd = NULL;
   server = NULL;
   store = NULL;
+  config = NULL;
   serverStatus = NOT_STARTED;
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
@@ -74,6 +75,8 @@ void Webserver :: startServer(){
 
      server = new AsyncWebServer(port);
 
+     config = new ConfigurationService();
+
      server->on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         //request->send(200, "text/plain", "Banking of Things ESP-32 SDK Webserver");
         AsyncJsonResponse * response = new AsyncJsonResponse();
@@ -106,6 +109,11 @@ void Webserver :: startServer(){
       LOG("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://", port);
       Serial.print(getBoardIP());
       LOG(":%d/\n",port);
+
+      config->initialize();
+      config->configureDevice();
+      
+      //Todo: BluetoothService.initialize();
    }
    else {
      LOG("\nWebserver :: startServer: ESP-32 board not connected to WiFi Network");
