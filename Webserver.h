@@ -10,6 +10,7 @@
 #include "Storage.h"
 #include "ControllerService.h"
 #include "ConfigurationService.h"
+#include "BluetoothService.h"
 #define STARTED 1
 #define NOT_STARTED 0
 
@@ -32,6 +33,7 @@ class Webserver
     KeyStore *store;
     AsyncWebServer *server;
     ConfigurationService *config;
+    BluetoothService *ble;
 };
 
 #endif

@@ -73,7 +73,7 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
              nullptr,
              0);
   if (rc != 0) {
-    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_parse_key: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
+    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_parse_key: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
     return "";
   }
   LOG("\nBoTService :: encodeJWT: Signing Key is parsed");
@@ -99,7 +99,7 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
   uint8_t digest[32];
   rc = mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), headerAndPayload, strlen((char*)headerAndPayload), digest);
   if (rc != 0) {
-    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_md: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
+    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_md: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
     return "";
   }
   LOG("\nBoTService :: encodeJWT: mbedtls_md is completed");
@@ -108,7 +108,7 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
   uint8_t oBuf[500];
   rc = mbedtls_pk_sign(&pk_context, MBEDTLS_MD_SHA256, digest, sizeof(digest), oBuf, &retSize, mbedtls_ctr_drbg_random, &ctr_drbg);
   if (rc != 0) {
-    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_sign: %d (-0x%x): %s\n", rc, -rc, mbedtlsError(rc));
+    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_sign: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
     return "";
   }
   LOG("\nBoTService :: encodeJWT: mbedtls_pk_sign is completed");
@@ -142,13 +142,15 @@ String BoTService :: get(const char* endPoint){
     LOG("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
 
     const char* errorMSG = httpClient->errorToString(httpCode).c_str();
+
+    String payload = httpClient->getString();
+    httpClient->end();
+
     delete fullURI;
 
     if(httpCode > 0) {
 
       LOG("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
-      String payload = httpClient->getString();
-      httpClient->end();
 
       if(httpCode == HTTP_CODE_OK) {
         int firstDoTIdx = payload.indexOf(".");
@@ -214,13 +216,15 @@ String BoTService :: post(const char* endPoint, const char* payload){
 
     int httpCode = httpClient->POST(body);
     const char* errorMSG = httpClient->errorToString(httpCode).c_str();
+
+    String payload = httpClient->getString();
+    httpClient->end();
+
     delete fullURI;
 
     if(httpCode > 0) {
 
-      LOG("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d\n", endPoint, httpCode);
-      String payload = httpClient->getString();
-      httpClient->end();
+      LOG("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
 
       if(httpCode == HTTP_CODE_OK) {
         int firstDoTIdx = payload.indexOf(".");
@@ -231,12 +235,12 @@ String BoTService :: post(const char* endPoint, const char* payload){
         }
       }
       else {
-        LOG("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s\n", endPoint, errorMSG);
+        LOG("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s", endPoint, errorMSG);
         return String(errorMSG);
       }
     }
     else {
-      LOG("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s\n", endPoint, errorMSG);
+      LOG("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s", endPoint, errorMSG);
       return String(errorMSG);
     }
   }

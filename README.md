@@ -23,4 +23,15 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download ZIP from repository and install through Arduino IDE
   - The required configuration file and keys are available in the path `Arduino/libraries/BoT-ESP32-SDK/data` directory
   - Update the required configuration in `configuration.json` file and replace the key-pair files by retaining the same file names
-  - Sample example sketches are also available in the path `Arduino/libraries/BoT-ESP32-SDK/examples` directory
+  - Sample example sketch - sdkSample.ino is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/SDKSample` directory
+
+- **Steps to execute sdkSample as it's purpose is to trigger the given action for every 1 minute**
+  - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/SDKSample/sdkSample.ino` into Arduino IDE Sketches directory
+  - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into sdkSample sketch data directory
+  - Update the configuration details and key-pair details in the files present in data directory
+  - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
+  - Compile and Upload sketch to ESP32 board using Arduino IDE
+  - Flash data directory contents using Arduino IDE -> Tools -> ESP32 Sketch Data Upload option
+  - Open Serial Monitor Window in Arduino IDE to observe the sketch flow
+  - Pair the new device through Companion Application using Bluetooth Communication, if device is not yet paired
+  - Once device is paired, observe the action getting triggered for every 1 minute
