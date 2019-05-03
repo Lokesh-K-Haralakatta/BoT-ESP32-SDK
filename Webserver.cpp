@@ -113,10 +113,10 @@ void Webserver :: startServer(){
       Serial.print(getBoardIP());
       LOG(":%d/\n",port);
 
+      ble->initializeBLE();
       config->initialize();
       config->configureDevice();
 
-      ble->initializeBLE();
    }
    else {
      LOG("\nWebserver :: startServer: ESP-32 board not connected to WiFi Network");

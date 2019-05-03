@@ -47,7 +47,9 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   }
   else {
     pairService->pairDevice();
-    if(store->getDeviceState() != DEVICE_NEW){
+    int deviceState = store->getDeviceState();
+    LOG("\nControllerService :: pairDevice: Device state after return from pairService->pairDevice() : %d",deviceState);
+    if( deviceState != DEVICE_NEW){
       doc["message"] = "Device pairing successful";
       doc.printTo(body);
       LOG("\nControllerService :: pairDevice: %s", body);

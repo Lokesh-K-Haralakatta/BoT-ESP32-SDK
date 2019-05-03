@@ -35,3 +35,199 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Open Serial Monitor Window in Arduino IDE to observe the sketch flow
   - Pair the new device through Companion Application using Bluetooth Communication, if device is not yet paired
   - Once device is paired, observe the action getting triggered for every 1 minute
+
+### Guidelines to develop sketch using ESP-32 SDK
+- **Configuration Format**
+  - The required configuration details for the sketch are expected to be provided through file `configuration.json`
+  - The `configuration.json` is expected to be present in `data` directory with in the sketch directory
+  - The `configuration.json` is expected to contain below given mandatory key-value pairs:
+    - WiFi SSID Name
+    - WiFi SSID Password
+    - Maker ID
+    - Device ID
+    - Queue ID
+  - Below given is sample snippet of `configuration.json` file:
+      ```
+        {
+            "wifi_ssid": "PJioWiFi",
+            "wifi_passwd": "qwertyuiop",
+            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
+            "device_id": "196deeca-5f29-46fa-91d2-b453040b3574",
+            "queue_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbbbc"
+          }
+
+      ```
+- **Device Key-Pair for secure data exchange**
+  - Generate RSA Key pair on any of the system by referring to [Generating new SSH Key] (https://help.github.com/en/enterprise/2.16/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
+  - Copy the contents of private key (id_rsa) to the file `private.key` into sketch data directory
+  - Copy the contents of public key (id_rsa.pub) to the file `public.key` into sketch data directory
+  - Copy the contents of BoT Service public key to the file `api.pem` into sketch data directory
+
+- **Loading configuration details from `configuration.json` in sketch**
+  - To perform the required actions, first step is to load configuration from `configuration.json` file
+  - To load configuration, we need an instance to `KeyStore` Class present in `Storage.h` of ESP-32 SDK
+  - Below given code snippet illustrates loading the configuration from `configuration.json` file in sketch code
+      ```
+        #include <Storage.h>
+        ...
+        KeyStore* store = KeyStore::getKeyStoreInstance(); // Get an instance of KeyStore Class
+        store->loadJSONConfiguration(); // Load given configuration from `configuration.json` file
+        store->initializeEEPROM(); // Initialize EEPROM to get/update device state in the workflow
+
+      ```
+
+- **Connecting ESP-32 board to WiFi Network and Starting AsyncWebServer on ESP-32 board**
+  - ESP-32 board need to be connected to WiFi Network provided through `configuration.json` file or Customized Network present in the sketch before carrying out any further tasks
+  - In either case, we need an instance to `Webserver` Class present in `Webserver.h` of ESP-32 SDK
+  - Below code snippet shows an instance to `Webserver` Class that can be connected to custom WiFi Network
+      ```
+        #include <Webserver.h>
+        #define WIFI_SSID "LJioWiFi"
+        #define WIFI_PASSWD "adgjmptw"
+        ...
+        Webserver *server = new Webserver(false,WIFI_SSID, WIFI_PASSWD);
+        ...
+
+      ```
+  - Below code snippet shows an instance to `Webserver` Class that can be connected to configured WiFi Network
+      ```
+        #include <Webserver.h>
+        ...
+        Webserver *server = new Webserver(true);
+        ...
+
+      ```
+  - As we have an instance to `Webserver` Class, next is to invoke member function `connectWiFi()` to make ESP32 board get connected to set WiFi Network within `Webserver` instance.
+  - Next, we have member function `isWiFiConnected()` to invoke to make sure ESP32 board connected to WiFi Network
+  - As we have confirmation on ESP-32 connected to WiFi Network, next step is to invoke member function `startServer()` to start AsyncWebserver on ESP-32 board
+  - Above sequence of steps are depicted in below given code snippet
+      ```
+        .......
+        server->connectWiFi();
+        if(server->isWiFiConnected()){
+
+          store = KeyStore::getKeyStoreInstance();
+          store->initializeEEPROM();
+
+          //Start Async Webserver on ESP32 board on predefined port 3001
+          server->startServer();
+          .......
+        }
+
+      ```
+  - The call to `server->startServer` internally makes call to BLE initialization enabling device pairing through Bluetooth with the companion application trying to communicate from iOS / Anroid device
+  - Device gets paired successfully, then call to activate the device is made and the device is ready to trigger the actions if device actiovation is successful
+  - Device fails in getting paired, then we can re-attempt to pair the device using the end point `/pairing` defined by the webserver
+
+- **Retrieve defined actions for the makerID from BoT Service using AsyncWebserver end point `/actions`**
+  - After successful start of AsyncWebserver, we can retrieve the actions defined for the provided `makerID`
+  - Below given code snippet shows simple HTTPClient code to retrieve actions from BoT Service
+      ```
+        .......
+        if(server->isServerAvailable()){
+          httpClient->begin((server->getBoardIP()).toString(),3001,"/actions");
+          int httpCode = httpClient->GET();
+          String payload = httpClient->getString();
+          httpClient->end();
+
+          if(httpCode == 200){
+            LOG("\nActions Retrieved from BoT Service: %s", payload.c_str());
+          }
+          else {
+            LOG("\nActions Retrieval failed with httpCode - %d", httpCode);
+          }
+        }
+        else {
+          LOG("\nWebserver not available on ESP32 board!");
+        }
+        .......
+
+      ```
+
+- **Pairing the device followed by activating it to trigger actions using AsyncWebserver end point `/pairing`**
+  - We can activate the paired device by hitting the defined end point `/pairing` to trigger actions
+  - Below given code snippet shows simple HTTPClient code to hit `/pairing` end point
+      ```
+        .......
+        if(server->isServerAvailable()){
+          httpClient->begin((server->getBoardIP()).toString(),3001,"/pairing");
+          int httpCode = httpClient->GET();
+          String payload = httpClient->getString();
+          httpClient->end();
+
+          if(httpCode == 200){
+            if(store->getDeviceState() == DEVICE_ACTIVE){
+              LOG("\nDevice Activation Successful");
+            }
+            else
+              LOG("\nDevice Not Activated, try again");
+          }
+          else {
+            LOG("\nCalling /pairing failed with httpCode - %d", httpCode);
+          }
+        }
+        else {
+          LOG("\nWebserver not available on ESP32 board!");
+        }
+        .......
+
+      ```
+
+- **Triggering the defined action using AsyncWebserver end point `/pairing`**
+  - We can trigger the defined actions periodically using the `/pairing` end point
+  - Below given code snippet shows simple HTTPClient making POST call on `/actions`
+      ```
+        .....
+        //Check for Webserver availability to trigger the action
+        if(server->isServerAvailable()){
+          //Check for the device state, should be active
+          if(store->getDeviceState() == DEVICE_ACTIVE){
+            LOG("\nsdkSample: Device State is ACTIVE and triggering the action - %s", actionID.c_str());
+
+            //Instantiate HTTP Client to send HTTP Request to trigger the action
+            httpClient = new HTTPClient();
+            httpClient->begin((server->getBoardIP()).toString(),port,"/actions");
+
+            //Prepare body with actionID
+            String body = (String)"{\"actionID\": \"" + actionID +   "\"}";
+
+            //Set required headers for HTTP Call
+            httpClient->addHeader("Content-Type", "application/json");
+            httpClient->addHeader("Content-Length",String(body.length()));
+
+            //Trigger action
+            int httpCode = httpClient->POST(body);
+
+            //Get response body contents
+            String payload = httpClient->getString();
+
+            //End http
+            httpClient->end();
+
+            //Deallocate memory allocated for httpClient
+            delete httpClient;
+
+            //Check for successful triggerring of given action
+            if(httpCode == 200){
+              triggerCount++;
+              LOG("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
+            }
+            else {
+              LOG("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+            }
+          }
+          else {
+            LOG("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
+
+            ......
+          }
+          .......
+
+      ```
+  - Complete sketch is available at the path `examples/SDKSample/sdkSample.ino` as part of ESP-32 SDK
+
+- **Must do steps before compiling and uploading sketch to ESP-32 board**
+  - Make sure the data directory contents are proper for the sketch
+  - Flash the data directory contents onto board from `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` Option
+  - Change the partition scheme from Default to No OTA (Large APP) using `Arduino IDE -> Tools` menu
+  - Make sure all the required dependent libraries for ESP-32 SDK are installed through Arduino IDE

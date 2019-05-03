@@ -7,9 +7,14 @@
 #define WIFI_SSID "LJioWiFi"
 #define WIFI_PASSWD "adgjmptw"
 
-//Webserver server(false,WIFI_SSID, WIFI_PASSWD);
-Webserver server(true);
+Webserver server(false,WIFI_SSID, WIFI_PASSWD);
+//Webserver server(true);
 KeyStore* store;
+HTTPClient* httpClient = NULL;
+
+//Webserver Port
+const int port = 3001;
+
 void setup()
 {
   server.connectWiFi();
@@ -17,27 +22,12 @@ void setup()
 
     store = KeyStore::getKeyStoreInstance();
     store->initializeEEPROM();
-    //For device state as NEW, /pairing will wait for maxPairAttempts and return the response
-    //store->setDeviceState(DEVICE_NEW);
 
-    //For triggering the action, hit /actions with post method
-
-    //For device with NEW, PAIRED state, we should see 403 Device not activated message as response
-    //store->setDeviceState(DEVICE_NEW);
-
-    //For device with MULTIPAIR state, json missing alternateID should get 400 Missing parameter
-    //store->setDeviceState(DEVICE_MULTIPAIR);
-
-    //For ACTIVE state device, missing actionID in json body should return 400 Missing parameter
-    store->setDeviceState(DEVICE_ACTIVE);
-
-    //For Active state device, json body containing invalid actionID, we should see 404
-
-    //For invalid combination of makerID, device ID and actionID, we should see 503 code
-
-    //If everything OK, we should see 200 Ok with Action triggerred message
-
+    //Start Async Webserver on ESP32 board
     server.startServer();
+
+    //Instantiate HTTPClient Instance
+    httpClient = new HTTPClient();
   }
   else {
     LOG("\nESP-32 board not connected to WiFi Network");
@@ -47,8 +37,41 @@ void setup()
 
 void loop()
 {
-  /*if(server.isServerAvailable()){
-    server.blinkLED();
-  }*/
+   if(server.isServerAvailable()){
+      //Retrieve defined actions for given makerID
+      httpClient->begin((server.getBoardIP()).toString(),3001,"/actions");
+      int httpCode = httpClient->GET();
+      String payload = httpClient->getString();
+      httpClient->end();
 
+      if(httpCode == 200){
+        LOG("\nActions Retrieved from BoT Service: %s", payload.c_str());
+      }
+      else {
+        LOG("\nActions Retrieval failed with httpCode - %d", httpCode);
+      }
+
+      //For device state as NEW, /pairing will wait for maxPairAttempts and return the response as Not Paired
+      //Make sure to have new unpaired deviceID in configuration file flashed to ESP32 board
+      store->setDeviceState(DEVICE_NEW);
+      httpClient->begin((server.getBoardIP()).toString(),port,"/pairing");
+      httpCode = httpClient->GET();
+      payload = httpClient->getString();
+      httpClient->end();
+
+      if(httpCode == 200){
+         if(store->getDeviceState() == DEVICE_ACTIVE){
+           LOG("\nDevice Activation Successful");
+         }
+         else
+           LOG("\nDevice Not Activated, try again");
+     }
+     else {
+        LOG("\nCalling /pairing failed with httpCode - %d", httpCode);
+     }
+    }
+    else {
+        LOG("\nstartAsyncServer: Webserver not available on ESP32 board!");
+    }
+  delay(5*60*1000);
 }
