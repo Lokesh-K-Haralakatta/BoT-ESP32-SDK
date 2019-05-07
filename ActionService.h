@@ -18,12 +18,6 @@
 #define HALF_YEAR_IN_SECONDS (WEEK_IN_SECONDS * 26)
 #define YEAR_IN_SECONDS (WEEK_IN_SECONDS * 52)
 
-struct Action{
-  char* actionID;
-  char* actionFrequency;
-  unsigned long triggeredTime;
-};
-
 class ActionService {
   public:
     ActionService();

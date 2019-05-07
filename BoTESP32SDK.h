@@ -32,4 +32,10 @@
 #define DEVICE_MULTIPAIR 3
 #define LOG Serial.printf
 
+struct Action{
+  char* actionID;
+  char* actionFrequency;
+  unsigned long triggeredTime;
+};
+
 #endif

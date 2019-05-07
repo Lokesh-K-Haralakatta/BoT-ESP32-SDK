@@ -154,7 +154,7 @@ bool ActionService :: isValidActionFrequency(const struct Action* pAction){
   else if(strcmp(pAction->actionFrequency,"half-yearly") == 0){
     return secondsSinceLastTriggered > HALF_YEAR_IN_SECONDS;
   }
-  else if(strcmp(pAction->actionFrequency,"half-yearly") == 0){
+  else if(strcmp(pAction->actionFrequency,"yearly") == 0){
     return secondsSinceLastTriggered > YEAR_IN_SECONDS;
   }
   else {

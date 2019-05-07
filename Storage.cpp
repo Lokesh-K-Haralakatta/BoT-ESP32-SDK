@@ -52,6 +52,7 @@ bool KeyStore :: isJSONConfigLoaded(){
 }
 
 void KeyStore :: loadJSONConfiguration(){
+  LOG("\nKeyStore :: loadJSONConfiguration: Loading given configuration from file - %s",JSON_CONFIG_FILE);
   if(!isJSONConfigLoaded()){
     if(!SPIFFS.begin(true)){
       jsonCfgLoadStatus = NOT_LOADED;
@@ -85,45 +86,70 @@ void KeyStore :: loadJSONConfiguration(){
       return;
     }
 
-    const char* ssid = json["wifi_ssid"];
-    wifiSSID = new String(ssid);
-    const char* passwd = json["wifi_passwd"];
-    wifiPASSWD = new String(passwd);
-    const char* mId = json["maker_id"];
-    makerID = new String(mId);
-    const char* dId = json["device_id"];
-    deviceID = new String(dId);
-    const char* adId = json["alt_device_id"];
-    altDeviceID = new String(adId);
-    const char* qId = json["queue_id"];
-    queueID = new String(qId);
+    const char* ssid = json["wifi_ssid"] | "wifi_ssid";
+    if(ssid != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed WiFi SSID from configuration: %s",ssid);
+      wifiSSID = new String(ssid);
+    }
+
+    const char* passwd = json["wifi_passwd"] | "wifi_passwd";
+    if(passwd != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred WiFi Password from configuration: %s",passwd);
+      wifiPASSWD = new String(passwd);
+    }
+
+    const char* mId = json["maker_id"] | "maker_id";
+    if(mId != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred MakerID from configuration: %s",mId);
+      makerID = new String(mId);
+    }
+
+    const char* dId = json["device_id"] | "device_id";
+    if(dId != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred deviceID from configuration: %s",dId);
+      deviceID = new String(dId);
+    }
+
+    const char* adId = json["alt_device_id"] | "alt_device_id";
+    if(adId != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred alternate deviceID from configuration: %s",adId);
+      altDeviceID = new String(adId);
+    }
+
+    const char* qId = json["queue_id"] | "queue_id";
+    if(qId != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred queueID from configuration: %s",qId);
+      queueID = new String(qId);
+    }
+
+    delete buffer;
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
   }
 }
 
 const char* KeyStore :: getWiFiSSID(){
-  return wifiSSID->c_str();
+  return (wifiSSID != NULL) ? wifiSSID->c_str():NULL;
 }
 
 const char* KeyStore :: getWiFiPasswd(){
-  return wifiPASSWD->c_str();
+  return (wifiPASSWD != NULL) ? wifiPASSWD->c_str():NULL;
 }
 
 const char* KeyStore :: getMakerID(){
-  return makerID->c_str();
+  return (makerID != NULL) ? makerID->c_str() : NULL;
 }
 
 const char* KeyStore :: getDeviceID(){
-  return deviceID->c_str();
+  return (deviceID != NULL) ? deviceID->c_str() : NULL;
 }
 
 const char* KeyStore :: getAlternateDeviceID(){
-  return altDeviceID->c_str();
+  return (altDeviceID != NULL) ? altDeviceID->c_str() : NULL;
 }
 
 const char* KeyStore :: getQueueID(){
-  return queueID->c_str();
+  return (queueID != NULL) ? queueID->c_str() : NULL;
 }
 
 bool KeyStore :: isPrivateKeyLoaded(){
@@ -208,4 +234,92 @@ const char* KeyStore :: getDevicePublicKey(){
 
 const char* KeyStore :: getAPIPublicKey(){
   return apiKey->c_str();
+}
+
+std::vector <struct Action>  KeyStore :: retrieveActions(){
+  //Clear previous actions details
+  if(!actionsList.empty()){
+    actionsList.clear();
+    LOG("\nKeyStore :: retrieveActions: Cleared contents of previous actions present in ActionsList");
+  }
+
+  if(!SPIFFS.begin(true)){
+    LOG("\nKeyStore :: retrieveActions: An Error has occurred while mounting SPIFFS");
+    return actionsList;
+  }
+
+  if(SPIFFS.exists(ACTIONS_FILE)){
+    File file = SPIFFS.open(ACTIONS_FILE, FILE_READ);
+    if(!file){
+      LOG("\nKeyStore :: retrieveActions: There was an error opening the file - %s for reading action details", ACTIONS_FILE);
+      return actionsList;
+    }
+
+    DynamicJsonBuffer jb;
+    JsonArray& actionsArray = jb.parseArray(file);
+    file.close();
+
+    if(actionsArray.success()){
+      LOG("\nKeyStore :: retrieveActions: JSON Array parsed from the file - %s", ACTIONS_FILE);
+      int actionsCount = actionsArray.size();
+      for(byte i=0 ; i < actionsCount; i++){
+        const char* actionID = actionsArray[i]["actionID"];
+        const char* frequency = actionsArray[i]["frequency"];
+        const unsigned long ltt = (actionsArray[i]["time"]).as<unsigned long>();
+        LOG("\nKeyStore :: retrieveActions: Action - %d Details: %s - %s - %lu",i+1,actionID,frequency,ltt);
+
+        struct Action actionItem;
+        actionItem.actionID = new char[strlen(actionID)+1];
+        actionItem.actionFrequency = new char[strlen(frequency)+1];
+        strcpy(actionItem.actionID,actionID);
+        strcpy(actionItem.actionFrequency,frequency);
+        actionItem.triggeredTime = ltt;
+
+        actionsList.push_back(actionItem);
+      }
+      return actionsList;
+    }
+    else {
+      LOG("\nKeyStore :: retrieveActions: Error while parsing retrieved JSON Array from the file - %s", ACTIONS_FILE);
+      return actionsList;
+    }
+  }
+  else {
+    LOG("\nFile - %s does not exist to read action details",ACTIONS_FILE);
+    return actionsList;
+  }
+}
+
+bool KeyStore :: saveActions(std::vector <struct Action> aList){
+  if(!SPIFFS.begin(true)){
+    LOG("\nKeyStore :: saveActions: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  File file = SPIFFS.open(ACTIONS_FILE, FILE_WRITE);
+  if(!file){
+    LOG("\nKeyStore :: saveActions: There was an error opening the file - %s for saving actions", ACTIONS_FILE);
+    return false;
+  }
+
+  DynamicJsonBuffer jb;
+  JsonArray& actionsArray = jb.createArray();
+
+  LOG("\nKeyStore :: saveActions: Actions given to save to the file - %s : %d", ACTIONS_FILE,aList.size());
+  for (std::vector<struct Action>::iterator i = aList.begin() ; i != aList.end(); ++i){
+    JsonObject& obj = jb.createObject();
+    obj["actionID"] = i->actionID;
+    obj["frequency"] = i->actionFrequency;
+    obj["time"] = i->triggeredTime;
+    actionsArray.add(obj);
+    LOG("\nKeyStore :: saveActions: %s : %s : %lu -- Added to actions array", i->actionID, i->actionFrequency, i->triggeredTime);
+  }
+
+  LOG("\nKeyStore :: saveActions: Number of actions in actionsArray to save to file : %d", actionsArray.size());
+  int nBytes = actionsArray.measureLength();
+  actionsArray.printTo(file);
+  LOG("\nKeyStore :: saveActions: Number of bytes written to %s: %d",ACTIONS_FILE,nBytes);
+
+  file.close();
+  return true;
 }

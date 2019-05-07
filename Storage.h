@@ -10,6 +10,7 @@
 #define PRIVATE_KEY_FILE "/private.key"
 #define PUBLIC_KEY_FILE "/public.key"
 #define API_KEY_FILE "/api.pem"
+#define ACTIONS_FILE "/actions.json"
 #define NOT_LOADED 0
 #define LOADED 1
 #define DEVICE_STATE_ADDR 0
@@ -35,6 +36,8 @@ class KeyStore {
     void setDeviceState(int);
     void resetDeviceState();
     const int getDeviceState();
+    std::vector <struct Action> retrieveActions();
+    bool saveActions(std::vector <struct Action> aList);
   private:
     static KeyStore *store;
     String *wifiSSID;
@@ -52,6 +55,7 @@ class KeyStore {
     byte apiKeyLoadStatus;
     void loadFileContents(const char* filePath, byte keyType);
     KeyStore();
+    std::vector <struct Action> actionsList;
 };
 
 #endif
