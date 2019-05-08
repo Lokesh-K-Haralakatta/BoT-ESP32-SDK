@@ -28,8 +28,11 @@ class ActionService {
     KeyStore *store;
     WiFiUDP ntpUDP;
     NTPClient *timeClient;
+    unsigned long presentActionTriggerTimeInSeconds;
     std::vector <struct Action> actionsList;
     bool isValidAction(const char* actionID);
     bool isValidActionFrequency(const struct Action*);
+    void updateActionsLastTriggeredTime();
+    bool updateTriggeredTimeForAction(const char* actionID);
 };
 #endif
