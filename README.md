@@ -30,10 +30,13 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into sdkSample sketch data directory
   - Update the configuration details and key-pair details in the files present in data directory
   - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
+  - Sketch has code to trigger actions with various frequencies like minutely, hourly, daily, monthly,half-yearly, yearly and always
+  - Pair the new device through Companion Application using Bluetooth Communication, if device is not yet paired
+  - Define the actions in maker portal, add service in companion app, update the actionIDs properly before executing the sketch
+  - Remove the comments for required action to be triggered based on the action frequency
   - Compile and Upload sketch to ESP32 board using Arduino IDE
   - Flash data directory contents using Arduino IDE -> Tools -> ESP32 Sketch Data Upload option
   - Open Serial Monitor Window in Arduino IDE to observe the sketch flow
-  - Pair the new device through Companion Application using Bluetooth Communication, if device is not yet paired
   - Once device is paired, observe the action getting triggered for every 1 minute
 
 ### Guidelines to develop sketch using ESP-32 SDK

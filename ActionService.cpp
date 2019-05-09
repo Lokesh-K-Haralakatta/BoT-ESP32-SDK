@@ -62,7 +62,7 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
   }
   else {
     LOG("\nActionService :: triggerAction: %s is invalid actionID", actionID);
-    response = "{\"code\": \"404\", \"message\": \"Action not found\"}";
+    response = "{\"code\": \"404\", \"message\": \"Invalid Action\"}";
   }
   return response;
 }
@@ -210,28 +210,40 @@ bool ActionService :: isValidActionFrequency(const struct Action* pAction){
   unsigned int secondsSinceLastTriggered = presentActionTriggerTimeInSeconds - lastTriggeredAt;
   LOG("\nActionService :: isValidActionFrequency: secondsSinceLastTriggered: %d", secondsSinceLastTriggered);
 
-  if(strcmp(pAction->actionFrequency,"minuetly") == 0){
+  if(strcmp(pAction->actionFrequency,"minutely") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Minutely",pAction->actionID);
     return secondsSinceLastTriggered > MINUTE_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"hourly") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Hourly",pAction->actionID);
     return secondsSinceLastTriggered > HOUR_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"daily") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Daily",pAction->actionID);
     return secondsSinceLastTriggered > DAY_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"weekly") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Weekly",pAction->actionID);
     return secondsSinceLastTriggered > WEEK_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"monthly") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Monthly",pAction->actionID);
     return secondsSinceLastTriggered > MONTH_IN_SECONDS;
   }
-  else if(strcmp(pAction->actionFrequency,"half-yearly") == 0){
+  else if(strcmp(pAction->actionFrequency,"half_yearly") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Half-Yearly",pAction->actionID);
     return secondsSinceLastTriggered > HALF_YEAR_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"yearly") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Yearly",pAction->actionID);
     return secondsSinceLastTriggered > YEAR_IN_SECONDS;
   }
-  else {
+  else if(strcmp(pAction->actionFrequency,"always") == 0){
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Always",pAction->actionID);
     return true;
+  }
+  else {
+    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for None",pAction->actionID);
+    return false;
   }
 }

@@ -25,8 +25,10 @@
   1. Gets makerID from the provided configuration
   2. Initializes the configuration, internally it waits for pairing and device gets activated
   3. Starts the Async Webserver on port 3001 on ESP32 board
-  4. Triggers the action for every 1 minute if device state is active and connected to WiFi
-  5. Webserver provides the endpoints /actions, /pairing for direct interaction
+  4. Sketch has code to trigger actions with various frequencies like minutely, hourly, daily, monthly,half-yearly, yearly and always
+  5. Define the actions in maker portal, add service in companion app, update the actionIDs properly before executing the sketch
+  6. Remove the comments for required action to be triggered based on the action frequency
+  7. Webserver provides the endpoints /actions, /pairing for direct interaction
 */
 
 #include<Storage.h>
@@ -41,8 +43,29 @@ KeyStore *store = NULL;
 Webserver *server = NULL;
 HTTPClient* httpClient = NULL;
 
-//Define valid actionID to be triggered
-String actionID = String("E6509B49-5048-4151-B965-BB7B2DBC7905");
+//Action ID with frequency as "always"
+String actionIDAlways = String("E6509B49-5048-4151-B965-BB7B2DBC7905");
+
+//Action ID with frequency as "minutely"
+String actionIDMinutely = String("A42ABD19-3226-47AB-8045-8129DBDF117E");
+
+//Action ID with frequency as "hourly"
+String actionIDHourly = String("749081B8-664D-4A15-908E-1C3F6590930D");
+
+//Action ID with frequency as "daily"
+String actionIDDaily = String("81F6011A-9AF0-45AE-91CD-9A0CDA81FA1F");
+
+//Action ID with frequency as "weekly"
+String actionIDWeekly = String("0BF5E8D2-9062-467E-BB19-88CB76D06F8E");
+
+//Action ID with frequency as "monthly"
+String actionIDMonthly = String("C257DB70-AE57-4409-B94E-678CB1567FA6");
+
+//Action ID with frequency as "half-yearly"
+String actionIDHYearly = String("D93F99E1-011B-4609-B04E-AEDBA98A7C5F");
+
+//Action ID with frequency as "yearly"
+String actionIDYearly = String("0097430C-FA78-4087-9B78-3AC7FEEF2245");
 
 //Webserver Port
 const int port = 3001;
@@ -73,11 +96,11 @@ void setup()
     bool loadConfig = true;
 
     //Instantiate Webserver by using WiFi credentials from configuration
-    server = new Webserver(loadConfig);
+    //server = new Webserver(loadConfig);
 
     //Instantiate Webserver by using the custom WiFi credentials
-    //loadConfig = false;
-    //server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD);
+    loadConfig = false;
+    server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD);
 
     //Enable board to connect to WiFi Network
     server->connectWiFi();
@@ -107,39 +130,72 @@ void loop()
   if(server->isServerAvailable()){
     //Check for the device state, should be active
     if(store->getDeviceState() == DEVICE_ACTIVE){
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the action - %s", actionID.c_str());
 
-      //Instantiate HTTP Client to send HTTP Request to trigger the action
-      httpClient = new HTTPClient();
-      httpClient->begin((server->getBoardIP()).toString(),port,"/actions");
+      //Trying to trigger an action with frequency as "minutely"
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the minutely action - %s", actionIDMinutely.c_str());
+      triggerAnAction(actionIDMinutely.c_str());
 
-      //Prepare body with actionID
-      String body = (String)"{\"actionID\": \"" + actionID +   "\"}";
+      /*
+      //Trying to trigger an action with frequency as "hourly"
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the hourly action - %s", actionIDHourly.c_str());
+      triggerAnAction(actionIDHourly.c_str());
+      */
 
-      //Set required headers for HTTP Call
-      httpClient->addHeader("Content-Type", "application/json");
-      httpClient->addHeader("Content-Length",String(body.length()));
+      /*
+      //Trying to trigger an action with frequency as "daily"
 
-      //Trigger action
-      int httpCode = httpClient->POST(body);
+      //Simulate the duration between last triggered time is more than a day from now by saving last triggered time as older than a day in to ACTIONS_FILE
+      //updateActionLtt(actionIDDaily.c_str(),"daily",1557220108);
 
-      //Get response body contents
-      String payload = httpClient->getString();
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the daily action - %s", actionIDDaily.c_str());
+      triggerAnAction(actionIDDaily.c_str());
+      */
 
-      //End http
-      httpClient->end();
+      /*
+      //Trying to trigger an action with frequency as "weekly"
 
-      //Deallocate memory allocated for httpClient
-      delete httpClient;
+      //Simulate the duration between last triggered time is more than a week from now by saving last triggered time as older than a week in to ACTIONS_FILE
+      //updateActionLtt(actionIDWeekly.c_str(),"weekly",1556701708);
 
-      //Check for successful triggerring of given action
-      if(httpCode == 200){
-        triggerCount++;
-        LOG("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
-      }
-      else {
-        LOG("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
-      }
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the weekly action - %s", actionIDWeekly.c_str());
+      triggerAnAction(actionIDWeekly.c_str());
+      */
+
+      /*
+      //Trying to trigger an action with frequency as "monthly"
+
+      //Simulate the duration between last triggered time is more than a month from now by saving last triggered time as older than a month in to ACTIONS_FILE
+      //updateActionLtt(actionIDMonthly.c_str(),"monthly",1554109708);
+
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the monthly action - %s", actionIDMonthly.c_str());
+      triggerAnAction(actionIDMonthly.c_str());
+      */
+
+      /*
+      //Trying to trigger an action with frequency as "half-yearly"
+
+      //Simulate the duration between last triggered time is more than 6 months from now by saving last triggered time as older than 6 months in to ACTIONS_FILE
+      //updateActionLtt(actionIDHYearly.c_str(),"half_yearly",1533114508);
+
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the half-yearly action - %s", actionIDHYearly.c_str());
+      triggerAnAction(actionIDHYearly.c_str());
+      */
+
+      /*
+      //Trying to trigger an action with frequency as "yearly"
+
+      //Simulate the duration between last triggered time is more than a year from now by saving last triggered time as older than a year in to ACTIONS_FILE
+      //updateActionLtt(actionIDYearly.c_str(),"yearly",1522573708);
+
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the yearly action - %s", actionIDYearly.c_str());
+      triggerAnAction(actionIDYearly.c_str());
+      */
+
+      /*
+      //Trying to trigger an action with frequency as "always"
+      LOG("\nsdkSample: Device State is ACTIVE and triggering the action with always frequency - %s", actionIDAlways.c_str());
+      triggerAnAction(actionIDAlways.c_str());
+      */
     }
     else {
       LOG("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
@@ -168,7 +224,7 @@ void loop()
       }
     }
 
-    //Introduce delay of 1 minute
+    //Introduce delay of 1 min
     delay(1*60*1000);
 
   }
@@ -186,4 +242,59 @@ void loop()
     ////Introduce delay of 2 secs
     delay(2000);
   }
+}
+
+void triggerAnAction(const char* actionID){
+  //Instantiate HTTP Client to send HTTP Request to trigger the action
+  httpClient = new HTTPClient();
+  httpClient->begin((server->getBoardIP()).toString(),port,"/actions");
+
+  //Prepare body with actionID
+  String body = (String)"{\"actionID\": \"" + actionID +   "\"}";
+
+  //Set required headers for HTTP Call
+  httpClient->addHeader("Content-Type", "application/json");
+  httpClient->addHeader("Content-Length",String(body.length()));
+
+  //Call HTTP Post to trigger action
+  int httpCode = httpClient->POST(body);
+
+  //Get response body contents
+  String payload = httpClient->getString();
+
+  //Check for successful triggerring of given action
+  if(httpCode == 200){
+    triggerCount++;
+    LOG("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
+  }
+  else {
+    LOG("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+  }
+
+  //End http
+  httpClient->end();
+
+  //Deallocate memory allocated for httpClient
+  delete httpClient;
+
+}
+
+void updateActionLtt(const char* actionID, const char* frequency, const unsigned long ltt){
+  //Initialize action details to save to file
+  const char* id1 = actionID;
+  const char* freq1 = frequency;
+  const unsigned long ltt1 = ltt;
+
+  std::vector <struct Action> actionsList;
+
+  struct Action item1;
+  item1.actionID = new char[strlen(id1)+1];
+  item1.actionFrequency = new char[strlen(freq1)+1];
+
+  strcpy(item1.actionID,id1);
+  strcpy(item1.actionFrequency,freq1);
+  item1.triggeredTime = ltt1;
+  actionsList.push_back(item1);
+
+  store->saveActions(actionsList);
 }
