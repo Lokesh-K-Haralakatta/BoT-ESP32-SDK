@@ -7,7 +7,6 @@
 #include "ActionService.h"
 
 ActionService :: ActionService(){
-  bot = new BoTService();
   store = KeyStore :: getKeyStoreInstance();
   timeClient = new NTPClient(ntpUDP);
 }
@@ -44,7 +43,11 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
     char payload[200];
     doc.printTo(payload);
     LOG("\nActionService :: triggerAction: Minified JSON payload to triggerAction: %s", payload);
+
+    BoTService *bot = new BoTService();
     response = bot->post(ACTIONS_END_POINT,payload);
+    delete bot;
+
     //Update the trigger time for the actionID
     if(updateTriggeredTimeForAction(actionID)){
       LOG("\nActionService :: triggerAction: Action trigger time - %lu updated to %s",presentActionTriggerTimeInSeconds,actionID);
@@ -90,7 +93,10 @@ bool ActionService :: updateTriggeredTimeForAction(const char* actionID){
 }
 
 String ActionService :: getActions(){
+  BoTService *bot = new BoTService();
   String actions = bot->get(ACTIONS_END_POINT);
+  delete bot;
+
   LOG("\nActionService :: getActions: %s", actions.c_str());
 
   if(!actionsList.empty()){

@@ -20,7 +20,6 @@ class ActivationService {
     void activateDevice();
   private:
     KeyStore *store;
-    BoTService *bot;
     String sendActivationRequest();
     bool pollActivationStatus();
 };

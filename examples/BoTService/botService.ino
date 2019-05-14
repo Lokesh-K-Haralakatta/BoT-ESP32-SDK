@@ -13,10 +13,6 @@ int ledPin = 2;
 BoTService* bot;
 KeyStore* store;
 
-const char* host = "api-dev.bankingofthings.io";
-int port = 80;
-const char* uri = "/bot_iot";
-
 void setup() {
 
   store = KeyStore :: getKeyStoreInstance();
@@ -25,8 +21,13 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 
-  const char* WIFI_NAME = store->getWiFiSSID();
-  const char* WIFI_PASSWORD = store->getWiFiPasswd();
+  //Get WiFi Credentials from given configuration
+  //const char* WIFI_NAME = store->getWiFiSSID();
+  //const char* WIFI_PASSWORD = store->getWiFiPasswd();
+
+  //Provide custom WiFi Credentials
+  const char* WIFI_NAME = "LJioWiFi";
+  const char* WIFI_PASSWORD = "adgjmptw";
 
   LOG("\nConnecting to %s", WIFI_NAME);
   //WiFi.disconnect();
@@ -40,12 +41,23 @@ void setup() {
   LOG("\nIP address: ");
   Serial.println(WiFi.localIP());
 
-  //bot = new BoTService(host,uri,port);
+  //Create BoT Service Instance
   bot = new BoTService();
 
-  //Sample GET calls
+  //GET Pairing Status
   LOG("\nPair Status: %s", bot->get("/pair").c_str());
+
+  //Deallocate
+  delete bot;
+
+  //Create BoT Service Instance
+  bot = new BoTService();
+
+  //GET Actions defined in Maker Portal
   LOG("\nActions: %s", bot->get("/actions").c_str());
+
+  //Deallocate
+  delete bot;
 
   //Prepare JSON Data to trigger an Action through POST call
   StaticJsonBuffer<200> jsonBuffer;
@@ -59,7 +71,13 @@ void setup() {
   doc.printTo(payload);
   LOG("\nMinified JSON Data to trigger Action: %s", payload);
 
-  LOG("\nResponse from trigering action: %s", bot->post("/actions",payload).c_str());
+  //Create BoT Service Instance
+  bot = new BoTService();
+
+  LOG("\nResponse from triggering action: %s", bot->post("/actions",payload).c_str());
+
+  //Deallocate
+  delete bot;
 }
 
 void loop() {

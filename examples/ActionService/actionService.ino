@@ -20,8 +20,13 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 
-  const char* WIFI_NAME = store->getWiFiSSID();
-  const char* WIFI_PASSWORD = store->getWiFiPasswd();
+  //Get WiFi Credentials from given configuration
+  //const char* WIFI_NAME = store->getWiFiSSID();
+  //const char* WIFI_PASSWORD = store->getWiFiPasswd();
+
+  //Provide custom WiFi Credentials
+  const char* WIFI_NAME = "LJioWiFi";
+  const char* WIFI_PASSWORD = "adgjmptw";
 
   LOG("\nConnecting to %s", WIFI_NAME);
   //WiFi.disconnect();
@@ -35,7 +40,6 @@ void setup() {
   LOG("\nIP address: ");
   Serial.println(WiFi.localIP());
 
-  //bot = new BoTService(host,uri,port);
   actService = new ActionService();
 
   //GET Actions for given device from BoT Service

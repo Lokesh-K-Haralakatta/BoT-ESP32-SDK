@@ -20,15 +20,23 @@ void setup(){
     LOG("\n Device ID: %s", store->getDeviceID());
     LOG("\n Altternate Device ID: %s", store->getAlternateDeviceID());
   }
+
   store->retrieveAllKeys();
+
   if(store->isPrivateKeyLoaded()){
     LOG("\n Private Key Contents: \n%s\n", store->getDevicePrivateKey());
   }
+
   if(store->isPublicKeyLoaded()){
     LOG("\n Public Key Contents: \n%s\n", store->getDevicePublicKey());
   }
+
   if(store->isAPIKeyLoaded()){
     LOG("\n API Key Contents: \n%s\n", store->getAPIPublicKey());
+  }
+
+  if(store->isCACertLoaded()){
+    LOG("\n CA Certificate Contents: \n%s\n", store->getCACert());
   }
 
   //Initialize actions to save to file

@@ -9,7 +9,6 @@
 
 ActivationService :: ActivationService(){
   store = KeyStore :: getKeyStoreInstance();
-  bot = new BoTService();
 }
 
 bool ActivationService :: pollActivationStatus(){
@@ -41,7 +40,12 @@ String ActivationService :: sendActivationRequest(){
   doc.printTo(payload);
   LOG("\nActivationService :: sendActivationRequest: Minified JSON payload to send: %s", payload);
 
-  return bot->post(ACTIVATION_END_POINT,payload);
+  BoTService *bot = new BoTService();
+  String response = bot->post(ACTIVATION_END_POINT,payload);
+  LOG("\nActivationService :: sendActivationRequest: Response from bot->post: %s",response.c_str());
+  delete bot;
+
+  return response;
 }
 
 void ActivationService :: activateDevice(){

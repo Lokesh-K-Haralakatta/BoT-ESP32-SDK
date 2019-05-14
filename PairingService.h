@@ -20,8 +20,6 @@ class PairingService {
     void pairDevice();
   private:
     KeyStore *store;
-    BoTService *bot;
-    ActivationService *actService;
     bool isPairable();
     bool isMultipair();
     String getPairingStatus();

@@ -46,6 +46,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - The `configuration.json` is expected to contain below given mandatory key-value pairs:
     - WiFi SSID Name
     - WiFi SSID Password
+    - HTTPS Support
     - Maker ID
     - Device ID
     - Queue ID
@@ -54,6 +55,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         {
             "wifi_ssid": "PJioWiFi",
             "wifi_passwd": "qwertyuiop",
+            "https": "false",
             "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
             "device_id": "196deeca-5f29-46fa-91d2-b453040b3574",
             "queue_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbbbc"
@@ -65,6 +67,14 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Copy the contents of private key (id_rsa) to the file `private.key` into sketch data directory
   - Copy the contents of public key (id_rsa.pub) to the file `public.key` into sketch data directory
   - Copy the contents of BoT Service public key to the file `api.pem` into sketch data directory
+
+- **Secure HTTP (HTTPS) Feature**
+  - ESP-32 SDK supports HTTPS by default with the BoT Service Calls
+  - To have Secure HTTP Communication between BoT Service and Sketch, we need CA Certificate
+  - Export GoDaddy Root Certificate from trusted certificate store present in browser to file `cacert.cer`
+  - Place the file `cacert.cer` into sketch data directory and flash onto ESP-32 Board along with other files
+  - SDK enables HTTPS by default, we have also have an option of disabling HTTPS through configuration
+  - In order to disable HTTPS, specify the flag `"https": "false"` in `configuration.json` as shown above and flash onto ESP32 board
 
 - **Loading configuration details from `configuration.json` in sketch**
   - To perform the required actions, first step is to load configuration from `configuration.json` file

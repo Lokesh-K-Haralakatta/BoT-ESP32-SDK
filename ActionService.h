@@ -24,7 +24,6 @@ class ActionService {
     String triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
     String getActions();
   private:
-    BoTService *bot;
     KeyStore *store;
     WiFiUDP ntpUDP;
     NTPClient *timeClient;

@@ -8,8 +8,6 @@
 
 PairingService :: PairingService(){
   store = KeyStore :: getKeyStoreInstance();
-  bot = new BoTService();
-  actService = new ActivationService();
 }
 
 bool PairingService :: isMultipair(){
@@ -24,7 +22,11 @@ bool PairingService :: isPairable(){
 }
 
 String PairingService :: getPairingStatus(){
-  return bot->get(PAIRING_END_POINT);
+  BoTService* bots = new BoTService();
+  String response = bots->get(PAIRING_END_POINT);
+  delete bots;
+  LOG("\nPairingService :: getPairingStatus : %s", response.c_str());
+  return response;
 }
 
 bool PairingService :: pollPairingStatus(){
@@ -65,7 +67,10 @@ void PairingService :: pairDevice(){
     store->setDeviceState(DEVICE_PAIRED);
     LOG("\nPairingService :: pairDevice: Device successfully paired. Ready to activate.");
     //Remove Device publickey from SPIFFS
+    ActivationService *actService = new ActivationService();
     actService->activateDevice();
+    LOG("\nPairingService :: pairDevice: Returned from actService->activateDevice()");
+    delete actService;
   }
   else {
     LOG("\nPairingService :: pairDevice: Device pairing not yet completed.Try again...");

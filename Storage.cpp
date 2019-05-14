@@ -20,6 +20,7 @@ KeyStore :: KeyStore(){
   Serial.begin(115200);
   wifiSSID = NULL;
   wifiPASSWD = NULL;
+  https = NULL;
   makerID = NULL;
   deviceID = NULL;
   altDeviceID = NULL;
@@ -27,10 +28,12 @@ KeyStore :: KeyStore(){
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
+  caCert = NULL;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
   apiKeyLoadStatus = NOT_LOADED;
+  caCertLoadStatus = NOT_LOADED;
 }
 
 void KeyStore :: setDeviceState(int state){
@@ -98,6 +101,12 @@ void KeyStore :: loadJSONConfiguration(){
       wifiPASSWD = new String(passwd);
     }
 
+    const char* httpsFlag = json["https"] | "true";
+    if(httpsFlag != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred HTTPS Flag from configuration: %s",httpsFlag);
+      https = new String(httpsFlag);
+    }
+
     const char* mId = json["maker_id"] | "maker_id";
     if(mId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Pasred MakerID from configuration: %s",mId);
@@ -136,6 +145,13 @@ const char* KeyStore :: getWiFiPasswd(){
   return (wifiPASSWD != NULL) ? wifiPASSWD->c_str():NULL;
 }
 
+const bool KeyStore :: getHTTPS(){
+  if(https != NULL && https->equalsIgnoreCase("true"))
+    return true;
+  else
+    return false;
+}
+
 const char* KeyStore :: getMakerID(){
   return (makerID != NULL) ? makerID->c_str() : NULL;
 }
@@ -164,6 +180,10 @@ bool KeyStore :: isAPIKeyLoaded(){
   return((apiKeyLoadStatus == LOADED)?true:false);
 }
 
+bool KeyStore :: isCACertLoaded(){
+  return((caCertLoadStatus == LOADED)?true:false);
+}
+
 void KeyStore :: initializeEEPROM(){
   EEPROM.begin(EEPROM_SIZE);
 }
@@ -177,6 +197,9 @@ void KeyStore :: retrieveAllKeys(){
   }
   if(!isAPIKeyLoaded()){
     loadFileContents(API_KEY_FILE,3);
+  }
+  if(!isCACertLoaded()){
+    loadFileContents(CA_CERT_FILE,4);
   }
 }
 void KeyStore :: loadFileContents(const char* filePath, byte kType){
@@ -218,6 +241,9 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       case 3: apiKey = new String(buffer);
               apiKeyLoadStatus = LOADED;
               break;
+      case 4: caCert = new String(buffer);
+              caCertLoadStatus = LOADED;
+              break;
     }
 
     delete buffer;
@@ -225,15 +251,31 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
 }
 
 const char* KeyStore :: getDevicePrivateKey(){
-  return privateKey->c_str();
+  if(isPrivateKeyLoaded()){
+    return privateKey->c_str();
+  }
+  return NULL;
 }
 
 const char* KeyStore :: getDevicePublicKey(){
-  return publicKey->c_str();
+  if(isPublicKeyLoaded()){
+    return publicKey->c_str();
+  }
+  return NULL;
 }
 
 const char* KeyStore :: getAPIPublicKey(){
-  return apiKey->c_str();
+  if(isAPIKeyLoaded()){
+    return apiKey->c_str();
+  }
+  return NULL;
+}
+
+const char* KeyStore :: getCACert(){
+  if(isCACertLoaded()){
+    return caCert->c_str();
+  }
+  return NULL;
 }
 
 std::vector <struct Action>  KeyStore :: retrieveActions(){

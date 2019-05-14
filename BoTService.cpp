@@ -13,27 +13,14 @@ BoTService :: BoTService(){
   uriPath = new char[strlen(URI)+1];
   strcpy(uriPath,URI);
 
-  port = HTTP_PORT;
+  https = true;
 
-  httpClient = new HTTPClient();
-  store = KeyStore :: getKeyStoreInstance();
-}
-
-BoTService :: BoTService(const char* host, const char* uri, const int p){
-  hostURL = new char[strlen(host)+1];
-  strcpy(hostURL,host);
-
-  uriPath = new char[strlen(uri)+1];
-  strcpy(uriPath,uri);
-
-  port = p;
-
-  httpClient = new HTTPClient();
+  wifiClient = NULL;
+  httpClient = NULL;
   store = KeyStore :: getKeyStoreInstance();
 }
 
 BoTService :: ~BoTService(){
-  delete httpClient;
   delete uriPath;
   delete hostURL;
 }
@@ -127,47 +114,88 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
 
 String BoTService :: get(const char* endPoint){
   store->loadJSONConfiguration();
+  store->retrieveAllKeys();
+  https = store->getHTTPS();
+
   String *fullURI = new String(uriPath);
   fullURI->concat(endPoint);
   LOG("\nBoTService :: get: URI: %s", fullURI->c_str());
 
   if(WiFi.status() == WL_CONNECTED){
     LOG("\nBoTService :: get: WiFi Status: Connected");
-    httpClient->begin(hostURL,port,fullURI->c_str());
-    httpClient->addHeader("makerID", store->getMakerID());
-    httpClient->addHeader("deviceID", store->getDeviceID());
 
-    LOG("\nBoTService :: get: Making httpClient->GET call");
-    int httpCode = httpClient->GET();
-    LOG("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
+    wifiClient = new WiFiClientSecure();
+    httpClient = new HTTPClient();
 
-    const char* errorMSG = httpClient->errorToString(httpCode).c_str();
+    if(https){
+      if(store->getCACert() != NULL){
+        wifiClient->setCACert(store->getCACert());
+        LOG("\nBoTService :: get: CACert set to wifiClient");
+      }
+      else {
+        LOG("\nBoTService :: get: store->getCACert returned NULL, hence turning off https");
+        https = false;
+      }
+    }
 
-    String payload = httpClient->getString();
-    httpClient->end();
+    bool httpClientBegin = false;
+    if(https){
+      httpClientBegin = httpClient->begin(*wifiClient,hostURL,HTTPS_PORT,fullURI->c_str(),true);
+      if(httpClientBegin)
+        LOG("\nBoTService :: get: HTTPClient initialized for HTTPS");
+      else
+        LOG("\nBoTService :: get: HTTPClient initialization failed for HTTPS");
+    }
+    else {
+      httpClientBegin = httpClient->begin(hostURL,HTTP_PORT,fullURI->c_str());
+      if(httpClientBegin)
+        LOG("\nBoTService :: get: HTTPClient initialized for HTTP");
+      else
+        LOG("\nBoTService :: post: HTTPClient initialization failed for HTTP");
+    }
 
-    delete fullURI;
+    if(httpClientBegin){
+      httpClient->addHeader("makerID", store->getMakerID());
+      httpClient->addHeader("deviceID", store->getDeviceID());
 
-    if(httpCode > 0) {
+      LOG("\nBoTService :: get: Making httpClient->GET call");
+      int httpCode = httpClient->GET();
+      LOG("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
 
-      LOG("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
+      const char* errorMSG = httpClient->errorToString(httpCode).c_str();
 
-      if(httpCode == HTTP_CODE_OK) {
-        int firstDoTIdx = payload.indexOf(".");
-        if (firstDoTIdx != -1) {
-          int secDoTIdx = payload.indexOf(".",firstDoTIdx+1);
-          String encodedPayload = payload.substring(firstDoTIdx+1 , secDoTIdx);
-          return(decodePayload(encodedPayload));
+      String payload = httpClient->getString();
+      httpClient->end();
+
+      delete httpClient;
+      delete wifiClient;
+      delete fullURI;
+
+      if(httpCode > 0) {
+
+        LOG("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
+
+        if(httpCode == HTTP_CODE_OK) {
+          int firstDoTIdx = payload.indexOf(".");
+          if (firstDoTIdx != -1) {
+            int secDoTIdx = payload.indexOf(".",firstDoTIdx+1);
+            String encodedPayload = payload.substring(firstDoTIdx+1 , secDoTIdx);
+            return(decodePayload(encodedPayload));
+          }
+        }
+        else {
+          LOG("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s", endPoint, errorMSG);
+          return errorMSG;
         }
       }
       else {
-        LOG("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s", endPoint, errorMSG);
+        LOG("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s", endPoint, errorMSG);
         return errorMSG;
       }
     }
     else {
-      LOG("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s", endPoint, errorMSG);
-      return errorMSG;
+      LOG("\nBoTService :: get: httpClient->begin failed....");
+      return "httpClient->begin failed....";
     }
   }
   else {
@@ -207,41 +235,80 @@ String BoTService :: post(const char* endPoint, const char* payload){
 
   if(WiFi.status() == WL_CONNECTED){
     LOG("\nBoTService :: post: Everything good to make POST Call to BoT Service: %s", fullURI->c_str());
-    httpClient->begin(hostURL,port,fullURI->c_str());
-    httpClient->addHeader("makerID", store->getMakerID());
-    httpClient->addHeader("deviceID", store->getDeviceID());
-    httpClient->addHeader("Content-Type", "application/json");
-    httpClient->addHeader("Connection","keep-alive");
-    httpClient->addHeader("Content-Length",String(body.length()));
 
-    int httpCode = httpClient->POST(body);
-    const char* errorMSG = httpClient->errorToString(httpCode).c_str();
+    wifiClient = new WiFiClientSecure();
+    httpClient = new HTTPClient();
+    https = store->getHTTPS();
 
-    String payload = httpClient->getString();
-    httpClient->end();
+    if(https){
+      if(store->getCACert() != NULL){
+        wifiClient->setCACert(store->getCACert());
+        LOG("\nBoTService :: post: CACert set to wifiClient");
+      }
+      else {
+        LOG("\nBoTService :: post: store->getCACert returned NULL, hence turning off https");
+        https = false;
+      }
+    }
 
-    delete fullURI;
+    bool httpClientBegin = false;
+    if(https){
+      httpClientBegin = httpClient->begin(*wifiClient,hostURL,HTTPS_PORT,fullURI->c_str(),true);
+      if(httpClientBegin)
+        LOG("\nBoTService :: post: HTTPClient initialized for HTTPS");
+      else
+        LOG("\nBoTService :: post: HTTPClient initialization failed for HTTPS");
+    }
+    else {
+      httpClientBegin = httpClient->begin(hostURL,HTTP_PORT,fullURI->c_str());
+      if(httpClientBegin)
+        LOG("\nBoTService :: post: HTTPClient initialized for HTTP");
+      else
+        LOG("\nBoTService :: post: HTTPClient initialization failed for HTTP");
+    }
 
-    if(httpCode > 0) {
+    if(httpClientBegin){
+      httpClient->addHeader("makerID", store->getMakerID());
+      httpClient->addHeader("deviceID", store->getDeviceID());
+      httpClient->addHeader("Content-Type", "application/json");
+      httpClient->addHeader("Connection","keep-alive");
+      httpClient->addHeader("Content-Length",String(body.length()));
 
-      LOG("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
+      int httpCode = httpClient->POST(body);
+      const char* errorMSG = httpClient->errorToString(httpCode).c_str();
 
-      if(httpCode == HTTP_CODE_OK) {
-        int firstDoTIdx = payload.indexOf(".");
-        if (firstDoTIdx != -1) {
-          int secDoTIdx = payload.indexOf(".",firstDoTIdx+1);
-          String encodedPayload = payload.substring(firstDoTIdx+1 , secDoTIdx);
-          return(decodePayload(encodedPayload));
+      String payload = httpClient->getString();
+      httpClient->end();
+
+      delete httpClient;
+      delete wifiClient;
+      delete fullURI;
+
+      if(httpCode > 0) {
+
+        LOG("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
+
+        if(httpCode == HTTP_CODE_OK) {
+          int firstDoTIdx = payload.indexOf(".");
+          if (firstDoTIdx != -1) {
+            int secDoTIdx = payload.indexOf(".",firstDoTIdx+1);
+            String encodedPayload = payload.substring(firstDoTIdx+1 , secDoTIdx);
+            return(decodePayload(encodedPayload));
+          }
+        }
+        else {
+          LOG("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s", endPoint, errorMSG);
+          return String(errorMSG);
         }
       }
       else {
-        LOG("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s", endPoint, errorMSG);
+        LOG("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s", endPoint, errorMSG);
         return String(errorMSG);
       }
     }
     else {
-      LOG("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s", endPoint, errorMSG);
-      return String(errorMSG);
+      LOG("\nBoTService :: post: httpClient->begin failed....");
+      return "httpClient->begin failed....";
     }
   }
   else {

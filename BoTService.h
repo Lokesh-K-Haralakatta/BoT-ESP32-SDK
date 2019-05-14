@@ -19,7 +19,6 @@
 class BoTService {
   public:
     BoTService();
-    BoTService(const char* host, const char* uri, const int port);
     ~BoTService();
     String get(const char* endPoint);
     String post(const char* endPoint, const char* payload);
@@ -27,6 +26,8 @@ class BoTService {
     char* hostURL;
     char* uriPath;
     int port;
+    bool https;
+    WiFiClientSecure* wifiClient;
     HTTPClient* httpClient;
     KeyStore* store;
     const char* mbedtlsError(int errnum);
