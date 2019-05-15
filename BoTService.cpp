@@ -128,8 +128,10 @@ String BoTService :: get(const char* endPoint){
     httpClient = new HTTPClient();
 
     if(https){
-      if(store->getCACert() != NULL){
-        wifiClient->setCACert(store->getCACert());
+      const char* caCert = store->getCACert();
+      if( caCert != NULL){
+        //LOG("\nCA Certificate Contents: \n%s\n",caCert);
+        wifiClient->setCACert(caCert);
         LOG("\nBoTService :: get: CACert set to wifiClient");
       }
       else {
@@ -167,6 +169,7 @@ String BoTService :: get(const char* endPoint){
       String payload = httpClient->getString();
       httpClient->end();
 
+      //Deallocate memory allocated for objects
       delete httpClient;
       delete wifiClient;
       delete fullURI;
@@ -195,6 +198,10 @@ String BoTService :: get(const char* endPoint){
     }
     else {
       LOG("\nBoTService :: get: httpClient->begin failed....");
+      //Deallocate memory allocated for objects
+      delete httpClient;
+      delete wifiClient;
+      delete fullURI;
       return "httpClient->begin failed....";
     }
   }
@@ -280,6 +287,7 @@ String BoTService :: post(const char* endPoint, const char* payload){
       String payload = httpClient->getString();
       httpClient->end();
 
+      //Deallocate memory allocated for objects
       delete httpClient;
       delete wifiClient;
       delete fullURI;
@@ -308,6 +316,10 @@ String BoTService :: post(const char* endPoint, const char* payload){
     }
     else {
       LOG("\nBoTService :: post: httpClient->begin failed....");
+      //Deallocate memory allocated for objects
+      delete httpClient;
+      delete wifiClient;
+      delete fullURI;
       return "httpClient->begin failed....";
     }
   }
