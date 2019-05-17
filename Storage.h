@@ -28,7 +28,6 @@ class KeyStore {
     bool isCACertLoaded();
     const char* getWiFiSSID();
     const char* getWiFiPasswd();
-    const bool getHTTPS();
     const char* getMakerID();
     const char* getDeviceID();
     const char* getQueueID();
@@ -37,6 +36,8 @@ class KeyStore {
     const char* getDevicePublicKey();
     const char* getAPIPublicKey();
     const char* getCACert();
+    void setHTTPS(const bool https);
+    const bool getHTTPS();
     void setDeviceState(int);
     void resetDeviceState();
     const int getDeviceState();

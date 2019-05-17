@@ -17,6 +17,7 @@ BoTService :: BoTService(){
 
   wifiClient = NULL;
   httpClient = NULL;
+  fullURI = NULL;
   store = KeyStore :: getKeyStoreInstance();
 }
 
@@ -117,7 +118,7 @@ String BoTService :: get(const char* endPoint){
   store->retrieveAllKeys();
   https = store->getHTTPS();
 
-  String *fullURI = new String(uriPath);
+  fullURI = new String(uriPath);
   fullURI->concat(endPoint);
   LOG("\nBoTService :: get: URI: %s", fullURI->c_str());
 
@@ -143,8 +144,24 @@ String BoTService :: get(const char* endPoint){
     bool httpClientBegin = false;
     if(https){
       httpClientBegin = httpClient->begin(*wifiClient,hostURL,HTTPS_PORT,fullURI->c_str(),true);
-      if(httpClientBegin)
+      if(httpClientBegin){
         LOG("\nBoTService :: get: HTTPClient initialized for HTTPS");
+        if(!wifiClient->connect((char*)HOST, HTTPS_PORT)){
+          LOG("\nBoTService :: get: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
+          freeObjects();
+          return "wifiSecureClient connection to server failed, can not verify SSL Finger Print";
+        }
+        else {
+          LOG("\nBoTService :: get: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
+          if(wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST))
+            LOG("\nBoTService :: get: SSL Finger Print Verification Succeeded...");
+            else {
+              LOG("\nBoTService :: get: SSL Finger Print Verification Failed...");
+              freeObjects();
+              return "SSL Finger Print Verification Failed in BoTService GET";
+            }
+        }
+      }
       else
         LOG("\nBoTService :: get: HTTPClient initialization failed for HTTPS");
     }
@@ -170,9 +187,7 @@ String BoTService :: get(const char* endPoint){
       httpClient->end();
 
       //Deallocate memory allocated for objects
-      delete httpClient;
-      delete wifiClient;
-      delete fullURI;
+      freeObjects();
 
       if(httpCode > 0) {
 
@@ -199,9 +214,8 @@ String BoTService :: get(const char* endPoint){
     else {
       LOG("\nBoTService :: get: httpClient->begin failed....");
       //Deallocate memory allocated for objects
-      delete httpClient;
-      delete wifiClient;
-      delete fullURI;
+      freeObjects();
+
       return "httpClient->begin failed....";
     }
   }
@@ -237,7 +251,7 @@ String BoTService :: post(const char* endPoint, const char* payload){
   String body = (String)"{\"bot\": \"" + botJWT +   "\"}";
 
   LOG("\nBoTService :: post: body contents after encoding: %s", body.c_str());
-  String *fullURI = new String(uriPath);
+  fullURI = new String(uriPath);
   fullURI->concat(endPoint);
 
   if(WiFi.status() == WL_CONNECTED){
@@ -248,8 +262,9 @@ String BoTService :: post(const char* endPoint, const char* payload){
     https = store->getHTTPS();
 
     if(https){
-      if(store->getCACert() != NULL){
-        wifiClient->setCACert(store->getCACert());
+      const char* caCert = store->getCACert();
+      if(caCert != NULL){
+        wifiClient->setCACert(caCert);
         LOG("\nBoTService :: post: CACert set to wifiClient");
       }
       else {
@@ -261,8 +276,24 @@ String BoTService :: post(const char* endPoint, const char* payload){
     bool httpClientBegin = false;
     if(https){
       httpClientBegin = httpClient->begin(*wifiClient,hostURL,HTTPS_PORT,fullURI->c_str(),true);
-      if(httpClientBegin)
+      if(httpClientBegin){
         LOG("\nBoTService :: post: HTTPClient initialized for HTTPS");
+        if(!wifiClient->connect((char*)HOST, HTTPS_PORT)){
+          LOG("\nBoTService :: post: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
+          freeObjects();
+          return "wifiSecureClient connection to server failed, can not verify SSL Finger Print";
+        }
+        else {
+          LOG("\nBoTService :: post: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
+          if(wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST))
+            LOG("\nBoTService :: post: SSL Finger Print Verification Succeeded...");
+          else {
+            LOG("\nBoTService :: post: SSL Finger Print Verification Failed...");
+            freeObjects();
+            return "SSL Finger Print Verification Failed in BoTService POST";
+          }
+        }
+      }
       else
         LOG("\nBoTService :: post: HTTPClient initialization failed for HTTPS");
     }
@@ -288,9 +319,7 @@ String BoTService :: post(const char* endPoint, const char* payload){
       httpClient->end();
 
       //Deallocate memory allocated for objects
-      delete httpClient;
-      delete wifiClient;
-      delete fullURI;
+      freeObjects();
 
       if(httpCode > 0) {
 
@@ -317,9 +346,7 @@ String BoTService :: post(const char* endPoint, const char* payload){
     else {
       LOG("\nBoTService :: post: httpClient->begin failed....");
       //Deallocate memory allocated for objects
-      delete httpClient;
-      delete wifiClient;
-      delete fullURI;
+      freeObjects();
       return "httpClient->begin failed....";
     }
   }
@@ -327,4 +354,23 @@ String BoTService :: post(const char* endPoint, const char* payload){
     LOG("\nBoTService :: post: Board Not Connected to WiFi...");
     return String("Board Not Connected to WiFi...");
   }
+}
+
+void BoTService :: freeObjects(){
+  if(httpClient != NULL) {
+     delete httpClient;
+     httpClient = NULL;
+   }
+
+  if(wifiClient != NULL) {
+    delete wifiClient;
+    wifiClient = NULL;
+  }
+
+  if(fullURI != NULL) {
+    delete fullURI;
+    fullURI = NULL;
+  }
+
+  LOG("\nBoTService :: freeObjects : Objects memory freed");
 }

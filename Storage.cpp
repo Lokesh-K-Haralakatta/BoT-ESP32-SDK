@@ -137,12 +137,14 @@ void KeyStore :: loadJSONConfiguration(){
   }
 }
 
-const char* KeyStore :: getWiFiSSID(){
-  return (wifiSSID != NULL) ? wifiSSID->c_str():NULL;
-}
-
-const char* KeyStore :: getWiFiPasswd(){
-  return (wifiPASSWD != NULL) ? wifiPASSWD->c_str():NULL;
+void KeyStore :: setHTTPS(const bool httpsFlag){
+  if(https != NULL)
+    delete https;
+    
+  if(httpsFlag)
+    https = new String("true");
+  else
+    https = new String("false");
 }
 
 const bool KeyStore :: getHTTPS(){
@@ -150,6 +152,14 @@ const bool KeyStore :: getHTTPS(){
     return true;
   else
     return false;
+}
+
+const char* KeyStore :: getWiFiSSID(){
+  return (wifiSSID != NULL) ? wifiSSID->c_str():NULL;
+}
+
+const char* KeyStore :: getWiFiPasswd(){
+  return (wifiPASSWD != NULL) ? wifiPASSWD->c_str():NULL;
 }
 
 const char* KeyStore :: getMakerID(){

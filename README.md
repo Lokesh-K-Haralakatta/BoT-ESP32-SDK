@@ -75,6 +75,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Place the file `cacert.cer` into sketch data directory and flash onto ESP-32 Board along with other files
   - SDK enables HTTPS by default, we have also have an option of disabling HTTPS through configuration
   - In order to disable HTTPS, specify the flag `"https": "false"` in `configuration.json` as shown above and flash onto ESP32 board
+  - SDK also has a method `setHTTPS(bool value)` in KeyStore class to override HTTPS flag value provided through `configuration.json`
 
 - **Loading configuration details from `configuration.json` in sketch**
   - To perform the required actions, first step is to load configuration from `configuration.json` file

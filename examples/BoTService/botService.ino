@@ -41,6 +41,10 @@ void setup() {
   LOG("\nIP address: ");
   Serial.println(WiFi.localIP());
 
+  //Enable HTTPS for BoTService Calls
+  //Override HTTPS value given in configuration.json
+  store->setHTTPS(true);
+
   //Create BoT Service Instance
   bot = new BoTService();
 
