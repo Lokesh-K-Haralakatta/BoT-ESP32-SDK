@@ -63,7 +63,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
 
       ```
 - **Device Key-Pair for secure data exchange**
-  - Generate RSA Key pair on any of the system by referring to [Generating new SSH Key] (https://help.github.com/en/enterprise/2.16/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
+  - Generate RSA Key pair on any of the system by referring to [Generating new SSH Key](https://help.github.com/en/enterprise/2.16/user/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)
   - Copy the contents of private key (id_rsa) to the file `private.key` into sketch data directory
   - Copy the contents of public key (id_rsa.pub) to the file `public.key` into sketch data directory
   - Copy the contents of BoT Service public key to the file `api.pem` into sketch data directory
@@ -129,8 +129,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         }
 
       ```
-  - The call to `server->startServer` internally makes call to BLE initialization enabling device pairing through Bluetooth with the companion application trying to communicate from iOS / Anroid device
-  - Device gets paired successfully, then call to activate the device is made and the device is ready to trigger the actions if device actiovation is successful
+  - The call to `server->startServer` internally makes call to BLE initialization enabling device pairing through Bluetooth with the companion application trying to communicate from iOS / Android device
+  - Device gets paired successfully, then call to activate the device is made and the device is ready to trigger the actions if device activation is successful
   - Device fails in getting paired, then we can re-attempt to pair the device using the end point `/pairing` defined by the webserver
 
 - **Retrieve defined actions for the makerID from BoT Service using AsyncWebserver end point `/actions`**
