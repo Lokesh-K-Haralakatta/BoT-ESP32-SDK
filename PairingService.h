@@ -18,11 +18,11 @@ class PairingService {
   public:
     PairingService();
     void pairDevice();
+    String getPairingStatus();
   private:
     KeyStore *store;
     bool isPairable();
     bool isMultipair();
-    String getPairingStatus();
     bool pollPairingStatus();
 };
 #endif

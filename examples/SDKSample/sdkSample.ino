@@ -95,6 +95,9 @@ void setup()
     //Variable to flag whether to load WiFi credentials from given configuration or not
     bool loadConfig = true;
 
+    //Override HTTPS
+    store->setHTTPS(true);
+
     //Instantiate Webserver by using WiFi credentials from configuration
     //server = new Webserver(loadConfig);
 
