@@ -113,10 +113,46 @@ void Webserver :: startServer(){
       Serial.print(getBoardIP());
       LOG(":%d/\n",port);
 
-      ble->initializeBLE();
-      config->initialize();
-      config->configureDevice();
+      //Check pairing status for the device
+      PairingService* ps = new PairingService();
+      String psResponse = ps->getPairingStatus();
+      delete ps;
 
+      //Device is already paired, then device initialization is skipped
+      //Otherwise waits till BLE client connects and key exchanges happen followed by device configuration
+      if((psResponse.indexOf("true")) != -1){
+        LOG("\nWebserver :: startServer: Device is already paired, no need to initialize and configure");
+      }
+      else {
+        LOG("\nWebserver :: startServer: Device is not paired yet, needs initialization");
+        LOG("\nWebserver :: startServer: Free Heap before BLE Init: %u", ESP.getFreeHeap());
+        ble->initializeBLE();
+        bool bleClientConnected = false;
+        //Wait till BLE Client connects to BLE Server
+        do {
+          delay(2000);
+          bleClientConnected = ble->isBLEClientConnected();
+          if(!bleClientConnected)
+            LOG("\nWebserver :: startServer: Waiting for BLE Client to connect and exchange keys");
+          else
+            LOG("\nWebserver :: startServer: BLE Client connected to BLE Server");
+        }while(!bleClientConnected);
+
+        //Wait till BLE Client disconnects from BLE Server
+        while(bleClientConnected){
+          LOG("\nWebserver :: startServer: Waiting for BLE Client to disconnect from BLE Server");
+          bleClientConnected = ble->isBLEClientConnected();
+          delay(2000);
+        }
+
+        //Release memory used by BLE Service once BLE Client gets disconnected
+        if(!bleClientConnected) ble->deInitializeBLE();
+        LOG("\nWebserver :: startServer: Free Heap after BLE deInit: %u", ESP.getFreeHeap());
+
+        //Proceed with device initialization and followed by configuring
+        config->initialize();
+        config->configureDevice();
+     }
    }
    else {
      LOG("\nWebserver :: startServer: ESP-32 board not connected to WiFi Network");

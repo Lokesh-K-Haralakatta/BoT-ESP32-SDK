@@ -22,6 +22,7 @@ class BluetoothService {
   public:
           BluetoothService();
           void initializeBLE(const char* deviceName=NULL);
+          void deInitializeBLE();
           bool isBLEClientConnected();
           static void setClientConnected(bool status);
   private:
@@ -30,16 +31,22 @@ class BluetoothService {
           KeyStore *store;
           BLEServer *bleServer;
           BLEService *bleService;
+          BLECharacteristic *bleDeviceCharacteristic;
+          BLECharacteristic *bleDeviceInfoCharacteristic;
+          BLECharacteristic *bleNetworkCharacteristic;
+          BLECharacteristic *bleConfigureCharacteristic;
           friend class BoTServerCallbacks;
 };
 
 class BoTServerCallbacks: public BLEServerCallbacks {
   friend class BluetoothService;
   void onConnect(BLEServer* pServer) {
+    LOG("\nBoTServerCallbacks :: onConnect: BLE Client Connected...");
     BluetoothService :: setClientConnected(true);
   };
 
   void onDisconnect(BLEServer* pServer) {
+    LOG("\nBoTServerCallbacks :: onDisconnect: BLE Client Disconnected...");
     BluetoothService :: setClientConnected(false);
   }
 };

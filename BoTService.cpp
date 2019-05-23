@@ -358,11 +358,13 @@ String BoTService :: post(const char* endPoint, const char* payload){
 
 void BoTService :: freeObjects(){
   if(httpClient != NULL) {
+     httpClient->end();
      delete httpClient;
      httpClient = NULL;
    }
 
   if(wifiClient != NULL) {
+    wifiClient->stop();
     delete wifiClient;
     wifiClient = NULL;
   }

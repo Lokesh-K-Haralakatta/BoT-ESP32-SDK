@@ -11,6 +11,7 @@
 #include "ControllerService.h"
 #include "ConfigurationService.h"
 #include "BluetoothService.h"
+#include "PairingService.h"
 #define STARTED 1
 #define NOT_STARTED 0
 
