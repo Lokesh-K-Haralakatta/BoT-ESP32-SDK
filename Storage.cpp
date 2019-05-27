@@ -24,7 +24,6 @@ KeyStore :: KeyStore(){
   makerID = NULL;
   deviceID = NULL;
   altDeviceID = NULL;
-  queueID = NULL;
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
@@ -125,12 +124,6 @@ void KeyStore :: loadJSONConfiguration(){
       altDeviceID = new String(adId);
     }
 
-    const char* qId = json["queue_id"] | "queue_id";
-    if(qId != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred queueID from configuration: %s",qId);
-      queueID = new String(qId);
-    }
-
     delete buffer;
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
@@ -140,7 +133,7 @@ void KeyStore :: loadJSONConfiguration(){
 void KeyStore :: setHTTPS(const bool httpsFlag){
   if(https != NULL)
     delete https;
-    
+
   if(httpsFlag)
     https = new String("true");
   else
@@ -172,10 +165,6 @@ const char* KeyStore :: getDeviceID(){
 
 const char* KeyStore :: getAlternateDeviceID(){
   return (altDeviceID != NULL) ? altDeviceID->c_str() : NULL;
-}
-
-const char* KeyStore :: getQueueID(){
-  return (queueID != NULL) ? queueID->c_str() : NULL;
 }
 
 bool KeyStore :: isPrivateKeyLoaded(){
@@ -212,6 +201,7 @@ void KeyStore :: retrieveAllKeys(){
     loadFileContents(CA_CERT_FILE,4);
   }
 }
+
 void KeyStore :: loadFileContents(const char* filePath, byte kType){
     if(!SPIFFS.begin(true)){
       LOG("\nKeyStore :: loadFileContents: An Error has occurred while mounting SPIFFS");
