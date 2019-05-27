@@ -74,4 +74,5 @@ void startBLE(){
   pServer->getAdvertising()->start();
   
   Serial.println("Characteristic defined! Now you can read it in your phone!");
+  delay(1000);
 }
