@@ -12,6 +12,7 @@
 #define API_KEY_FILE "/api.pem"
 #define CA_CERT_FILE "/cacert.cer"
 #define ACTIONS_FILE "/actions.json"
+#define UUID_GEN_CA_CERT "/uuidGenCaCert.cer"
 #define NOT_LOADED 0
 #define LOADED 1
 #define DEVICE_STATE_ADDR 0
@@ -26,16 +27,17 @@ class KeyStore {
     bool isPublicKeyLoaded();
     bool isAPIKeyLoaded();
     bool isCACertLoaded();
+    bool isUUIDGenCACertLoaded();
     const char* getWiFiSSID();
     const char* getWiFiPasswd();
     const char* getMakerID();
     const char* getDeviceID();
-    const char* getQueueID();
     const char* getAlternateDeviceID();
     const char* getDevicePrivateKey();
     const char* getDevicePublicKey();
     const char* getAPIPublicKey();
     const char* getCACert();
+    const char* getUUIDGenCACert();
     void setHTTPS(const bool https);
     const bool getHTTPS();
     void setDeviceState(int);
@@ -51,16 +53,17 @@ class KeyStore {
     String *makerID;
     String *deviceID;
     String *altDeviceID;
-    String *queueID;
     String *privateKey;
     String *publicKey;
     String *apiKey;
     String *caCert;
+    String *uuidCACert;
     byte jsonCfgLoadStatus;
     byte privateKeyLoadStatus;
     byte publicKeyLoadStatus;
     byte apiKeyLoadStatus;
     byte caCertLoadStatus;
+    byte uuidGenCACertLoadStatus;
     void loadFileContents(const char* filePath, byte keyType);
     KeyStore();
     std::vector <struct Action> actionsList;

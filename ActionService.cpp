@@ -11,6 +11,60 @@ ActionService :: ActionService(){
   timeClient = new NTPClient(ntpUDP);
 }
 
+const char* ActionService ::generateUuid4() {
+  uint8_t uuid[16];
+  String* uuidStr = new String();
+
+  // Generate a Version 4 UUID according to RFC4122
+  for (int i=0;i<16;i++) uuid[i] = esp_random();
+
+  // Although the UUID contains 128 bits, only 122 of those are random.
+  // The other 6 bits are fixed, to indicate a version number.
+  uuid[6] = 0x40 | (0x0F & uuid[6]);
+  uuid[8] = 0x80 | (0x3F & uuid[8]);
+
+  //Convert generated uuid to string format
+  for (int i=0; i<16; i++) {
+    if (i==4) *uuidStr += "-";
+    if (i==6) *uuidStr += "-";
+    if (i==8) *uuidStr += "-";
+    if (i==10) *uuidStr += "-";
+    int topDigit = uuid[i] >> 4;
+    int bottomDigit = uuid[i] & 0x0f;
+    // High hex digit
+    *uuidStr += "0123456789abcdef"[topDigit];
+    // Low hex digit
+    *uuidStr += "0123456789abcdef"[bottomDigit];
+  }
+
+  LOG("\nActionService :: generateuuid4 : %s", uuidStr->c_str());
+
+  return uuidStr->c_str();
+}
+
+const char* ActionService :: generateQueueID(){
+  const char* uuid4GenURL = "https://www.uuidgenerator.net/api/version4";
+  store->retrieveAllKeys();
+
+  HTTPClient* httpClient = new HTTPClient();
+  httpClient->begin(uuid4GenURL,store->getUUIDGenCACert());
+  int httpCode = httpClient->GET();
+  String response = httpClient->getString();
+  httpClient->end();
+  delete httpClient;
+
+  if(httpCode == 200){
+    const char* queueID = response.c_str();
+    LOG("\nActionsService :: generateQueueID : Generated queueID is - %s", queueID);
+    return queueID;
+  }
+  else {
+    LOG("\nActionsService :: generateQueueID : Generation of queueID failed with httpCode - %d", httpCode);
+    LOG("\nActionsService :: generateQueueID : Calling generateuuid4() to dynamically generate queueID on the board itself");
+    return generateUuid4();
+  }
+}
+
 String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
   String response = "";
   LOG("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
@@ -23,7 +77,10 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
     store->loadJSONConfiguration();
 
     const char* deviceID = store->getDeviceID();
-    const char* queueID = store->getQueueID();
+    LOG("\nActionService :: triggerAction: Provided deviceID : %s", deviceID);
+    //const char* queueID = generateQueueID();
+    const char* queueID = generateUuid4();
+    LOG("\nActionService :: triggerAction: Generated queueID : %s", queueID);
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject& doc = jsonBuffer.createObject();

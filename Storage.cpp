@@ -24,16 +24,17 @@ KeyStore :: KeyStore(){
   makerID = NULL;
   deviceID = NULL;
   altDeviceID = NULL;
-  queueID = NULL;
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
   caCert = NULL;
+  uuidCACert = NULL;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
   apiKeyLoadStatus = NOT_LOADED;
   caCertLoadStatus = NOT_LOADED;
+  uuidGenCACertLoadStatus = NOT_LOADED;
 }
 
 void KeyStore :: setDeviceState(int state){
@@ -125,12 +126,6 @@ void KeyStore :: loadJSONConfiguration(){
       altDeviceID = new String(adId);
     }
 
-    const char* qId = json["queue_id"] | "queue_id";
-    if(qId != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred queueID from configuration: %s",qId);
-      queueID = new String(qId);
-    }
-
     delete buffer;
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
@@ -140,7 +135,7 @@ void KeyStore :: loadJSONConfiguration(){
 void KeyStore :: setHTTPS(const bool httpsFlag){
   if(https != NULL)
     delete https;
-    
+
   if(httpsFlag)
     https = new String("true");
   else
@@ -174,10 +169,6 @@ const char* KeyStore :: getAlternateDeviceID(){
   return (altDeviceID != NULL) ? altDeviceID->c_str() : NULL;
 }
 
-const char* KeyStore :: getQueueID(){
-  return (queueID != NULL) ? queueID->c_str() : NULL;
-}
-
 bool KeyStore :: isPrivateKeyLoaded(){
   return((privateKeyLoadStatus == LOADED)?true:false);
 }
@@ -192,6 +183,10 @@ bool KeyStore :: isAPIKeyLoaded(){
 
 bool KeyStore :: isCACertLoaded(){
   return((caCertLoadStatus == LOADED)?true:false);
+}
+
+bool KeyStore :: isUUIDGenCACertLoaded(){
+  return((uuidGenCACertLoadStatus == LOADED)?true:false);
 }
 
 void KeyStore :: initializeEEPROM(){
@@ -210,6 +205,9 @@ void KeyStore :: retrieveAllKeys(){
   }
   if(!isCACertLoaded()){
     loadFileContents(CA_CERT_FILE,4);
+  }
+  if(!isUUIDGenCACertLoaded()){
+    loadFileContents(UUID_GEN_CA_CERT,5);
   }
 }
 void KeyStore :: loadFileContents(const char* filePath, byte kType){
@@ -254,6 +252,9 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       case 4: caCert = new String(buffer);
               caCertLoadStatus = LOADED;
               break;
+      case 5: uuidCACert = new String(buffer);
+              uuidGenCACertLoadStatus = LOADED;
+              break;
     }
 
     delete buffer;
@@ -284,6 +285,13 @@ const char* KeyStore :: getAPIPublicKey(){
 const char* KeyStore :: getCACert(){
   if(isCACertLoaded()){
     return caCert->c_str();
+  }
+  return NULL;
+}
+
+const char* KeyStore :: getUUIDGenCACert(){
+  if(isUUIDGenCACertLoaded()){
+    return uuidCACert->c_str();
   }
   return NULL;
 }

@@ -40,6 +40,9 @@ void setup() {
   LOG("\nIP address: ");
   Serial.println(WiFi.localIP());
 
+  //Override HTTPS
+  store->setHTTPS(true);
+  
   actService = new ActionService();
 
   //GET Actions for given device from BoT Service
