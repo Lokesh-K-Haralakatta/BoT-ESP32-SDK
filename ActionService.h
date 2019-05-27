@@ -33,7 +33,6 @@ class ActionService {
     bool isValidActionFrequency(const struct Action*);
     void updateActionsLastTriggeredTime();
     bool updateTriggeredTimeForAction(const char* actionID);
-    const char* generateQueueID();
     const char* generateUuid4();
 };
 #endif

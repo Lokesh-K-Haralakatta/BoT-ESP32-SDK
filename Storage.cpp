@@ -28,13 +28,11 @@ KeyStore :: KeyStore(){
   publicKey = NULL;
   apiKey = NULL;
   caCert = NULL;
-  uuidCACert = NULL;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
   apiKeyLoadStatus = NOT_LOADED;
   caCertLoadStatus = NOT_LOADED;
-  uuidGenCACertLoadStatus = NOT_LOADED;
 }
 
 void KeyStore :: setDeviceState(int state){
@@ -185,10 +183,6 @@ bool KeyStore :: isCACertLoaded(){
   return((caCertLoadStatus == LOADED)?true:false);
 }
 
-bool KeyStore :: isUUIDGenCACertLoaded(){
-  return((uuidGenCACertLoadStatus == LOADED)?true:false);
-}
-
 void KeyStore :: initializeEEPROM(){
   EEPROM.begin(EEPROM_SIZE);
 }
@@ -206,10 +200,8 @@ void KeyStore :: retrieveAllKeys(){
   if(!isCACertLoaded()){
     loadFileContents(CA_CERT_FILE,4);
   }
-  if(!isUUIDGenCACertLoaded()){
-    loadFileContents(UUID_GEN_CA_CERT,5);
-  }
 }
+
 void KeyStore :: loadFileContents(const char* filePath, byte kType){
     if(!SPIFFS.begin(true)){
       LOG("\nKeyStore :: loadFileContents: An Error has occurred while mounting SPIFFS");
@@ -252,9 +244,6 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       case 4: caCert = new String(buffer);
               caCertLoadStatus = LOADED;
               break;
-      case 5: uuidCACert = new String(buffer);
-              uuidGenCACertLoadStatus = LOADED;
-              break;
     }
 
     delete buffer;
@@ -285,13 +274,6 @@ const char* KeyStore :: getAPIPublicKey(){
 const char* KeyStore :: getCACert(){
   if(isCACertLoaded()){
     return caCert->c_str();
-  }
-  return NULL;
-}
-
-const char* KeyStore :: getUUIDGenCACert(){
-  if(isUUIDGenCACertLoaded()){
-    return uuidCACert->c_str();
   }
   return NULL;
 }

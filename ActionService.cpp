@@ -42,29 +42,6 @@ const char* ActionService ::generateUuid4() {
   return uuidStr->c_str();
 }
 
-const char* ActionService :: generateQueueID(){
-  const char* uuid4GenURL = "https://www.uuidgenerator.net/api/version4";
-  store->retrieveAllKeys();
-
-  HTTPClient* httpClient = new HTTPClient();
-  httpClient->begin(uuid4GenURL,store->getUUIDGenCACert());
-  int httpCode = httpClient->GET();
-  String response = httpClient->getString();
-  httpClient->end();
-  delete httpClient;
-
-  if(httpCode == 200){
-    const char* queueID = response.c_str();
-    LOG("\nActionsService :: generateQueueID : Generated queueID is - %s", queueID);
-    return queueID;
-  }
-  else {
-    LOG("\nActionsService :: generateQueueID : Generation of queueID failed with httpCode - %d", httpCode);
-    LOG("\nActionsService :: generateQueueID : Calling generateuuid4() to dynamically generate queueID on the board itself");
-    return generateUuid4();
-  }
-}
-
 String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
   String response = "";
   LOG("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
@@ -78,7 +55,6 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
 
     const char* deviceID = store->getDeviceID();
     LOG("\nActionService :: triggerAction: Provided deviceID : %s", deviceID);
-    //const char* queueID = generateQueueID();
     const char* queueID = generateUuid4();
     LOG("\nActionService :: triggerAction: Generated queueID : %s", queueID);
 

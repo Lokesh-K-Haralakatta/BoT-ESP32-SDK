@@ -40,10 +40,6 @@ void setup(){
     LOG("\n CA Certificate Contents: \n%s\n", store->getCACert());
   }
 
-  if(store->isUUIDGenCACertLoaded()){
-    LOG("\n UUID4 Generator.net CA Certificate Contents: \n%s\n", store->getUUIDGenCACert());
-  }
-
   //Initialize actions to save to file
   const char* id1 = "E6509B49-5048-4151-B965-BB7B2DBC7905";
   const char* freq1 = "minuetly";
