@@ -2,16 +2,17 @@
 #include <ArduinoJson.h>
 #include "base64url.h"
 
-
-const char* host = "api-dev.bankingofthings.io";
-
 String makerID_variable = "185d8549-0091-463e-90fe-eda6ae15dc91";
 String deviceID_variable = "edfc7678-cacf-44f0-a2c6-1be15abef444";
 String actionID_variable = "77189283-A963-4E2E-BD12-18D1681A00EE";
+const char* host = "api-dev.bankingofthings.io";  // Server URL
 
-void getPairing() {
+
+String getPairing() {
+
   String i_status = getJSON ("pair");
   Serial.println("HTTP Pairing Status is:" + i_status);
+  return i_status;
 }
 
 void getActions() {
@@ -31,7 +32,7 @@ void postAction(String action, String value) {
   actionJSON.printTo(actionJSONString);
 
   Serial.println("actionJSON:" + (String)actionJSONString);
-  
+
   //actionJSON.prettyPrintTo(Serial);
   //String jwtHeader = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9";
   char* jwtHeader = "{\"alg\":\"RS256\",\"typ\":\"JWT\"}";
@@ -53,16 +54,16 @@ void postAction(String action, String value) {
 
 
 String postJSON(String path, String body) {
-  WiFiClient client;
-  if (!client.connect(host, 80)) {
-    Serial.println("HTTP Clientent: connection failed");
+  client.setCACert(bot_root_ca);
+  if (!client.connect(host, 443)) {
+    Serial.println("HTTP Client: connection failed");
     return "";
   }
 
   String url = "/bot_iot/" + path;
   String httpRq = "";
 
-  httpRq = String("POST ") + url + " HTTP/1.1\r\n" +
+  httpRq = String("POST ") + "https://" + host + url + " HTTP/1.1\r\n" +
            "Host: " + host + "\r\n" +
            "Content-Type: " + "application/json\r\n" +
            "Connection :" + "keep-alive\r\n" +
@@ -92,26 +93,58 @@ String postJSON(String path, String body) {
   // Read all the lines of the reply from server and print them to Serial
   Serial.println("HTTP Client receiving POST response: ");
   while (client.available()) {
-    String line = client.readStringUntil('\r');
-    Serial.print(line);
-    if (line.indexOf(prefix) != -1) {
-      int prefixLength = prefix.length() + 1;
-      String encodedPayload = line.substring(prefixLength , line.substring(prefixLength, line.length()).indexOf(".") + prefixLength + 1);
-      Serial.println("JWT received:"+encodedPayload);
-      return decodePayload(encodedPayload);
-    }
+     char c = client.read();
+      Serial.write(c);
+//    String line = client.readStringUntil('\r');
+//    Serial.print(line);
+//    if (line.indexOf(prefix) != -1) {
+//      int prefixLength = prefix.length() + 1;
+//      String encodedPayload = line.substring(prefixLength , line.substring(prefixLength, line.length()).indexOf(".") + prefixLength + 1);
+//      Serial.println("JWT received:" + encodedPayload);
+//      return decodePayload(encodedPayload);
+//    }
     return "";
+  }
+  client.stop();
+}
+
+
+void doithere() {
+  client.setCACert(bot_root_ca);
+  Serial.println("\nStarting connection to server...");
+  if (!client.connect(server, 443))
+    Serial.println("Connection failed!");
+  else {
+    Serial.println("Connected to server!");
+    // Make a HTTP request:
+    client.println("GET https://api-dev.bankingofthings.io/bot_iot/pairing HTTP/1.0");
+    client.println("Host: api-dev.bankingofthings.io");
+    client.println("Connection: close");
+    client.println();
+
+    while (client.connected()) {
+      String line = client.readStringUntil('\n');
+      if (line == "\r") {
+        Serial.println("headers received");
+        break;
+      }
+    }
+    // if there are incoming bytes available
+    // from the server, read them and print them:
+    while (client.available()) {
+      char c = client.read();
+      Serial.write(c);
+    }
+    client.stop();
   }
 }
 
 
-
-
-
 String getJSON(String path) {
+  //doithere();
+  client.setCACert(bot_root_ca);
 
-  WiFiClient client;
-  if (!client.connect(host, 80)) {
+  if (!client.connect(host, 443)) {
     Serial.println("HTTP Client: connection failed");
     return "";
   }
@@ -120,7 +153,7 @@ String getJSON(String path) {
 
   String httpRq = "";
 
-  httpRq = String("GET ") + url + " HTTP/1.1\r\n" +
+  httpRq = String("GET ") + "https://" + host + url + " HTTP/1.1\r\n" +
            "Host: " + host + "\r\n" +
            "makerID: " + makerID_variable + "\r\n" +
            "deviceID: " + deviceID_variable + "\r\n" +
