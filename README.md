@@ -49,17 +49,15 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
     - HTTPS Support
     - Maker ID
     - Device ID
-    - Queue ID
+
   - Below given is sample snippet of `configuration.json` file:
       ```
         {
             "wifi_ssid": "PJioWiFi",
             "wifi_passwd": "qwertyuiop",
             "https": "false",
-            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
-            "device_id": "196deeca-5f29-46fa-91d2-b453040b3574",
-            "queue_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbbbc"
-          }
+            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B"
+         }
 
       ```
 - **Device Key-Pair for secure data exchange**
