@@ -10,7 +10,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include<WiFiClientSecure.h>
+#include <WiFiClientSecure.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
@@ -32,6 +32,21 @@
 #define DEVICE_ACTIVE 2
 #define DEVICE_MULTIPAIR 3
 #define LOG Serial.printf
+
+//RemoteDebug Speicifics go here
+
+//#define DEBUG_DISABLED true
+#include <RemoteDebug.h>
+
+//Debug levels for RemoteDebug feature
+//Effective only if RemoteDebug is enabled
+#define BoT_DEBUG 2
+#define BoT_INFO 3
+#define BoT_WARNING 4
+#define BoT_ERROR 5
+#ifndef DEBUG_DISABLED
+  extern RemoteDebug Debug;
+#endif
 
 struct Action{
   char* actionID;

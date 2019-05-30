@@ -54,8 +54,8 @@ bool KeyStore :: isJSONConfigLoaded(){
 }
 
 void KeyStore :: loadJSONConfiguration(){
-  LOG("\nKeyStore :: loadJSONConfiguration: Loading given configuration from file - %s",JSON_CONFIG_FILE);
   if(!isJSONConfigLoaded()){
+    LOG("\nKeyStore :: loadJSONConfiguration: Loading given configuration from file - %s",JSON_CONFIG_FILE);
     if(!SPIFFS.begin(true)){
       jsonCfgLoadStatus = NOT_LOADED;
       LOG("\nKeyStore :: loadJSONConfiguration: An Error has occurred while mounting SPIFFS");
@@ -204,13 +204,21 @@ void KeyStore :: retrieveAllKeys(){
 
 void KeyStore :: loadFileContents(const char* filePath, byte kType){
     if(!SPIFFS.begin(true)){
-      LOG("\nKeyStore :: loadFileContents: An Error has occurred while mounting SPIFFS");
+      #ifndef DEBUG_DISABLED
+        debugE("\nKeyStore :: loadFileContents: An Error has occurred while mounting SPIFFS");
+      #else
+        LOG("\nKeyStore :: loadFileContents: An Error has occurred while mounting SPIFFS");
+      #endif
       return;
     }
 
     File file = SPIFFS.open(filePath);
     if(!file){
-      LOG("\nKeyStore :: loadFileContents: Failed to open file - %s for reading key contents", filePath);
+      #ifndef DEBUG_DISABLED
+        debugE("\nKeyStore :: loadFileContents: Failed to open file - %s for reading key contents", filePath);
+      #else
+        LOG("\nKeyStore :: loadFileContents: Failed to open file - %s for reading key contents", filePath);
+      #endif
       return;
     }
 
@@ -247,7 +255,11 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
     }
 
     delete buffer;
-    LOG("\nKeyStore :: loadFileContents: Key Contents loaded from file - %s", filePath);
+    #ifndef DEBUG_DISABLED
+      debugD("\nKeyStore :: loadFileContents: Key Contents loaded from file - %s", filePath);
+    #else
+      LOG("\nKeyStore :: loadFileContents: Key Contents loaded from file - %s", filePath);
+    #endif
 }
 
 const char* KeyStore :: getDevicePrivateKey(){
@@ -282,18 +294,18 @@ std::vector <struct Action>  KeyStore :: retrieveActions(){
   //Clear previous actions details
   if(!actionsList.empty()){
     actionsList.clear();
-    LOG("\nKeyStore :: retrieveActions: Cleared contents of previous actions present in ActionsList");
+    debugD("\nKeyStore :: retrieveActions: Cleared contents of previous actions present in ActionsList");
   }
 
   if(!SPIFFS.begin(true)){
-    LOG("\nKeyStore :: retrieveActions: An Error has occurred while mounting SPIFFS");
+    debugE("\nKeyStore :: retrieveActions: An Error has occurred while mounting SPIFFS");
     return actionsList;
   }
 
   if(SPIFFS.exists(ACTIONS_FILE)){
     File file = SPIFFS.open(ACTIONS_FILE, FILE_READ);
     if(!file){
-      LOG("\nKeyStore :: retrieveActions: There was an error opening the file - %s for reading action details", ACTIONS_FILE);
+      debugE("\nKeyStore :: retrieveActions: There was an error opening the file - %s for reading action details", ACTIONS_FILE);
       return actionsList;
     }
 
@@ -302,13 +314,13 @@ std::vector <struct Action>  KeyStore :: retrieveActions(){
     file.close();
 
     if(actionsArray.success()){
-      LOG("\nKeyStore :: retrieveActions: JSON Array parsed from the file - %s", ACTIONS_FILE);
+      debugD("\nKeyStore :: retrieveActions: JSON Array parsed from the file - %s", ACTIONS_FILE);
       int actionsCount = actionsArray.size();
       for(byte i=0 ; i < actionsCount; i++){
         const char* actionID = actionsArray[i]["actionID"];
         const char* frequency = actionsArray[i]["frequency"];
         const unsigned long ltt = (actionsArray[i]["time"]).as<unsigned long>();
-        LOG("\nKeyStore :: retrieveActions: Action - %d Details: %s - %s - %lu",i+1,actionID,frequency,ltt);
+        debugD("\nKeyStore :: retrieveActions: Action - %d Details: %s - %s - %lu",i+1,actionID,frequency,ltt);
 
         struct Action actionItem;
         actionItem.actionID = new char[strlen(actionID)+1];
@@ -322,45 +334,45 @@ std::vector <struct Action>  KeyStore :: retrieveActions(){
       return actionsList;
     }
     else {
-      LOG("\nKeyStore :: retrieveActions: Error while parsing retrieved JSON Array from the file - %s", ACTIONS_FILE);
+      debugE("\nKeyStore :: retrieveActions: Error while parsing retrieved JSON Array from the file - %s", ACTIONS_FILE);
       return actionsList;
     }
   }
   else {
-    LOG("\nFile - %s does not exist to read action details",ACTIONS_FILE);
+    debugE("\nFile - %s does not exist to read action details",ACTIONS_FILE);
     return actionsList;
   }
 }
 
 bool KeyStore :: saveActions(std::vector <struct Action> aList){
   if(!SPIFFS.begin(true)){
-    LOG("\nKeyStore :: saveActions: An Error has occurred while mounting SPIFFS");
+    debugE("\nKeyStore :: saveActions: An Error has occurred while mounting SPIFFS");
     return false;
   }
 
   File file = SPIFFS.open(ACTIONS_FILE, FILE_WRITE);
   if(!file){
-    LOG("\nKeyStore :: saveActions: There was an error opening the file - %s for saving actions", ACTIONS_FILE);
+    debugE("\nKeyStore :: saveActions: There was an error opening the file - %s for saving actions", ACTIONS_FILE);
     return false;
   }
 
   DynamicJsonBuffer jb;
   JsonArray& actionsArray = jb.createArray();
 
-  LOG("\nKeyStore :: saveActions: Actions given to save to the file - %s : %d", ACTIONS_FILE,aList.size());
+  debugD("\nKeyStore :: saveActions: Actions given to save to the file - %s : %d", ACTIONS_FILE,aList.size());
   for (std::vector<struct Action>::iterator i = aList.begin() ; i != aList.end(); ++i){
     JsonObject& obj = jb.createObject();
     obj["actionID"] = i->actionID;
     obj["frequency"] = i->actionFrequency;
     obj["time"] = i->triggeredTime;
     actionsArray.add(obj);
-    LOG("\nKeyStore :: saveActions: %s : %s : %lu -- Added to actions array", i->actionID, i->actionFrequency, i->triggeredTime);
+    debugD("\nKeyStore :: saveActions: %s : %s : %lu -- Added to actions array", i->actionID, i->actionFrequency, i->triggeredTime);
   }
 
-  LOG("\nKeyStore :: saveActions: Number of actions in actionsArray to save to file : %d", actionsArray.size());
+  debugD("\nKeyStore :: saveActions: Number of actions in actionsArray to save to file : %d", actionsArray.size());
   int nBytes = actionsArray.measureLength();
   actionsArray.printTo(file);
-  LOG("\nKeyStore :: saveActions: Number of bytes written to %s: %d",ACTIONS_FILE,nBytes);
+  debugD("\nKeyStore :: saveActions: Number of bytes written to %s: %d",ACTIONS_FILE,nBytes);
 
   file.close();
   return true;

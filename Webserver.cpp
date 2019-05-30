@@ -6,8 +6,11 @@
 */
 
 #include "Webserver.h"
+#ifndef DEBUG_DISABLED
+  RemoteDebug Debug;
+#endif
 
-Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd){
+Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd, const int logLevel){
   ledPin = 2;
   port = 3001;
   WiFi_SSID = NULL;
@@ -16,6 +19,7 @@ Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd){
   store = NULL;
   config = NULL;
   ble = NULL;
+  debugLevel = logLevel;
   serverStatus = NOT_STARTED;
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
@@ -43,12 +47,27 @@ void Webserver :: connectWiFi(){
 
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
-        LOG("\nWebserver :: connectWiFi: Trying to Connect to WiFi SSID: %s\n", WiFi_SSID->c_str());
+        LOG("\nWebserver :: connectWiFi: Trying to Connect to WiFi SSID: %s", WiFi_SSID->c_str());
     }
 
-    LOG("\nWebserver :: connectWiFi: Board Connected to WiFi SSID: %s, assigned IP: ", WiFi_SSID->c_str());
-    Serial.print(getBoardIP());
+    LOG("\nWebserver :: connectWiFi: Board Connected to WiFi SSID: %s, assigned IP: %s", WiFi_SSID->c_str(), (getBoardIP().toString()).c_str());
     blinkLED();
+    //Remote Debug Setup if DEBUG ENABLED
+    #ifndef DEBUG_DISABLED
+      //Initialise RemoteDebug instance based on provided log level
+      switch(debugLevel){
+        case BoT_DEBUG: Debug.begin("BoT-ESP-32",Debug.DEBUG); break;
+        case BoT_INFO: Debug.begin("BoT-ESP-32",Debug.INFO); break;
+        case BoT_WARNING: Debug.begin("BoT-ESP-32",Debug.WARNING); break;
+        case BoT_ERROR: Debug.begin("BoT-ESP-32",Debug.ERROR); break;
+        default: Debug.begin("BoT-ESP-32",Debug.INFO); break;
+      }
+      //Set required properties for Debug
+      Debug.setResetCmdEnabled(true);
+      Debug.setSerialEnabled(true);
+      Debug.showProfiler(true);
+      Debug.showColors(true);
+    #endif
   }
 }
 
@@ -109,9 +128,7 @@ void Webserver :: startServer(){
 
       server->begin();
       serverStatus = STARTED;
-      LOG("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://", port);
-      Serial.print(getBoardIP());
-      LOG(":%d/\n",port);
+      LOG("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://%s:%d/", port,(getBoardIP().toString()).c_str(),port);
 
       //Check pairing status for the device
       PairingService* ps = new PairingService();
