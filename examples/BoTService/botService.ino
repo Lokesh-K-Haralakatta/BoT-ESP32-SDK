@@ -42,7 +42,7 @@ void loop() {
   #ifndef DEBUG_DISABLED
     Debug.handle();
   #endif
-  
+
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
     //Create BoT Service Instance
@@ -84,7 +84,7 @@ void loop() {
     delete bot;
   }
   else {
-  LOG("\nsdkSample: ESP-32 board not connected to WiFi Network, try again");
+  LOG("\nbotService: ESP-32 board not connected to WiFi Network, try again");
   //Enable board to connect to WiFi Network
   server->connectWiFi();
   }

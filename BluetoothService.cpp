@@ -37,19 +37,23 @@ void BluetoothService :: initializeBLE(const char* dName){
     strcpy(deviceName,"BoT-ESP-32");
   }
 
-  LOG("\nBluetoothService :: initializeBLE: DeviceName set to %s", deviceName);
+  debugD("\nBluetoothService :: initializeBLE: DeviceName set to %s", deviceName);
 
   store->loadJSONConfiguration();
   store->retrieveAllKeys();
+  debugD("\nBluetoothService :: initializeBLE: Loaded config and all keys from KeyStore");
 
   BLEDevice::init(deviceName);
+  debugD("\nBluetoothService :: initializeBLE: BLEDevice::init done");
 
   bleServer = BLEDevice::createServer();
+  debugD("\nBluetoothService :: initializeBLE: BLEDevice::createServer done");
+
   bleServer->setCallbacks(new BoTServerCallbacks());
+  debugD("\nBluetoothService :: initializeBLE: bleServer->setCallbacks done");
 
   bleService = bleServer->createService(SERVICE_UUID);
-
-  LOG("\nBluetoothService :: initializeBLE: BLE Server and BLE Service setup done");
+  debugD("\nBluetoothService :: initializeBLE: BLE Server and BLE Service setup done");
 
   bleDeviceCharacteristic = bleService->createCharacteristic(DEVICE_CHARACTERISTIC_UUID,
                                                             BLECharacteristic::PROPERTY_READ);
@@ -63,64 +67,64 @@ void BluetoothService :: initializeBLE(const char* dName){
   char dInfo[1024];
   doc.printTo(dInfo);
 
-  LOG("\nBluetoothService :: initializeBLE: %s", dInfo);
+  debugD("\nBluetoothService :: initializeBLE: %s", dInfo);
   bleDeviceCharacteristic->setValue(std::string(dInfo));
 
-  LOG("\nBluetoothService :: initializeBLE: Setting Device Characteristic is done");
+  debugD("\nBluetoothService :: initializeBLE: Setting Device Characteristic is done");
 
   bleDeviceInfoCharacteristic = bleService->createCharacteristic(DEVICE_INFO_CHARACTERISTIC_UUID,
                                                                 BLECharacteristic::PROPERTY_READ);
   bleDeviceInfoCharacteristic->setValue("{}");
-  LOG("\nBluetoothService :: initializeBLE: Setting Device Info Characteristic is done");
+  debugD("\nBluetoothService :: initializeBLE: Setting Device Info Characteristic is done");
 
   bleNetworkCharacteristic = bleService->createCharacteristic(DEVICE_NETWORK_CHARACTERISTIC_UUID,
                                                                 BLECharacteristic::PROPERTY_READ);
   bleNetworkCharacteristic->setValue("{}");
-  LOG("\nBluetoothService :: initializeBLE: Setting Network Characteristic is done");
+  debugD("\nBluetoothService :: initializeBLE: Setting Network Characteristic is done");
 
   bleConfigureCharacteristic = bleService->createCharacteristic(CONFIGURE_CHARACTERISTIC_UUID,
                                                                                 BLECharacteristic::PROPERTY_READ |
                                                                                 BLECharacteristic::PROPERTY_WRITE);
   bleConfigureCharacteristic->setValue("{}");
-  LOG("\nBluetoothService :: initializeBLE: Setting Configuration Characteristic is done");
+  debugD("\nBluetoothService :: initializeBLE: Setting Configuration Characteristic is done");
 
   bleService->start();
-  LOG("\nBluetoothService :: initializeBLE: BLE Service Started");
+  debugD("\nBluetoothService :: initializeBLE: BLE Service Started");
 
   bleServer->getAdvertising()->addServiceUUID(bleService->getUUID());
   bleServer->getAdvertising()->start();
-  LOG("\nBluetoothService :: initializeBLE: BLE Server Started Advertising, we should see in companion device");
+  debugI("\nBluetoothService :: initializeBLE: BLE Server Started Advertising, we should see bluetooth device with name - %s in companion application",deviceName);
 }
 
 void BluetoothService :: deInitializeBLE(){
-  LOG("\nBluetoothService :: deInitializeBLE: Stopping and Clearing BLE Service");
+  debugD("\nBluetoothService :: deInitializeBLE: Stopping and Clearing BLE Service");
 
   bleServer->getAdvertising()->stop();
-  LOG("\nBluetoothService :: deInitializeBLE: Advertising stopped...");
+  debugD("\nBluetoothService :: deInitializeBLE: Advertising stopped...");
 
   bleService->stop();
-  LOG("\nBluetoothService :: deInitializeBLE: BLE Service stopped...");
+  debugD("\nBluetoothService :: deInitializeBLE: BLE Service stopped...");
 
   bleServer->removeService(bleService);
-  LOG("\nBluetoothService :: deInitializeBLE: BLE Service removed from BLE Server...");
+  debugD("\nBluetoothService :: deInitializeBLE: BLE Service removed from BLE Server...");
 
   if(bleConfigureCharacteristic != NULL) delete bleConfigureCharacteristic;
   if(bleNetworkCharacteristic != NULL) delete bleNetworkCharacteristic;
   if(bleDeviceInfoCharacteristic != NULL) delete bleDeviceInfoCharacteristic;
   if(bleDeviceCharacteristic != NULL) delete bleDeviceCharacteristic;
-  LOG("\nBluetoothService :: deInitializeBLE: All characteristics memory freed...");
+  debugD("\nBluetoothService :: deInitializeBLE: All characteristics memory freed...");
 
   if(bleService != NULL) delete bleService;
-  LOG("\nBluetoothService :: deInitializeBLE: BLE Service instance freed...");
+  debugD("\nBluetoothService :: deInitializeBLE: BLE Service instance freed...");
 
   if(bleServer != NULL) delete bleServer;
-  LOG("\nBluetoothService :: deInitializeBLE:  BLE Server instance freed...");
+  debugD("\nBluetoothService :: deInitializeBLE:  BLE Server instance freed...");
 
   BLEDevice::deinit(true);
-  LOG("\nBluetoothService :: deInitializeBLE: BLE Device deinitialized...");
+  debugD("\nBluetoothService :: deInitializeBLE: BLE Device deinitialized...");
 
   if(deviceName != NULL) delete deviceName;
-  LOG("\nBluetoothService :: deInitializeBLE: Memory used for deviceName freed...");
+  debugD("\nBluetoothService :: deInitializeBLE: Memory used for deviceName freed...");
 
-  LOG("\nBluetoothService :: deInitializeBLE: Done...");
+  debugD("\nBluetoothService :: deInitializeBLE: Done...");
 }

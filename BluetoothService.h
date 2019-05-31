@@ -41,12 +41,12 @@ class BluetoothService {
 class BoTServerCallbacks: public BLEServerCallbacks {
   friend class BluetoothService;
   void onConnect(BLEServer* pServer) {
-    LOG("\nBoTServerCallbacks :: onConnect: BLE Client Connected...");
+    debugI("\nBoTServerCallbacks :: onConnect: BLE Client Connected...");
     BluetoothService :: setClientConnected(true);
   };
 
   void onDisconnect(BLEServer* pServer) {
-    LOG("\nBoTServerCallbacks :: onDisconnect: BLE Client Disconnected...");
+    debugI("\nBoTServerCallbacks :: onDisconnect: BLE Client Disconnected...");
     BluetoothService :: setClientConnected(false);
   }
 };

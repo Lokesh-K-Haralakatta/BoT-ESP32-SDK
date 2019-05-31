@@ -70,7 +70,7 @@ void loop() {
     debugI("\n Device State after pairDevice return: %d", store->getDeviceState());
   }
   else {
-  LOG("\nsdkSample: ESP-32 board not connected to WiFi Network, try again");
+  LOG("\npairingService: ESP-32 board not connected to WiFi Network, try again");
   //Enable board to connect to WiFi Network
   server->connectWiFi();
   }

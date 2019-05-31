@@ -5,63 +5,64 @@
 */
 
 #include <ActionService.h>
-
-//Onboard LED Pin
-int ledPin = 2;
+#include <Webserver.h>
 
 ActionService* actService;
 KeyStore* store;
+Webserver *server;
 
 void setup() {
 
   store = KeyStore :: getKeyStoreInstance();
   store->loadJSONConfiguration();
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-
   //Get WiFi Credentials from given configuration
-  //const char* WIFI_NAME = store->getWiFiSSID();
-  //const char* WIFI_PASSWORD = store->getWiFiPasswd();
+  //const char* WIFI_SSID = store->getWiFiSSID();
+  //const char* WIFI_PASSWD = store->getWiFiPasswd();
 
   //Provide custom WiFi Credentials
-  const char* WIFI_NAME = "LJioWiFi";
-  const char* WIFI_PASSWORD = "adgjmptw";
-
-  LOG("\nConnecting to %s", WIFI_NAME);
-  //WiFi.disconnect();
-  WiFi.begin(WIFI_NAME, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    LOG("\nTrying to connect to Wifi Network - %s", WIFI_NAME);
-  }
-
-  LOG("\nSuccessfully connected to WiFi network - %s", WIFI_NAME);
-  LOG("\nIP address: ");
-  Serial.println(WiFi.localIP());
+  const char* WIFI_SSID = "LJioWiFi";
+  const char* WIFI_PASSWD = "adgjmptw";
 
   //Override HTTPS
   store->setHTTPS(true);
-  
+
+  //Instantiate Webserver by using the custom WiFi credentials
+  bool loadConfig = false;
+  int logLevel = BoT_ERROR;
+  server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+
+  //Enable board to connect to WiFi Network
+  server->connectWiFi();
+
   actService = new ActionService();
-
-  //GET Actions for given device from BoT Service
-  if(actService->getActions() != ""){
-    LOG("\nActions retrieval from server is success..");
-  }
-  else {
-    LOG("\nActions retrieval from server failed...");
-  }
-
-  //Trigger an action defined with the deviceID
-  const char* actionID = "E6509B49-5048-4151-B965-BB7B2DBC7905";
-  LOG("\nResponse from triggering action: %s", actService->triggerAction(actionID).c_str());
-
 }
 
 void loop() {
-  digitalWrite(ledPin, LOW);
-  delay(1000);
-  digitalWrite(ledPin, HIGH);
-  delay(1000);
+  //Proceed further if board connects to WiFi Network
+  if(server->isWiFiConnected()){
+    //GET Actions for given device from BoT Service
+    if(actService->getActions() != ""){
+      debugI("\nactionService: Actions retrieval from server is success..");
+    }
+    else {
+      debugE("\nactionService: Actions retrieval from server failed...");
+    }
+
+    //Trigger an action defined with the deviceID
+    const char* actionID = "0097430C-FA78-4087-9B78-3AC7FEEF2245";
+    debugI("\nactionService: Response from triggering action: %s", actService->triggerAction(actionID).c_str());
+
+  }
+  else {
+    LOG("\nactionService: ESP-32 board not connected to WiFi Network, try again");
+    //Enable board to connect to WiFi Network
+    server->connectWiFi();
+  }
+
+  #ifndef DEBUG_DISABLED
+    Debug.handle();
+  #endif
+
+  delay(1*60*1000);
 }

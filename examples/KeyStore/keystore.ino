@@ -135,7 +135,7 @@ void loop(){
     }
   }
   else {
-    LOG("\nsdkSample: ESP-32 board not connected to WiFi Network, try again");
+    LOG("\nkeyStore: ESP-32 board not connected to WiFi Network, try again");
     //Enable board to connect to WiFi Network
     server->connectWiFi();
   }
