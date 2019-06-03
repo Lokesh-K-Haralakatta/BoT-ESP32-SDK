@@ -52,25 +52,17 @@ bool PairingService :: pollPairingStatus(){
 
 void PairingService :: pairDevice(){
   store->initializeEEPROM();
-  if (isPairable() == false) {
-      return;
-  }
-
-  if (isMultipair()) {
-      return;
-  }
+  if(!isPairable() || isMultipair())
+    return;
 
   if(pollPairingStatus() == true){
-    if (isPairable() == false) {
-        return;
-    }
     store->setDeviceState(DEVICE_PAIRED);
     debugI("\nPairingService :: pairDevice: Device successfully paired. Ready to activate.");
     //Remove Device publickey from SPIFFS
-    ActivationService *actService = new ActivationService();
-    actService->activateDevice();
+    ActivationService *actionService = new ActivationService();
+    actionService->activateDevice();
     debugD("\nPairingService :: pairDevice: Returned from actService->activateDevice()");
-    delete actService;
+    delete actionService;
   }
   else {
     debugW("\nPairingService :: pairDevice: Device pairing not yet completed.Try again...");

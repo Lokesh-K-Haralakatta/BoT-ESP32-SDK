@@ -33,7 +33,7 @@
 #define DEVICE_MULTIPAIR 3
 #define LOG Serial.printf
 
-//RemoteDebug Speicifics go here
+//RemoteDebug Specifics go here
 
 //#define DEBUG_DISABLED true
 #include <RemoteDebug.h>
@@ -44,6 +44,7 @@
 #define BoT_INFO 3
 #define BoT_WARNING 4
 #define BoT_ERROR 5
+
 #ifndef DEBUG_DISABLED
   extern RemoteDebug Debug;
 #endif

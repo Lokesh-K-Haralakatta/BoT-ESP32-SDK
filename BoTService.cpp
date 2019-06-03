@@ -153,13 +153,15 @@ String BoTService :: get(const char* endPoint){
         }
         else {
           debugI("\nBoTService :: get: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
-          if(wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST))
+          bool ssl_fg_verify = wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST);
+          debugD("\nBoTService :: get: Return value from wifiClient->verify : %u",ssl_fg_verify);
+          if(ssl_fg_verify == true)
             debugI("\nBoTService :: get: SSL Finger Print Verification Succeeded...");
-            else {
-              debugE("\nBoTService :: get: SSL Finger Print Verification Failed...");
-              freeObjects();
-              return "SSL Finger Print Verification Failed in BoTService GET";
-            }
+          else {
+            debugE("\nBoTService :: get: SSL Finger Print Verification Failed...");
+            freeObjects();
+            return "SSL Finger Print Verification Failed in BoTService GET";
+          }
         }
       }
       else
@@ -285,7 +287,9 @@ String BoTService :: post(const char* endPoint, const char* payload){
         }
         else {
           debugI("\nBoTService :: post: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
-          if(wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST))
+          bool ssl_fg_verify = wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST);
+          debugD("\nBoTService :: post: Return value from wifiClient->verify : %u",ssl_fg_verify);
+          if(ssl_fg_verify == true)
             debugI("\nBoTService :: post: SSL Finger Print Verification Succeeded...");
           else {
             debugE("\nBoTService :: post: SSL Finger Print Verification Failed...");

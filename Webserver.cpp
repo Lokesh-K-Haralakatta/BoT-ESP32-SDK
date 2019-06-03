@@ -91,7 +91,7 @@ bool Webserver :: isWiFiConnected(){
 
 void Webserver :: startServer(){
    if(isWiFiConnected() == true){
-     LOG("\nWebserver :: startServer: Starting the Async Webserver...");
+     debugD("\nWebserver :: startServer: Starting the Async Webserver...");
 
      server = new AsyncWebServer(port);
 
@@ -128,7 +128,7 @@ void Webserver :: startServer(){
 
       server->begin();
       serverStatus = STARTED;
-      LOG("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://%s:%d/", port,(getBoardIP().toString()).c_str(),port);
+      debugI("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://%s:%d/", port,(getBoardIP().toString()).c_str(),port);
 
       //Check pairing status for the device
       PairingService* ps = new PairingService();
@@ -138,11 +138,11 @@ void Webserver :: startServer(){
       //Device is already paired, then device initialization is skipped
       //Otherwise waits till BLE client connects and key exchanges happen followed by device configuration
       if((psResponse.indexOf("true")) != -1){
-        LOG("\nWebserver :: startServer: Device is already paired, no need to initialize and configure");
+        debugI("\nWebserver :: startServer: Device is already paired, no need to initialize and configure");
       }
       else {
-        LOG("\nWebserver :: startServer: Device is not paired yet, needs initialization");
-        LOG("\nWebserver :: startServer: Free Heap before BLE Init: %u", ESP.getFreeHeap());
+        debugI("\nWebserver :: startServer: Device is not paired yet, needs initialization");
+        debugD("\nWebserver :: startServer: Free Heap before BLE Init: %u", ESP.getFreeHeap());
         ble->initializeBLE();
         bool bleClientConnected = false;
         //Wait till BLE Client connects to BLE Server
@@ -150,21 +150,21 @@ void Webserver :: startServer(){
           delay(2000);
           bleClientConnected = ble->isBLEClientConnected();
           if(!bleClientConnected)
-            LOG("\nWebserver :: startServer: Waiting for BLE Client to connect and exchange keys");
+            debugI("\nWebserver :: startServer: Waiting for BLE Client to connect and exchange keys");
           else
-            LOG("\nWebserver :: startServer: BLE Client connected to BLE Server");
+            debugI("\nWebserver :: startServer: BLE Client connected to BLE Server");
         }while(!bleClientConnected);
 
         //Wait till BLE Client disconnects from BLE Server
         while(bleClientConnected){
-          LOG("\nWebserver :: startServer: Waiting for BLE Client to disconnect from BLE Server");
+          debugI("\nWebserver :: startServer: Waiting for BLE Client to disconnect from BLE Server");
           bleClientConnected = ble->isBLEClientConnected();
           delay(2000);
         }
 
         //Release memory used by BLE Service once BLE Client gets disconnected
         if(!bleClientConnected) ble->deInitializeBLE();
-        LOG("\nWebserver :: startServer: Free Heap after BLE deInit: %u", ESP.getFreeHeap());
+        debugD("\nWebserver :: startServer: Free Heap after BLE deInit: %u", ESP.getFreeHeap());
 
         //Proceed with device initialization and followed by configuring
         config->initialize();
