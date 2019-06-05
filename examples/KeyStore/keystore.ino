@@ -7,9 +7,10 @@
 
 #include <Storage.h>
 #include <Webserver.h>
+#include <ConfigurationService.h>
 
 KeyStore* store;
-Webserver *server = NULL;
+Webserver *server;
 
 void setup(){
   store = KeyStore :: getKeyStoreInstance();
@@ -31,6 +32,7 @@ void setup(){
 
   //Enable board to connect to WiFi Network
   server->connectWiFi();
+
 }
 
 void loop(){
@@ -41,9 +43,14 @@ void loop(){
       debugI("\n WiFi Passwd: %s", store->getWiFiPasswd());
       debugI("\n Maker ID: %s", store->getMakerID());
       debugI("\n Device ID: %s", store->getDeviceID());
+      debugI("\n Device Name: %s", store->getDeviceName());
       debugI("\n Altternate Device ID: %s", store->getAlternateDeviceID());
     }
 
+    //Explicitly set Device name
+    store->setDeviceName("keystore-device");
+    debugI("\n Device Name after reset: %s", store->getDeviceName());
+    
     store->retrieveAllKeys();
 
     if(store->isPrivateKeyLoaded()){

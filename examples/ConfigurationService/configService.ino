@@ -30,7 +30,7 @@ void setup() {
 
   //Instantiate Webserver by using the custom WiFi credentials
   bool loadConfig = false;
-  int logLevel = BoT_ERROR;
+  int logLevel = BoT_INFO;
   server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
   //Enable board to connect to WiFi Network

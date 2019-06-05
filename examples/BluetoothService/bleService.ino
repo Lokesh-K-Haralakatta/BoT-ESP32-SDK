@@ -31,9 +31,14 @@ void setup(){
 void loop(){
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
-    String bleDeviceName = "BoT-ESP32-" + String(counter);
     ble = new BluetoothService();
-    ble->initializeBLE(bleDeviceName.c_str());
+    if(counter == 1)
+      ble->initializeBLE(NULL);
+    else {
+      String bleDeviceName = "BoT-ESP32-" + String(counter);
+      ble->initializeBLE(bleDeviceName.c_str());
+    }
+
     while(!ble->isBLEClientConnected()){
       debugI("\nbleService: Waiting for BLE Client to connect");
       if(ble->isBLEClientConnected()) break;

@@ -37,6 +37,8 @@ class KeyStore {
     const char* getCACert();
     void setHTTPS(const bool https);
     const bool getHTTPS();
+    const char* getDeviceName();
+    void setDeviceName(const char* dName);
     void setDeviceState(int);
     void resetDeviceState();
     const int getDeviceState();
@@ -49,6 +51,7 @@ class KeyStore {
     String *https;
     String *makerID;
     String *deviceID;
+    String *deviceName;
     String *altDeviceID;
     String *privateKey;
     String *publicKey;

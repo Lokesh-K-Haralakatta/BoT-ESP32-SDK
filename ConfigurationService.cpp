@@ -26,25 +26,27 @@ void ConfigurationService :: initialize(){
 
 String* ConfigurationService :: getDeviceInfo(){
   if(deviceInfo != NULL){
-    delete deviceInfo;
-    deviceInfo = NULL;
+    debugD("\nConfigurationService :: getDeviceInfo: Already collected device info");
+    return deviceInfo;
   }
 
   if(store->isJSONConfigLoaded() && store->isPublicKeyLoaded()){
     debugD("\nConfigurationService :: getDeviceInfo: Getting device specific data");
     const char* deviceID = store->getDeviceID();
+    const char* deviceName = store->getDeviceName();
     const char* makerID = store->getMakerID();
     const char* publicKey = store->getDevicePublicKey();
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject& doc = jsonBuffer.createObject();
     doc["deviceID"] = deviceID;
+    doc["name"] = deviceName;
     doc["makerID"] = makerID;
     doc["publicKey"] = publicKey;
-
+    doc["multipair"] = 0;
     if (store->getDeviceState() == DEVICE_MULTIPAIR) {
       doc["multipair"] = 1;
-      doc["alternativeID"] = store->getAlternateDeviceID();
+      doc["aid"] = store->getAlternateDeviceID();
     }
 
     char dInfo[1024];

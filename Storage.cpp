@@ -23,6 +23,7 @@ KeyStore :: KeyStore(){
   https = NULL;
   makerID = NULL;
   deviceID = NULL;
+  deviceName = NULL;
   altDeviceID = NULL;
   privateKey = NULL;
   publicKey = NULL;
@@ -118,6 +119,12 @@ void KeyStore :: loadJSONConfiguration(){
       deviceID = new String(dId);
     }
 
+    const char* dName = json["device_name"] | "BoT-ESP-32";
+    if(dName != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred deviceName from configuration: %s",dName);
+      deviceName = new String(dName);
+    }
+
     const char* adId = json["alt_device_id"] | "alt_device_id";
     if(adId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Pasred alternate deviceID from configuration: %s",adId);
@@ -145,6 +152,19 @@ const bool KeyStore :: getHTTPS(){
     return true;
   else
     return false;
+}
+
+const char* KeyStore :: getDeviceName(){
+  return (deviceName != NULL) ? deviceName->c_str() : NULL;
+}
+
+void KeyStore :: setDeviceName(const char* dName){
+  if(deviceName != NULL){
+    delete deviceName;
+    deviceName = NULL;
+  }
+  if(dName != NULL)
+    deviceName = new String(dName);
 }
 
 const char* KeyStore :: getWiFiSSID(){
