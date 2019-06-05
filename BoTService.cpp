@@ -48,7 +48,7 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
 
   uint8_t headerAndPayload[800];
   sprintf((char*)headerAndPayload, "%s.%s", base64Header, base64Payload);
-  LOG("\nBoTService :: encodeJWT: headerAndPayload contents: %s", (char*)headerAndPayload);
+  debugD("\nBoTService :: encodeJWT: headerAndPayload contents: %s", (char*)headerAndPayload);
 
   mbedtls_pk_context pk_context;
   mbedtls_pk_init(&pk_context);
@@ -61,14 +61,14 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
              nullptr,
              0);
   if (rc != 0) {
-    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_parse_key: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
+    debugE("\nBoTService :: encodeJWT: Failed to mbedtls_pk_parse_key: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
     return "";
   }
-  LOG("\nBoTService :: encodeJWT: Signing Key is parsed");
+  debugD("\nBoTService :: encodeJWT: Signing Key is parsed");
 
   mbedtls_rsa_context *rsa;
   rsa = mbedtls_pk_rsa(pk_context);
-  LOG("\nBoTService :: encodeJWT: RSA context loaded");
+  debugD("\nBoTService :: encodeJWT: RSA context loaded");
 
   mbedtls_entropy_context entropy;
   mbedtls_ctr_drbg_context ctr_drbg;
@@ -82,30 +82,30 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
     &entropy,
     (const unsigned char*)pers,
     strlen(pers));
-  LOG("\nBoTService :: encodeJWT: mbedtls_ctr_drbg_seed is completed");
+  debugD("\nBoTService :: encodeJWT: mbedtls_ctr_drbg_seed is completed");
 
   uint8_t digest[32];
   rc = mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), headerAndPayload, strlen((char*)headerAndPayload), digest);
   if (rc != 0) {
-    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_md: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
+    debugE("\nBoTService :: encodeJWT: Failed to mbedtls_md: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
     return "";
   }
-  LOG("\nBoTService :: encodeJWT: mbedtls_md is completed");
+  debugD("\nBoTService :: encodeJWT: mbedtls_md is completed");
 
   size_t retSize;
   uint8_t oBuf[500];
   rc = mbedtls_pk_sign(&pk_context, MBEDTLS_MD_SHA256, digest, sizeof(digest), oBuf, &retSize, mbedtls_ctr_drbg_random, &ctr_drbg);
   if (rc != 0) {
-    LOG("\nBoTService :: encodeJWT: Failed to mbedtls_pk_sign: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
+    debugE("\nBoTService :: encodeJWT: Failed to mbedtls_pk_sign: %d (-0x%x): %s", rc, -rc, mbedtlsError(rc));
     return "";
   }
-  LOG("\nBoTService :: encodeJWT: mbedtls_pk_sign is completed");
+  debugD("\nBoTService :: encodeJWT: mbedtls_pk_sign is completed");
 
   char base64Signature[600];
   base64url_encode((unsigned char *)oBuf, retSize, base64Signature);
   char* retData = (char*)malloc(strlen((char*)headerAndPayload) + 1 + strlen((char*)base64Signature) + 1);
   sprintf(retData, "%s.%s", headerAndPayload, base64Signature);
-  LOG("\nBoTService :: encodeJWT: encoded return data is ready");
+  debugD("\nBoTService :: encodeJWT: encoded return data is ready");
 
   delay(100);
   mbedtls_pk_free(&pk_context);
@@ -120,10 +120,10 @@ String BoTService :: get(const char* endPoint){
 
   fullURI = new String(uriPath);
   fullURI->concat(endPoint);
-  LOG("\nBoTService :: get: URI: %s", fullURI->c_str());
+  debugD("\nBoTService :: get: URI: %s", fullURI->c_str());
 
   if(WiFi.status() == WL_CONNECTED){
-    LOG("\nBoTService :: get: WiFi Status: Connected");
+    debugD("\nBoTService :: get: WiFi Status: Connected");
 
     wifiClient = new WiFiClientSecure();
     httpClient = new HTTPClient();
@@ -133,10 +133,10 @@ String BoTService :: get(const char* endPoint){
       if( caCert != NULL){
         //LOG("\nCA Certificate Contents: \n%s\n",caCert);
         wifiClient->setCACert(caCert);
-        LOG("\nBoTService :: get: CACert set to wifiClient");
+        debugD("\nBoTService :: get: CACert set to wifiClient");
       }
       else {
-        LOG("\nBoTService :: get: store->getCACert returned NULL, hence turning off https");
+        debugW("\nBoTService :: get: store->getCACert returned NULL, hence turning off https");
         https = false;
       }
     }
@@ -145,41 +145,43 @@ String BoTService :: get(const char* endPoint){
     if(https){
       httpClientBegin = httpClient->begin(*wifiClient,hostURL,HTTPS_PORT,fullURI->c_str(),true);
       if(httpClientBegin){
-        LOG("\nBoTService :: get: HTTPClient initialized for HTTPS");
+        debugI("\nBoTService :: get: HTTPClient initialized for HTTPS");
         if(!wifiClient->connect((char*)HOST, HTTPS_PORT)){
-          LOG("\nBoTService :: get: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
+          debugE("\nBoTService :: get: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
           freeObjects();
           return "wifiSecureClient connection to server failed, can not verify SSL Finger Print";
         }
         else {
-          LOG("\nBoTService :: get: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
-          if(wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST))
-            LOG("\nBoTService :: get: SSL Finger Print Verification Succeeded...");
-            else {
-              LOG("\nBoTService :: get: SSL Finger Print Verification Failed...");
-              freeObjects();
-              return "SSL Finger Print Verification Failed in BoTService GET";
-            }
+          debugI("\nBoTService :: get: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
+          bool ssl_fg_verify = wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST);
+          debugD("\nBoTService :: get: Return value from wifiClient->verify : %u",ssl_fg_verify);
+          if(ssl_fg_verify == true)
+            debugI("\nBoTService :: get: SSL Finger Print Verification Succeeded...");
+          else {
+            debugE("\nBoTService :: get: SSL Finger Print Verification Failed...");
+            freeObjects();
+            return "SSL Finger Print Verification Failed in BoTService GET";
+          }
         }
       }
       else
-        LOG("\nBoTService :: get: HTTPClient initialization failed for HTTPS");
+        debugE("\nBoTService :: get: HTTPClient initialization failed for HTTPS");
     }
     else {
       httpClientBegin = httpClient->begin(hostURL,HTTP_PORT,fullURI->c_str());
       if(httpClientBegin)
-        LOG("\nBoTService :: get: HTTPClient initialized for HTTP");
+        debugI("\nBoTService :: get: HTTPClient initialized for HTTP");
       else
-        LOG("\nBoTService :: post: HTTPClient initialization failed for HTTP");
+        debugW("\nBoTService :: get: HTTPClient initialization failed for HTTP");
     }
 
     if(httpClientBegin){
       httpClient->addHeader("makerID", store->getMakerID());
       httpClient->addHeader("deviceID", store->getDeviceID());
 
-      LOG("\nBoTService :: get: Making httpClient->GET call");
+      debugD("\nBoTService :: get: Making httpClient->GET call");
       int httpCode = httpClient->GET();
-      LOG("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
+      debugD("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
 
       const char* errorMSG = httpClient->errorToString(httpCode).c_str();
 
@@ -191,7 +193,7 @@ String BoTService :: get(const char* endPoint){
 
       if(httpCode > 0) {
 
-        LOG("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
+        debugI("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
 
         if(httpCode == HTTP_CODE_OK) {
           int firstDoTIdx = payload.indexOf(".");
@@ -202,17 +204,17 @@ String BoTService :: get(const char* endPoint){
           }
         }
         else {
-          LOG("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s", endPoint, errorMSG);
+          debugE("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s", endPoint, errorMSG);
           return errorMSG;
         }
       }
       else {
-        LOG("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s", endPoint, errorMSG);
+        debugE("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s", endPoint, errorMSG);
         return errorMSG;
       }
     }
     else {
-      LOG("\nBoTService :: get: httpClient->begin failed....");
+      debugE("\nBoTService :: get: httpClient->begin failed....");
       //Deallocate memory allocated for objects
       freeObjects();
 
@@ -231,12 +233,12 @@ String BoTService :: decodePayload(String encodedPayload){
   String ss(encodedPayload);
 
   base64url_decode((char *)ss.c_str(), ss.length() , decoded);
-  LOG("\nBoTService :: decodePayload: Decoded String: %s", decoded);
+  debugD("\nBoTService :: decodePayload: Decoded String: %s", decoded);
 
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(decoded);
   String botValue = root["bot"];
-  LOG("\nBoTService :: decodePayload: response value: %s",botValue.c_str());
+  debugD("\nBoTService :: decodePayload: response value: %s",botValue.c_str());
 
   return botValue;
 }
@@ -250,12 +252,12 @@ String BoTService :: post(const char* endPoint, const char* payload){
   String botJWT = encodeJWT(jwtHeader, payload);
   String body = (String)"{\"bot\": \"" + botJWT +   "\"}";
 
-  LOG("\nBoTService :: post: body contents after encoding: %s", body.c_str());
+  debugD("\nBoTService :: post: body contents after encoding: %s", body.c_str());
   fullURI = new String(uriPath);
   fullURI->concat(endPoint);
 
   if(WiFi.status() == WL_CONNECTED){
-    LOG("\nBoTService :: post: Everything good to make POST Call to BoT Service: %s", fullURI->c_str());
+    debugD("\nBoTService :: post: Everything good to make POST Call to BoT Service: %s", fullURI->c_str());
 
     wifiClient = new WiFiClientSecure();
     httpClient = new HTTPClient();
@@ -265,10 +267,10 @@ String BoTService :: post(const char* endPoint, const char* payload){
       const char* caCert = store->getCACert();
       if(caCert != NULL){
         wifiClient->setCACert(caCert);
-        LOG("\nBoTService :: post: CACert set to wifiClient");
+        debugD("\nBoTService :: post: CACert set to wifiClient");
       }
       else {
-        LOG("\nBoTService :: post: store->getCACert returned NULL, hence turning off https");
+        debugW("\nBoTService :: post: store->getCACert returned NULL, hence turning off https");
         https = false;
       }
     }
@@ -277,32 +279,34 @@ String BoTService :: post(const char* endPoint, const char* payload){
     if(https){
       httpClientBegin = httpClient->begin(*wifiClient,hostURL,HTTPS_PORT,fullURI->c_str(),true);
       if(httpClientBegin){
-        LOG("\nBoTService :: post: HTTPClient initialized for HTTPS");
+        debugI("\nBoTService :: post: HTTPClient initialized for HTTPS");
         if(!wifiClient->connect((char*)HOST, HTTPS_PORT)){
-          LOG("\nBoTService :: post: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
+          debugE("\nBoTService :: post: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
           freeObjects();
           return "wifiSecureClient connection to server failed, can not verify SSL Finger Print";
         }
         else {
-          LOG("\nBoTService :: post: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
-          if(wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST))
-            LOG("\nBoTService :: post: SSL Finger Print Verification Succeeded...");
+          debugI("\nBoTService :: post: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
+          bool ssl_fg_verify = wifiClient->verify((char*)SSL_FINGERPRINT_SHA256, (char*)HOST);
+          debugD("\nBoTService :: post: Return value from wifiClient->verify : %u",ssl_fg_verify);
+          if(ssl_fg_verify == true)
+            debugI("\nBoTService :: post: SSL Finger Print Verification Succeeded...");
           else {
-            LOG("\nBoTService :: post: SSL Finger Print Verification Failed...");
+            debugE("\nBoTService :: post: SSL Finger Print Verification Failed...");
             freeObjects();
             return "SSL Finger Print Verification Failed in BoTService POST";
           }
         }
       }
       else
-        LOG("\nBoTService :: post: HTTPClient initialization failed for HTTPS");
+        debugE("\nBoTService :: post: HTTPClient initialization failed for HTTPS");
     }
     else {
       httpClientBegin = httpClient->begin(hostURL,HTTP_PORT,fullURI->c_str());
       if(httpClientBegin)
-        LOG("\nBoTService :: post: HTTPClient initialized for HTTP");
+        debugI("\nBoTService :: post: HTTPClient initialized for HTTP");
       else
-        LOG("\nBoTService :: post: HTTPClient initialization failed for HTTP");
+        debugW("\nBoTService :: post: HTTPClient initialization failed for HTTP");
     }
 
     if(httpClientBegin){
@@ -323,7 +327,7 @@ String BoTService :: post(const char* endPoint, const char* payload){
 
       if(httpCode > 0) {
 
-        LOG("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
+        debugI("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
 
         if(httpCode == HTTP_CODE_OK) {
           int firstDoTIdx = payload.indexOf(".");
@@ -334,17 +338,17 @@ String BoTService :: post(const char* endPoint, const char* payload){
           }
         }
         else {
-          LOG("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s", endPoint, errorMSG);
+          debugE("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s", endPoint, errorMSG);
           return String(errorMSG);
         }
       }
       else {
-        LOG("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s", endPoint, errorMSG);
+        debugE("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s", endPoint, errorMSG);
         return String(errorMSG);
       }
     }
     else {
-      LOG("\nBoTService :: post: httpClient->begin failed....");
+      debugE("\nBoTService :: post: httpClient->begin failed....");
       //Deallocate memory allocated for objects
       freeObjects();
       return "httpClient->begin failed....";
@@ -374,5 +378,5 @@ void BoTService :: freeObjects(){
     fullURI = NULL;
   }
 
-  LOG("\nBoTService :: freeObjects : Objects memory freed");
+  debugD("\nBoTService :: freeObjects : Objects memory freed");
 }

@@ -6,12 +6,11 @@
 */
 #include <PairingService.h>
 #include <Storage.h>
-
-//Onboard LED Pin
-int ledPin = 2;
+#include <Webserver.h>
 
 PairingService* ps;
 KeyStore* store;
+Webserver *server = NULL;
 
 void setup() {
 
@@ -19,28 +18,24 @@ void setup() {
   store->loadJSONConfiguration();
   store->initializeEEPROM();
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-
   //Get WiFi Credentials from given configuration
-  //const char* WIFI_NAME = store->getWiFiSSID();
-  //const char* WIFI_PASSWORD = store->getWiFiPasswd();
+  //const char* WIFI_SSID = store->getWiFiSSID();
+  //const char* WIFI_PASSWD = store->getWiFiPasswd();
 
   //Provide custom WiFi Credentials
-  const char* WIFI_NAME = "LJioWiFi";
-  const char* WIFI_PASSWORD = "adgjmptw";
+  const char* WIFI_SSID = "LJioWiFi";
+  const char* WIFI_PASSWD = "adgjmptw";
 
-  LOG("\nConnecting to %s", WIFI_NAME);
-  //WiFi.disconnect();
-  WiFi.begin(WIFI_NAME, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    LOG("\nTrying to connect to Wifi Network - %s", WIFI_NAME);
-  }
+  //Override HTTPS
+  store->setHTTPS(true);
 
-  LOG("\nSuccessfully connected to WiFi network - %s", WIFI_NAME);
-  LOG("\nIP address: ");
-  Serial.println(WiFi.localIP());
+  //Instantiate Webserver by using the custom WiFi credentials
+  bool loadConfig = false;
+  int logLevel = BoT_ERROR;
+  server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+
+  //Enable board to connect to WiFi Network
+  server->connectWiFi();
 
   ps = new PairingService();
 
@@ -51,7 +46,7 @@ void setup() {
   //Device State after pairDevice should be DEVICE_ACTIVE i.e. 2
 
   //For new deviceID, set the device state to DEVICE_NEW
-  //We should see waiting for 10 times to see the response status as false
+  //We should see waiting for 3 times to see the response status as false
   //Device State after pairDevice should be DEVICE_NEW i.e. 0
 
   //For all other states, the pairDevice method simply returns immediately
@@ -59,21 +54,30 @@ void setup() {
   //store->setDeviceState(DEVICE_ACTIVE);
   //store->setDeviceState(DEVICE_MULTIPAIR);
   //Device State after pairDevice should be same as before
-
-  store->setDeviceState(DEVICE_NEW);
-  LOG("\n Given deviceID in configuration: %s", store->getDeviceID());
-  LOG("\n Device State stored in EEPROM: %d", store->getDeviceState());
-  LOG("\n Now trying to pair the device, followed by activating the device");
-
-  //Should behave as mentioned above
-  ps->pairDevice();
-
-  LOG("\n Device State after pairDevice return: %d", store->getDeviceState());
 }
 
 void loop() {
-  digitalWrite(ledPin, LOW);
-  delay(1000);
-  digitalWrite(ledPin, HIGH);
-  delay(1000);
+  //Proceed further if board connects to WiFi Network
+  if(server->isWiFiConnected()){
+    store->setDeviceState(DEVICE_NEW);
+    debugI("\n Given deviceID in configuration: %s", store->getDeviceID());
+    debugI("\n Device State stored in EEPROM: %d", store->getDeviceState());
+    debugI("\n Now trying to pair the device, followed by activating the device");
+
+    //Should behave as mentioned above
+    ps->pairDevice();
+
+    debugI("\n Device State after pairDevice return: %d", store->getDeviceState());
+  }
+  else {
+  LOG("\npairingService: ESP-32 board not connected to WiFi Network, try again");
+  //Enable board to connect to WiFi Network
+  server->connectWiFi();
+  }
+
+  #ifndef DEBUG_DISABLED
+    Debug.handle();
+  #endif
+
+  delay(1*60*1000);
 }

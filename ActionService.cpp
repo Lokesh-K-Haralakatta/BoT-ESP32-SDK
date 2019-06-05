@@ -37,26 +37,26 @@ const char* ActionService ::generateUuid4() {
     *uuidStr += "0123456789abcdef"[bottomDigit];
   }
 
-  LOG("\nActionService :: generateuuid4 : %s", uuidStr->c_str());
+  debugD("\nActionService :: generateuuid4 : %s", uuidStr->c_str());
 
   return uuidStr->c_str();
 }
 
 String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
   String response = "";
-  LOG("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
+  debugD("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
-  LOG("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
+  debugD("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
   presentActionTriggerTimeInSeconds = 0;
   if(isValidAction(actionID)){
-    LOG("\nActionService :: triggerAction: %s is valid actionID, trying to trigger now", actionID);
+    debugD("\nActionService :: triggerAction: %s is valid actionID, trying to trigger now", actionID);
     store->initializeEEPROM();
     store->loadJSONConfiguration();
 
     const char* deviceID = store->getDeviceID();
-    LOG("\nActionService :: triggerAction: Provided deviceID : %s", deviceID);
+    debugD("\nActionService :: triggerAction: Provided deviceID : %s", deviceID);
     const char* queueID = generateUuid4();
-    LOG("\nActionService :: triggerAction: Generated queueID : %s", queueID);
+    debugD("\nActionService :: triggerAction: Generated queueID : %s", queueID);
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject& doc = jsonBuffer.createObject();
@@ -75,29 +75,36 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
 
     char payload[200];
     doc.printTo(payload);
-    LOG("\nActionService :: triggerAction: Minified JSON payload to triggerAction: %s", payload);
+    debugD("\nActionService :: triggerAction: Minified JSON payload to triggerAction: %s", payload);
 
     BoTService *bot = new BoTService();
     response = bot->post(ACTIONS_END_POINT,payload);
     delete bot;
 
-    //Update the trigger time for the actionID
-    if(updateTriggeredTimeForAction(actionID)){
-      LOG("\nActionService :: triggerAction: Action trigger time - %lu updated to %s",presentActionTriggerTimeInSeconds,actionID);
+    //Update the trigger time for the actionID if its success
+    if(response.indexOf("OK") != -1){
+      debugI("\nActionService :: triggerAction: Action %s successful at time - %lu",actionID,presentActionTriggerTimeInSeconds);
+      if(updateTriggeredTimeForAction(actionID)){
+        debugD("\nActionService :: triggerAction: Action trigger time - %lu updated to %s",presentActionTriggerTimeInSeconds,actionID);
+      }
+      else {
+        debugW("\nActionService :: triggerAction: Action trigger time - %lu failed to update to %s",presentActionTriggerTimeInSeconds,actionID);
+      }
     }
     else {
-      LOG("\nActionService :: triggerAction: Action trigger time - %lu failed to update to %s",presentActionTriggerTimeInSeconds,actionID);
+      debugE("\nActionService :: triggerAction: Failed with response - %s",response.c_str());
     }
+
     //Save the actions present in actionsList to ACTIONS_FILE for reference
     if(store->saveActions(actionsList)){
-      LOG("\nActionService :: triggerAction: %d actions successfully saved to file - %s",actionsList.size(),ACTIONS_FILE);
+      debugD("\nActionService :: triggerAction: %d actions successfully saved to file - %s",actionsList.size(),ACTIONS_FILE);
     }
     else {
-      LOG("\nActionService :: triggerAction: %d actions failed to save to file - %s",actionsList.size(),ACTIONS_FILE);
+      debugE("\nActionService :: triggerAction: %d actions failed to save to file - %s",actionsList.size(),ACTIONS_FILE);
     }
   }
   else {
-    LOG("\nActionService :: triggerAction: %s is invalid actionID", actionID);
+    debugE("\nActionService :: triggerAction: %s is invalid actionID", actionID);
     response = "{\"code\": \"404\", \"message\": \"Invalid Action\"}";
   }
   return response;
@@ -114,13 +121,13 @@ bool ActionService :: updateTriggeredTimeForAction(const char* actionID){
   delete x.actionID;
 
   if(i != actionsList.end()){
-    LOG("\nActionService :: updateTriggeredTimeForAction: Updating TriggeredTime for action - %s", i->actionID);
+    debugD("\nActionService :: updateTriggeredTimeForAction: Updating TriggeredTime for action - %s", i->actionID);
     i->triggeredTime = presentActionTriggerTimeInSeconds;
-    LOG("\nActionService :: updateTriggeredTimeForAction: %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
+    debugD("\nActionService :: updateTriggeredTimeForAction: %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
     return true;
   }
   else {
-    LOG("\nActionService :: updateTriggeredTimeForAction: Action - %s not present in actionsList", actionID);
+    debugW("\nActionService :: updateTriggeredTimeForAction: Action - %s not present in actionsList", actionID);
     return false;
   }
 }
@@ -130,11 +137,11 @@ String ActionService :: getActions(){
   String actions = bot->get(ACTIONS_END_POINT);
   delete bot;
 
-  LOG("\nActionService :: getActions: %s", actions.c_str());
+  debugD("\nActionService :: getActions: %s", actions.c_str());
 
   if(!actionsList.empty()){
     actionsList.clear();
-    LOG("\nActionService :: getActions: cleared contents of previous actions");
+    debugD("\nActionService :: getActions: cleared contents of previous actions");
   }
 
   if(actions.indexOf("[") != -1 && actions.indexOf("]") != -1){
@@ -142,13 +149,13 @@ String ActionService :: getActions(){
     JsonArray& actionsArray = jsonBuffer.parseArray(actions);
     if(actionsArray.success()){
         int actionsCount = actionsArray.size();
-        LOG("\nActionService :: getActions: JSON Actions array parsed successfully");
-        LOG("\nActionService :: getActions: Number of actions returned: %d", actionsCount);
+        debugD("\nActionService :: getActions: JSON Actions array parsed successfully");
+        debugD("\nActionService :: getActions: Number of actions returned: %d", actionsCount);
 
         for(byte i=0 ; i < actionsCount; i++){
            const char* actionID = actionsArray[i]["actionID"];
            const char* frequency = actionsArray[i]["frequency"];
-           LOG("\nID: %s  Frequency: %s", actionID, frequency);
+           debugD("\nID: %s  Frequency: %s", actionID, frequency);
            struct Action actionItem;
            actionItem.actionID = new char[strlen(actionID)+1];
            actionItem.actionFrequency = new char[strlen(frequency)+1];
@@ -157,19 +164,19 @@ String ActionService :: getActions(){
            strcpy(actionItem.actionFrequency,frequency);
            actionsList.push_back(actionItem);
         }
-        LOG("\nActionService :: getActions: Added %d actions returned from server into actionsList", actionsList.size());
+        debugI("\nActionService :: getActions: Added %d actions returned from server into actionsList", actionsList.size());
         return actions;
     }
     else {
-      LOG("\nActionService :: getActions: JSON Actions array parsed failed!");
-      LOG("\nActionService :: getActions: use locally stored actions, if available");
+      debugE("\nActionService :: getActions: JSON Actions array parsed failed!");
+      debugW("\nActionService :: getActions: use locally stored actions, if available");
       actionsList = store->retrieveActions();
       return "";
     }
   }
   else {
-    LOG("\nActionService :: getActions: Could not retrieve actions from server");
-    LOG("\nActionService :: getActions: use locally stored actions, if available");
+    debugE("\nActionService :: getActions: Could not retrieve actions from server");
+    debugW("\nActionService :: getActions: use locally stored actions, if available");
     actionsList = store->retrieveActions();
     return "";
   }
@@ -179,24 +186,24 @@ void ActionService :: updateActionsLastTriggeredTime(){
   //Get Saved Actions from KeyStore
   std::vector <struct Action> savedActionsList = store->retrieveActions();
   if(savedActionsList.empty()){
-    LOG("\nActionService :: updateActionsLastTriggeredTime: Zero saved actions, no need to update any triggered time");
+    debugD("\nActionService :: updateActionsLastTriggeredTime: Zero saved actions, no need to update any triggered time");
     return;
   }
   else {
-    LOG("\nActionService :: updateActionsLastTriggeredTime: There are %d saved actions retrieved from file - %s",savedActionsList.size(),ACTIONS_FILE);
+    debugD("\nActionService :: updateActionsLastTriggeredTime: There are %d saved actions retrieved from file - %s",savedActionsList.size(),ACTIONS_FILE);
     for (std::vector<struct Action>::iterator i = actionsList.begin() ; i != actionsList.end(); ++i){
-      LOG("\nActionService :: updateActionsLastTriggeredTime: %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
+      debugD("\nActionService :: updateActionsLastTriggeredTime: %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
       std::vector<struct Action>::iterator j = find_if(savedActionsList.begin(), savedActionsList.end(),
                                                         [i](const struct Action& k) {
                                                             return (strcmp(i->actionID, k.actionID) == 0); });
 
       if(j != savedActionsList.end()){
-        LOG("\nActionService :: updateActionsLastTriggeredTime: Updating lastTriggeredTime for action - %s", j->actionID);
+        debugD("\nActionService :: updateActionsLastTriggeredTime: Updating lastTriggeredTime for action - %s", j->actionID);
         i->triggeredTime = j->triggeredTime;
-        LOG("\nActionService :: updateActionsLastTriggeredTime: %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
+        debugD("\nActionService :: updateActionsLastTriggeredTime: %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
       }
       else {
-        LOG("\nActionService :: updateActionsLastTriggeredTime: Action - %s not present in savedActionsList", i->actionID);
+        debugD("\nActionService :: updateActionsLastTriggeredTime: Action - %s not present in savedActionsList", i->actionID);
       }
     }
   }
@@ -209,11 +216,11 @@ bool ActionService :: isValidAction(const char* actionID){
 
   //Update lastTriggeredTime for actions from saved details if actions successfully retrieved from BoT Server
   if(!actions.equals("")){
-    LOG("\nActionService :: isValidAction: Actions retrieved from BoT Server, calling updateActionsLastTriggeredTime");
+    debugD("\nActionService :: isValidAction: Actions retrieved from BoT Server, calling updateActionsLastTriggeredTime");
     updateActionsLastTriggeredTime();
   }
   else {
-    LOG("\nActionService :: isValidAction: Actions not retrieved from BoT Server, no need to update actions last triggered time");
+    debugW("\nActionService :: isValidAction: Actions not retrieved from BoT Server, no need to update actions last triggered time");
   }
 
   //Check existence of given action in the actions list
@@ -223,7 +230,7 @@ bool ActionService :: isValidAction(const char* actionID){
     if(strcmp((*i).actionID,actionID) == 0){
       actionIDExists = true;
       actionItem = (*i);
-      LOG("\nActionService :: isValidAction: Action - %s present in retrieved actions from server, lastTriggeredTime: %lu",
+      debugD("\nActionService :: isValidAction: Action - %s present in retrieved actions from server, lastTriggeredTime: %lu",
                     actionItem.actionID, actionItem.triggeredTime);
       break;
     }
@@ -233,7 +240,7 @@ bool ActionService :: isValidAction(const char* actionID){
 bool ActionService :: isValidActionFrequency(const struct Action* pAction){
   //Get last triggered time for the given action
   unsigned long lastTriggeredAt = pAction->triggeredTime;
-  LOG("\nActionService :: isValidActionFrequency: Action - %s last triggered time in seconds - %lu",pAction->actionID,lastTriggeredAt);
+  debugD("\nActionService :: isValidActionFrequency: Action - %s last triggered time in seconds - %lu",pAction->actionID,lastTriggeredAt);
   if (lastTriggeredAt == -1) {
       return true;
   }
@@ -242,47 +249,38 @@ bool ActionService :: isValidActionFrequency(const struct Action* pAction){
     timeClient->forceUpdate();
   }
 
-  LOG("\nActionService :: isValidActionFrequency: Action - %s frequency is %s",pAction->actionID,pAction->actionFrequency);
-  LOG("\nActionService :: isValidActionFrequency: lastTriggeredTime: %lu", lastTriggeredAt);
+  debugD("\nActionService :: isValidActionFrequency: Action - %s frequency is %s",pAction->actionID,pAction->actionFrequency);
+  debugD("\nActionService :: isValidActionFrequency: lastTriggeredTime: %lu", lastTriggeredAt);
   presentActionTriggerTimeInSeconds = timeClient->getEpochTime();
-  LOG("\nActionService :: isValidActionFrequency: presentTime: %lu", presentActionTriggerTimeInSeconds);
+  debugD("\nActionService :: isValidActionFrequency: presentTime: %lu", presentActionTriggerTimeInSeconds);
   unsigned int secondsSinceLastTriggered = presentActionTriggerTimeInSeconds - lastTriggeredAt;
-  LOG("\nActionService :: isValidActionFrequency: secondsSinceLastTriggered: %d", secondsSinceLastTriggered);
+  debugD("\nActionService :: isValidActionFrequency: secondsSinceLastTriggered: %d", secondsSinceLastTriggered);
 
   if(strcmp(pAction->actionFrequency,"minutely") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Minutely",pAction->actionID);
     return secondsSinceLastTriggered > MINUTE_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"hourly") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Hourly",pAction->actionID);
     return secondsSinceLastTriggered > HOUR_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"daily") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Daily",pAction->actionID);
     return secondsSinceLastTriggered > DAY_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"weekly") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Weekly",pAction->actionID);
     return secondsSinceLastTriggered > WEEK_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"monthly") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Monthly",pAction->actionID);
     return secondsSinceLastTriggered > MONTH_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"half_yearly") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Half-Yearly",pAction->actionID);
     return secondsSinceLastTriggered > HALF_YEAR_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"yearly") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Yearly",pAction->actionID);
     return secondsSinceLastTriggered > YEAR_IN_SECONDS;
   }
   else if(strcmp(pAction->actionFrequency,"always") == 0){
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for Always",pAction->actionID);
     return true;
   }
   else {
-    LOG("\nActionService :: isValidActionFrequency: %s frequency matched for None",pAction->actionID);
     return false;
   }
 }

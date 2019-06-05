@@ -21,7 +21,7 @@ void ConfigurationService :: initialize(){
   store->retrieveAllKeys();
   //generateAndSaveQRCode();
   store->setDeviceState(DEVICE_NEW);
-  LOG("\nConfigurationService :: initialize: Configuration successfully initialized");
+  debugD("\nConfigurationService :: initialize: Configuration successfully initialized");
 }
 
 String* ConfigurationService :: getDeviceInfo(){
@@ -31,7 +31,7 @@ String* ConfigurationService :: getDeviceInfo(){
   }
 
   if(store->isJSONConfigLoaded() && store->isPublicKeyLoaded()){
-    LOG("\nConfigurationService :: getDeviceInfo: Getting device specific data");
+    debugD("\nConfigurationService :: getDeviceInfo: Getting device specific data");
     const char* deviceID = store->getDeviceID();
     const char* makerID = store->getMakerID();
     const char* publicKey = store->getDevicePublicKey();
@@ -49,8 +49,8 @@ String* ConfigurationService :: getDeviceInfo(){
 
     char dInfo[1024];
     doc.printTo(dInfo);
-    LOG("\nConfigurationService :: getDeviceInfo: Data: %s", dInfo);
-    LOG("\nConfigurationService :: getDeviceInfo: Length: %d", strlen(dInfo));
+    debugD("\nConfigurationService :: getDeviceInfo: Data: %s", dInfo);
+    debugD("\nConfigurationService :: getDeviceInfo: Length: %d", strlen(dInfo));
 
     deviceInfo = new String(dInfo);
   }
@@ -60,16 +60,16 @@ String* ConfigurationService :: getDeviceInfo(){
 void ConfigurationService :: configureDevice(){
   switch (store->getDeviceState()) {
       case DEVICE_NEW:
-          LOG("\nConfigurationService :: configureDevice: Device not paired yet, Initializing pairing...");
+          debugD("\nConfigurationService :: configureDevice: Device not paired yet, Initializing pairing...");
           pairService->pairDevice();
           break;
       case DEVICE_PAIRED:
-          LOG("\nConfigurationService :: configureDevice: Device paired but not activated, Initializing activation process...");
+          debugD("\nConfigurationService :: configureDevice: Device paired but not activated, Initializing activation process...");
           activateService->activateDevice();
           break;
       case DEVICE_ACTIVE:
-          LOG("\nConfigurationService :: configureDevice: Device is already active");
-          LOG("\nConfigurationService :: configureDevice: %s", (actionService->getActions()).c_str());
+          debugD("\nConfigurationService :: configureDevice: Device is already active");
+          debugD("\nConfigurationService :: configureDevice: %s", (actionService->getActions()).c_str());
           break;
   }
 }

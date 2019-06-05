@@ -103,24 +103,11 @@ void setup()
 
     //Instantiate Webserver by using the custom WiFi credentials
     loadConfig = false;
-    server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD);
+    int logLevel = BoT_INFO;
+    server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
     //Enable board to connect to WiFi Network
     server->connectWiFi();
-
-    //Proceed further if board connects to WiFi Network
-    if(server->isWiFiConnected()){
-
-      //Start the Async Webserver on ESP32 board to serve external requests
-      server->startServer();
-
-    }
-    else {
-    LOG("\nsdkSample: ESP-32 board not connected to WiFi Network");
-    LOG("\nsdkSample: Make sure given WiFi SSID is up and reachable to the board");
-    LOG("\nsdkSample: Restart the ESP-32 board again to start from beginning");
-    }
-
   }
   else {
     LOG("\nsdkSample: MakerID can not be NULL!");
@@ -133,14 +120,13 @@ void loop()
   if(server->isServerAvailable()){
     //Check for the device state, should be active
     if(store->getDeviceState() == DEVICE_ACTIVE){
-
       //Trying to trigger an action with frequency as "minutely"
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the minutely action - %s", actionIDMinutely.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the minutely action - %s", actionIDMinutely.c_str());
       triggerAnAction(actionIDMinutely.c_str());
 
       /*
       //Trying to trigger an action with frequency as "hourly"
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the hourly action - %s", actionIDHourly.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the hourly action - %s", actionIDHourly.c_str());
       triggerAnAction(actionIDHourly.c_str());
       */
 
@@ -150,7 +136,7 @@ void loop()
       //Simulate the duration between last triggered time is more than a day from now by saving last triggered time as older than a day in to ACTIONS_FILE
       //updateActionLtt(actionIDDaily.c_str(),"daily",1557220108);
 
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the daily action - %s", actionIDDaily.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the daily action - %s", actionIDDaily.c_str());
       triggerAnAction(actionIDDaily.c_str());
       */
 
@@ -160,7 +146,7 @@ void loop()
       //Simulate the duration between last triggered time is more than a week from now by saving last triggered time as older than a week in to ACTIONS_FILE
       //updateActionLtt(actionIDWeekly.c_str(),"weekly",1556701708);
 
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the weekly action - %s", actionIDWeekly.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the weekly action - %s", actionIDWeekly.c_str());
       triggerAnAction(actionIDWeekly.c_str());
       */
 
@@ -170,7 +156,7 @@ void loop()
       //Simulate the duration between last triggered time is more than a month from now by saving last triggered time as older than a month in to ACTIONS_FILE
       //updateActionLtt(actionIDMonthly.c_str(),"monthly",1554109708);
 
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the monthly action - %s", actionIDMonthly.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the monthly action - %s", actionIDMonthly.c_str());
       triggerAnAction(actionIDMonthly.c_str());
       */
 
@@ -180,7 +166,7 @@ void loop()
       //Simulate the duration between last triggered time is more than 6 months from now by saving last triggered time as older than 6 months in to ACTIONS_FILE
       //updateActionLtt(actionIDHYearly.c_str(),"half_yearly",1533114508);
 
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the half-yearly action - %s", actionIDHYearly.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the half-yearly action - %s", actionIDHYearly.c_str());
       triggerAnAction(actionIDHYearly.c_str());
       */
 
@@ -190,22 +176,25 @@ void loop()
       //Simulate the duration between last triggered time is more than a year from now by saving last triggered time as older than a year in to ACTIONS_FILE
       //updateActionLtt(actionIDYearly.c_str(),"yearly",1522573708);
 
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the yearly action - %s", actionIDYearly.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the yearly action - %s", actionIDYearly.c_str());
       triggerAnAction(actionIDYearly.c_str());
       */
 
       /*
       //Trying to trigger an action with frequency as "always"
-      LOG("\nsdkSample: Device State is ACTIVE and triggering the action with always frequency - %s", actionIDAlways.c_str());
+      debugI("\nsdkSample: Device State is ACTIVE and triggering the action with always frequency - %s", actionIDAlways.c_str());
       triggerAnAction(actionIDAlways.c_str());
       */
     }
     else {
-      LOG("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
+      debugI("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
       //Instantiate HTTP Client to send HTTP Request to pair the device
       httpClient = new HTTPClient();
       httpClient->begin((server->getBoardIP()).toString(),port,"/pairing");
 
+      //Set HTTP Call timeout as 2 mins
+      httpClient->setTimeout(2*60*1000);
+      
       //Call GET on httpClient to pair the device
       int httpCode = httpClient->GET();
 
@@ -220,22 +209,31 @@ void loop()
 
       //Check for successful triggerring of pairing the device
       if(httpCode == 200){
-        LOG("\nsdkSample: Device paired successfully, we can trigger the action now");
+        debugI("\nsdkSample: Device paired successfully, we can trigger the action now");
       }
       else {
-        LOG("\nsdkSample: Device pairing failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+        debugE("\nsdkSample: Device pairing failed with httpCode - %d and message: %s", httpCode, payload.c_str());
       }
     }
+
+    #ifndef DEBUG_DISABLED
+      Debug.handle();
+    #endif
 
     //Introduce delay of 1 min
     delay(1*60*1000);
 
   }
   else {
-    LOG("\nsdkSample: Webserver not available, restarting the server");
     if(server->isWiFiConnected()){
+      debugI("\nsdkSample: Webserver not available, Starting the server");
       //Start the Async Webserver on ESP32 board to serve external requests
       server->startServer();
+
+      #ifndef DEBUG_DISABLED
+        Debug.handle();
+      #endif
+
     }
     else {
       //Enable board to connect to WiFi Network
@@ -259,6 +257,9 @@ void triggerAnAction(const char* actionID){
   httpClient->addHeader("Content-Type", "application/json");
   httpClient->addHeader("Content-Length",String(body.length()));
 
+  //Set HTTP Call timeout as 2 mins
+  httpClient->setTimeout(2*60*1000);
+
   //Call HTTP Post to trigger action
   int httpCode = httpClient->POST(body);
 
@@ -268,10 +269,10 @@ void triggerAnAction(const char* actionID){
   //Check for successful triggerring of given action
   if(httpCode == 200){
     triggerCount++;
-    LOG("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
+    debugI("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
   }
   else {
-    LOG("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+    debugE("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
   }
 
   //End http

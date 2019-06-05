@@ -18,12 +18,14 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download Zip [ESPAsyncWebServer Library](https://github.com/me-no-dev/ESPAsyncWebServer) and include in Arduino IDE
   - Download Zip [ArduinoJson Version 5.13.0](https://github.com/bblanchon/ArduinoJson/releases/tag/v5.13.0) and include in Arduino IDE
   - Download Zip [NTP Client](https://github.com/taranais/NTPClient/releases) and include in Arduino IDE
+  - Install [RemoteDebug](https://www.arduinolibraries.info/libraries/remote-debug) either through Arduino IDE Libraries or by downloading latest ZIP and including in Arduino IDE
 
 - **Setting up of BoT-ESP32-SDK Library on Arduino IDE**
   - Download ZIP from repository and install through Arduino IDE
   - The required configuration file and keys are available in the path `Arduino/libraries/BoT-ESP32-SDK/data` directory
   - Update the required configuration in `configuration.json` file and replace the key-pair files by retaining the same file names
   - Sample example sketch - sdkSample.ino is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/SDKSample` directory
+  - Make sure the line `#define DEBUG_DISABLED true` is commented in the file `BoTESP32SDK.h` to have Remote Redug feature enabled
 
 - **Steps to execute sdkSample as it's purpose is to trigger the given action for every 1 minute**
   - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/SDKSample/sdkSample.ino` into Arduino IDE Sketches directory
@@ -56,7 +58,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
             "wifi_ssid": "PJioWiFi",
             "wifi_passwd": "qwertyuiop",
             "https": "false",
-            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B"
+            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
+            "device_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc"
          }
 
       ```
@@ -87,6 +90,43 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         store->initializeEEPROM(); // Initialize EEPROM to get/update device state in the workflow
 
       ```
+
+- **Enable Remote Debug Feature and handle in sketch**
+  - SDK Supports Remote Debug feature through telnet which helps in code debugging over WiFi through telnet and also helps in setting different log levels
+  - Comment the line `#define DEBUG_DISABLED true` in file `BoTESP32SDK.h` to enable Remote Debug Feature
+      ```
+        //RemoteDebug Specifics go here
+
+        //#define DEBUG_DISABLED true
+        #include <RemoteDebug.h>
+
+      ```
+  - The supported log levels are defined in file `BoTESP32SDK.h`
+      ```
+        //Debug levels for RemoteDebug feature
+        //Effective only if RemoteDebug is enabled
+        #define BoT_DEBUG 2
+        #define BoT_INFO 3
+        #define BoT_WARNING 4
+        #define BoT_ERROR 5
+
+      ```
+  - The supported macros to log the messages based on specified log level are:
+    - `debugD` => Debug Message
+    - `debugI` => Info Message
+    - `debugW` => Warning Message
+    - `debugE` => Error Message
+  - The default loglevel set in SDK is `BoT_INFO`
+  - Call `Debug.handle()` at the end of `loop()` function in the sketch as shown below to transfer current log messages to telnet client over WiFi:
+      ```
+        #ifndef DEBUG_DISABLED
+          Debug.handle();
+        #endif
+
+      ```
+  - To view the log messages remotely, get the ESP-32 board's IP address after connecting to WiFi Network and connect through telnet from remote system
+  - The log levels can also be controlled remotely through telnet by specifying appropriate command from the telnet client window followed by pressing enter key
+  - We can also completely disable the log messages to reduce the overread for Production / Release by uncommenting the line `#define DEBUG_DISABLED true` in file `BoTESP32SDK.h`
 
 - **Connecting ESP-32 board to WiFi Network and Starting AsyncWebServer on ESP-32 board**
   - ESP-32 board need to be connected to WiFi Network provided through `configuration.json` file or Customized Network present in the sketch before carrying out any further tasks

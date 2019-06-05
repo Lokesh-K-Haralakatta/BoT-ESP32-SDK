@@ -25,7 +25,7 @@ String PairingService :: getPairingStatus(){
   BoTService* bots = new BoTService();
   String response = bots->get(PAIRING_END_POINT);
   delete bots;
-  LOG("\nPairingService :: getPairingStatus : %s", response.c_str());
+  debugD("\nPairingService :: getPairingStatus : %s", response.c_str());
   return response;
 }
 
@@ -34,11 +34,11 @@ bool PairingService :: pollPairingStatus(){
       return false;
   }
 
-  LOG("\nPairingService :: pollPairingStatus: Started polling BoT for pairing status for the device...");
+  debugD("\nPairingService :: pollPairingStatus: Started polling BoT for pairing status for the device...");
   int counter = 1;
   String response;
   do {
-    LOG("\nPairingService :: pollPairingStatus: Checking pairing status, attempt %d of %d", counter,MAXIMUM_TRIES);
+    debugD("\nPairingService :: pollPairingStatus: Checking pairing status, attempt %d of %d", counter,MAXIMUM_TRIES);
     response = getPairingStatus();
     if(response.indexOf("true") != -1){
       return true;
@@ -52,27 +52,19 @@ bool PairingService :: pollPairingStatus(){
 
 void PairingService :: pairDevice(){
   store->initializeEEPROM();
-  if (isPairable() == false) {
-      return;
-  }
-
-  if (isMultipair()) {
-      return;
-  }
+  if(!isPairable() || isMultipair())
+    return;
 
   if(pollPairingStatus() == true){
-    if (isPairable() == false) {
-        return;
-    }
     store->setDeviceState(DEVICE_PAIRED);
-    LOG("\nPairingService :: pairDevice: Device successfully paired. Ready to activate.");
+    debugI("\nPairingService :: pairDevice: Device successfully paired. Ready to activate.");
     //Remove Device publickey from SPIFFS
-    ActivationService *actService = new ActivationService();
-    actService->activateDevice();
-    LOG("\nPairingService :: pairDevice: Returned from actService->activateDevice()");
-    delete actService;
+    ActivationService *actionService = new ActivationService();
+    actionService->activateDevice();
+    debugD("\nPairingService :: pairDevice: Returned from actService->activateDevice()");
+    delete actionService;
   }
   else {
-    LOG("\nPairingService :: pairDevice: Device pairing not yet completed.Try again...");
+    debugW("\nPairingService :: pairDevice: Device pairing not yet completed.Try again...");
   }
 }
