@@ -9,7 +9,6 @@
 
 ConfigurationService :: ConfigurationService(){
   store = KeyStore :: getKeyStoreInstance();
-  deviceInfo = NULL;
   pairService = new PairingService();
   activateService = new ActivationService();
   actionService = new ActionService();
@@ -19,44 +18,8 @@ void ConfigurationService :: initialize(){
   store->loadJSONConfiguration();
   store->initializeEEPROM();
   store->retrieveAllKeys();
-  //generateAndSaveQRCode();
   store->setDeviceState(DEVICE_NEW);
   debugD("\nConfigurationService :: initialize: Configuration successfully initialized");
-}
-
-String* ConfigurationService :: getDeviceInfo(){
-  if(deviceInfo != NULL){
-    debugD("\nConfigurationService :: getDeviceInfo: Already collected device info");
-    return deviceInfo;
-  }
-
-  if(store->isJSONConfigLoaded() && store->isPublicKeyLoaded()){
-    debugD("\nConfigurationService :: getDeviceInfo: Getting device specific data");
-    const char* deviceID = store->getDeviceID();
-    const char* deviceName = store->getDeviceName();
-    const char* makerID = store->getMakerID();
-    const char* publicKey = store->getDevicePublicKey();
-
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& doc = jsonBuffer.createObject();
-    doc["deviceID"] = deviceID;
-    doc["name"] = deviceName;
-    doc["makerID"] = makerID;
-    doc["publicKey"] = publicKey;
-    doc["multipair"] = 0;
-    if (store->getDeviceState() == DEVICE_MULTIPAIR) {
-      doc["multipair"] = 1;
-      doc["aid"] = store->getAlternateDeviceID();
-    }
-
-    char dInfo[1024];
-    doc.printTo(dInfo);
-    debugD("\nConfigurationService :: getDeviceInfo: Data: %s", dInfo);
-    debugD("\nConfigurationService :: getDeviceInfo: Length: %d", strlen(dInfo));
-
-    deviceInfo = new String(dInfo);
-  }
-  return deviceInfo;
 }
 
 void ConfigurationService :: configureDevice(){

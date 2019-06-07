@@ -24,16 +24,54 @@ KeyStore :: KeyStore(){
   makerID = NULL;
   deviceID = NULL;
   deviceName = NULL;
+  deviceInfo = NULL;
   altDeviceID = NULL;
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
   caCert = NULL;
+  qrCACert = NULL;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
   apiKeyLoadStatus = NOT_LOADED;
   caCertLoadStatus = NOT_LOADED;
+  qrCACertLoadStatus = NOT_LOADED;
+}
+
+String* KeyStore :: getDeviceInfo(){
+  if(deviceInfo != NULL){
+    debugD("\nConfigurationService :: getDeviceInfo: Already collected device info");
+    return deviceInfo;
+  }
+
+  if(isJSONConfigLoaded() && isPublicKeyLoaded()){
+    debugD("\nConfigurationService :: getDeviceInfo: Getting device specific data");
+    const char* deviceID = getDeviceID();
+    const char* deviceName = getDeviceName();
+    const char* makerID = getMakerID();
+    const char* publicKey = getDevicePublicKey();
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& doc = jsonBuffer.createObject();
+    doc["deviceID"] = deviceID;
+    doc["name"] = deviceName;
+    doc["makerID"] = makerID;
+    doc["publicKey"] = publicKey;
+    doc["multipair"] = 0;
+    if (getDeviceState() == DEVICE_MULTIPAIR) {
+      doc["multipair"] = 1;
+      doc["aid"] = getAlternateDeviceID();
+    }
+
+    char dInfo[1024];
+    doc.printTo(dInfo);
+    debugD("\nKeyStore :: getDeviceInfo: Data: %s", dInfo);
+    debugD("\nKeyStore :: getDeviceInfo: Length: %d", strlen(dInfo));
+
+    deviceInfo = new String(dInfo);
+  }
+  return deviceInfo;
 }
 
 void KeyStore :: setDeviceState(int state){
@@ -63,6 +101,7 @@ void KeyStore :: loadJSONConfiguration(){
       return;
     }
 
+  if(SPIFFS.exists(JSON_CONFIG_FILE)){
     File file = SPIFFS.open(JSON_CONFIG_FILE);
     if(!file){
       jsonCfgLoadStatus = NOT_LOADED;
@@ -134,7 +173,8 @@ void KeyStore :: loadJSONConfiguration(){
     delete buffer;
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
-  }
+   }
+ }
 }
 
 void KeyStore :: setHTTPS(const bool httpsFlag){
@@ -203,6 +243,10 @@ bool KeyStore :: isCACertLoaded(){
   return((caCertLoadStatus == LOADED)?true:false);
 }
 
+bool KeyStore :: isQRCACertLoaded(){
+  return((qrCACertLoadStatus == LOADED)?true:false);
+}
+
 void KeyStore :: initializeEEPROM(){
   EEPROM.begin(EEPROM_SIZE);
 }
@@ -220,6 +264,9 @@ void KeyStore :: retrieveAllKeys(){
   if(!isCACertLoaded()){
     loadFileContents(CA_CERT_FILE,4);
   }
+  if(!isQRCACertLoaded()){
+    loadFileContents(QRC_CA_CERT,5);
+  }
 }
 
 void KeyStore :: loadFileContents(const char* filePath, byte kType){
@@ -232,6 +279,7 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       return;
     }
 
+  if(SPIFFS.exists(filePath)){
     File file = SPIFFS.open(filePath);
     if(!file){
       #ifndef DEBUG_DISABLED
@@ -272,6 +320,9 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       case 4: caCert = new String(buffer);
               caCertLoadStatus = LOADED;
               break;
+      case 5: qrCACert = new String(buffer);
+              qrCACertLoadStatus = LOADED;
+              break;
     }
 
     delete buffer;
@@ -280,6 +331,7 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
     #else
       LOG("\nKeyStore :: loadFileContents: Key Contents loaded from file - %s", filePath);
     #endif
+  }
 }
 
 const char* KeyStore :: getDevicePrivateKey(){
@@ -306,6 +358,13 @@ const char* KeyStore :: getAPIPublicKey(){
 const char* KeyStore :: getCACert(){
   if(isCACertLoaded()){
     return caCert->c_str();
+  }
+  return NULL;
+}
+
+const char* KeyStore :: getQRCACert(){
+  if(isQRCACertLoaded()){
+    return qrCACert->c_str();
   }
   return NULL;
 }

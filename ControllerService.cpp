@@ -33,6 +33,86 @@ void ControllerService :: getActions(AsyncWebServerRequest *request){
   }
 }
 
+void ControllerService :: getQRCode(AsyncWebServerRequest *request){
+  //Variables to hold return info
+  int returnCode = -1;
+  String contentType = "";
+  String responseMsg = "";
+
+  /*
+  const char* qrCodeGenURL = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=";
+  store->retrieveAllKeys();
+  const char* dInfo = (store->getDeviceInfo())->c_str();
+  debugD("\nControllerService :: getQRCode: Device Info: %s",dInfo);
+  String qrCodeGenLink = String(qrCodeGenURL);
+  qrCodeGenLink.concat(dInfo);
+  */
+  String qrCodeGenLink = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=%7B%22deviceID%22%3A%22eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc%22%2C%22name%22%3A%22BoT-ESP-32%22%2C%22makerID%22%3A%22469908A3-8F6C-46AC-84FA-4CF1570E564B%22%2C%22publicKey%22%3A%22ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQC5hDDJ9mvJj77rV2fm6cXpklEq2lO7TDYVBWvnVdP5JJrPfwW3XGBk%2Ft7S9jmuxcq%2BwGep%2F1YELMCGenXt%2FM8Qhy0694m9gSB8aqOiNo9EC9%2BWRRjAwpV7ObeJex8EiuqP8eUe9INfTATPS3GCHfqnUJc%2Fufw652bA5HFdD3no3Vvnp0iuJwKiitvVy26mrcqhayXqDM5uzNGFLZof9On%2FGwfcDcpkKhL4LNtvWutB80M3BxY2G8UL1vT0QILln37Mm5lIHPt7JCrN8vVqwT5fBCuej5khEUsOMb9i5bzjF26CEyepZPgr%2FxdRk8sxHsCok%2F0W23zzf4iLDtVyXZJp%20lokeshkot%40hcl.com%5Cn%22%2C%22multipair%22%3A0%7D";
+  debugD("\nControllerService :: getQRCode: qrCodeGenLink: %s",qrCodeGenLink.c_str());
+
+  //request->redirect(qrCodeGenLink);
+  HTTPClient* httpClient = new HTTPClient();
+  httpClient->begin(qrCodeGenLink,store->getQRCACert());
+  int httpCode = httpClient->GET();
+  if(httpCode > 0){
+    debugD("\nControllerService :: getQRCode: HTTP return code for GET call to generate QR Code: %d",httpCode);
+    if(httpCode == HTTP_CODE_OK){
+      uint8_t* buffer = NULL;
+      debugD("\nControllerService :: getQRCode: QR Code generation is successful");
+      int len = httpClient->getSize();
+      debugD("\nControllerService :: getQRCode: Content-length: %d",len);
+      WiFiClient* stream = httpClient->getStreamPtr();
+      if(httpClient->connected() && (len>0 || len == -1)){
+        size_t size = stream->available();
+        debugD("\nControllerService :: getQRCode: QR Code image size: %u",size);
+        if(size){
+          buffer = new uint8_t[size];
+          int rc = stream->readBytes(buffer,size);
+          debugD("\nControllerService :: getQRCode: Amount of bytes read into buffer: %d",rc);
+          returnCode = 200;
+          contentType = contentType + "image/png";
+          responseMsg = responseMsg + String((char*)buffer);
+          request->send(200, "image/png", (char*)buffer);
+          delete buffer;
+        }
+        else {
+          debugD("\nControllerService :: getQRCode: QR Code Data not available");
+          returnCode = 404;
+          contentType = contentType + "text/plain";
+          responseMsg = responseMsg + "QR Code Data not available";
+          //request->send(404, "text/plain", "QR Code Data not available");
+        }
+      }
+      else {
+        debugD("\nControllerService :: getQRCode: No Content Available");
+        returnCode = 204;
+        contentType = contentType + "text/plain";
+        responseMsg = responseMsg + "No Content Available";
+        //request->send(204, "text/plain", "No Content Available");
+      }
+    }
+    else {
+      debugD("\nControllerService :: getQRCode: HTTP GET Call to generate QR Code Failed with code: %d",httpCode);
+      returnCode = httpCode;
+      contentType = contentType + "text/plain";
+      responseMsg = responseMsg + HTTPClient::errorToString(httpCode);
+      //request->send(httpCode, "text/plain", "HTTP GET Call to generate QR Code Failed");
+    }
+  }
+  else {
+    debugD("\nControllerService :: getQRCode: HTTP GET Call to generate QR Code Failed with code: %d",httpCode);
+    returnCode = httpCode;
+    contentType = contentType + "text/plain";
+    responseMsg = responseMsg + HTTPClient::errorToString(httpCode);
+    //request->send(503, "text/plain", "Server Error in generating QR Code");
+  }
+  //Cleanup HTTP Client Resources
+  httpClient->end();
+  delete httpClient;
+  //Send back the response
+  request->send(returnCode, contentType.c_str(), responseMsg.c_str());
+}
+
 void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   store->initializeEEPROM();
   DynamicJsonBuffer jsonBuffer;

@@ -18,14 +18,11 @@ class ConfigurationService {
           ConfigurationService();
           void initialize();
           void configureDevice();
-          String* getDeviceInfo();
   private:
-          String* deviceInfo;
           KeyStore* store;
           PairingService* pairService;
           ActivationService* activateService;
           ActionService* actionService;
-          void generateAndSaveQRCode();
 };
 
 #endif

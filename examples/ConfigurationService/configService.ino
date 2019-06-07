@@ -44,8 +44,7 @@ void loop() {
   if(server->isWiFiConnected()){
     //Calling getDeviceInfo after initializing should return DeviceInformation
     configService->initialize(); // This internally sets device state as NEW
-    debugI("\nDeviceInformation: %s", (configService->getDeviceInfo())->c_str());
-
+    
     //Configuring the device for NEW Device
     configService->configureDevice();
     debugI("\nDevice State after configure for NEW Device: %d", store->getDeviceState());

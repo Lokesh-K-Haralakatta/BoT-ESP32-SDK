@@ -7,7 +7,6 @@
 
 #include <Storage.h>
 #include <Webserver.h>
-#include <ConfigurationService.h>
 
 KeyStore* store;
 Webserver *server;
@@ -27,7 +26,7 @@ void setup(){
 
   //Instantiate Webserver by using the custom WiFi credentials
   bool loadConfig = false;
-  int debugILevel = BoT_INFO;
+  int debugILevel = BoT_DEBUG;
   server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,debugILevel);
 
   //Enable board to connect to WiFi Network
@@ -50,7 +49,7 @@ void loop(){
     //Explicitly set Device name
     store->setDeviceName("keystore-device");
     debugI("\n Device Name after reset: %s", store->getDeviceName());
-    
+
     store->retrieveAllKeys();
 
     if(store->isPrivateKeyLoaded()){
@@ -68,6 +67,12 @@ void loop(){
     if(store->isCACertLoaded()){
       debugI("\n CA Certificate Contents: \n%s\n", store->getCACert());
     }
+
+    if(store->isQRCACertLoaded()){
+      debugI("\n QR Code API CA Certificate Contents: \n%s\n", store->getQRCACert());
+    }
+
+    debugI("\nDeviceInformation: %s", (store->getDeviceInfo())->c_str());
 
     //Initialize actions to save to file
     const char* id1 = "E6509B49-5048-4151-B965-BB7B2DBC7905";
