@@ -47,6 +47,8 @@ void loop()
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
    if(server->isServerAvailable()){
+    debugI("\nstartAsyncServer: Async Webserver is running on ESP-32 board, submit requests externally");
+    /*
       //Retrieve defined actions for given makerID
       httpClient->begin((server->getBoardIP()).toString(),3001,"/actions");
       //Set HTTP Call timeout as 2 mins
@@ -84,7 +86,7 @@ void loop()
      else {
         debugI("\nstartAsyncServer: Calling /pairing failed with httpCode - %d", httpCode);
      }
-     /*
+
      //Generate QRCode for the device hitting /qrcode end point
      httpClient->begin((server->getBoardIP()).toString(),3001,"/qrcode");
      //Set HTTP Call timeout as 2 mins

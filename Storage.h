@@ -13,6 +13,7 @@
 #define CA_CERT_FILE "/cacert.cer"
 #define ACTIONS_FILE "/actions.json"
 #define QRC_CA_CERT "/qrcCaCert.cer"
+#define QRCODE_FILE "/qrcode.png"
 #define NOT_LOADED 0
 #define LOADED 1
 #define DEVICE_STATE_ADDR 0
@@ -28,6 +29,7 @@ class KeyStore {
     bool isAPIKeyLoaded();
     bool isCACertLoaded();
     bool isQRCACertLoaded();
+    bool isQRCodeGeneratedandSaved();
     const char* getWiFiSSID();
     const char* getWiFiPasswd();
     const char* getMakerID();
@@ -48,6 +50,8 @@ class KeyStore {
     std::vector <struct Action> retrieveActions();
     bool saveActions(std::vector <struct Action> aList);
     String *getDeviceInfo();
+    bool generateAndSaveQRCode();
+    bool resetQRCodeStatus();
   private:
     static KeyStore *store;
     String *wifiSSID;
@@ -69,9 +73,12 @@ class KeyStore {
     byte apiKeyLoadStatus;
     byte caCertLoadStatus;
     byte qrCACertLoadStatus;
+    bool qrCodeStatus;
     void loadFileContents(const char* filePath, byte keyType);
     KeyStore();
     std::vector <struct Action> actionsList;
+    bool saveQRCode(const uint8_t* buffer, const size_t bufferSize);
+    void urlEncode(String& deviceInfo);
 };
 
 #endif

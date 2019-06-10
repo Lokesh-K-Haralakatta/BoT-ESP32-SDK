@@ -145,6 +145,17 @@ void loop(){
         debugI("\n %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
       }
     }
+
+    //Check QR Code generation and saving functionality
+    if(store->isQRCodeGeneratedandSaved()){
+      debugI("\n QR Code is already generated and saved to SPIFFS, resetting it's status");
+      store->resetQRCodeStatus();
+      store->generateAndSaveQRCode();
+    }
+    else {
+      debugI("\n QR Code is not generated and saved to SPIFFS, now generating and saving to SPIFFS");
+      store->generateAndSaveQRCode();
+    }
   }
   else {
     LOG("\nkeyStore: ESP-32 board not connected to WiFi Network, try again");

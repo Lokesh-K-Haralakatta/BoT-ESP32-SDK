@@ -31,6 +31,7 @@ KeyStore :: KeyStore(){
   apiKey = NULL;
   caCert = NULL;
   qrCACert = NULL;
+  qrCodeStatus = false;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
@@ -41,12 +42,12 @@ KeyStore :: KeyStore(){
 
 String* KeyStore :: getDeviceInfo(){
   if(deviceInfo != NULL){
-    debugD("\nConfigurationService :: getDeviceInfo: Already collected device info");
+    debugD("\nKeyStore :: getDeviceInfo: Already collected device info");
     return deviceInfo;
   }
 
   if(isJSONConfigLoaded() && isPublicKeyLoaded()){
-    debugD("\nConfigurationService :: getDeviceInfo: Getting device specific data");
+    debugD("\nKeyStore :: getDeviceInfo: Getting device specific data");
     const char* deviceID = getDeviceID();
     const char* deviceName = getDeviceName();
     const char* makerID = getMakerID();
@@ -455,4 +456,147 @@ bool KeyStore :: saveActions(std::vector <struct Action> aList){
 
   file.close();
   return true;
+}
+
+void KeyStore :: urlEncode(String& dInfo){
+  //Replcae all {'s with %7B
+  dInfo.replace("{","%7B");
+  //Replace all "'s with %22
+  dInfo.replace("\"","%22");
+  //Replcae all :'s with %3A
+  dInfo.replace(":","%3A");
+  //Replace all ,'s with %2C
+  dInfo.replace(",","%2C");
+  //Replace all ' ' with %20
+  dInfo.replace(" ","%20");
+  //Replace all / with %2F
+  dInfo.replace("\/","%2F");
+  //Replace all +'s with %2B
+  dInfo.replace("+","%2B");
+  //Replace all @'s with %40
+  dInfo.replace("@","%40");
+  //Replace all \'s with %5C
+  dInfo.replace("\\","%5C");
+  //Replace all }'s with %7D
+  dInfo.replace("}","%7D");
+
+  //%7B%22deviceID%22%3A%22eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc%22%2C%22name%22%3A%22BoT-ESP-32%22%2C%22makerID%22%3A%22469908A3-8F6C-46AC-84FA-4CF1570E564B%22%2C%22publicKey%22%3A%22ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQC5hDDJ9mvJj77rV2fm6cXpklEq2lO7TDYVBWvnVdP5JJrPfwW3XGBk%2Ft7S9jmuxcq%2BwGep%2F1YELMCGenXt%2FM8Qhy0694m9gSB8aqOiNo9EC9%2BWRRjAwpV7ObeJex8EiuqP8eUe9INfTATPS3GCHfqnUJc%2Fufw652bA5HFdD3no3Vvnp0iuJwKiitvVy26mrcqhayXqDM5uzNGFLZof9On%2FGwfcDcpkKhL4LNtvWutB80M3BxY2G8UL1vT0QILln37Mm5lIHPt7JCrN8vVqwT5fBCuej5khEUsOMb9i5bzjF26CEyepZPgr%2FxdRk8sxHsCok%2F0W23zzf4iLDtVyXZJp%20lokeshkot%40hcl.com%5Cn%22%2C%22multipair%22%3A0%7D";
+}
+bool KeyStore :: generateAndSaveQRCode(){
+  //QR Code is already generated and saved to SPIFFS, just return true
+  if(isQRCodeGeneratedandSaved()){
+    debugD("\nKeyStore :: generateAndSaveQRCode: QR Code already generated and saved to SPIFFS");
+    return qrCodeStatus;
+  }
+
+  //Otherwise generate QR Code and Save to SPIFFS, set qrCodeStatus to true
+  bool qrCodeGenerated = false;
+  bool qrCodeSaved = false;
+
+  if(WiFi.status() == WL_CONNECTED){
+  const char* qrCodeGenURL = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=";
+  store->retrieveAllKeys();
+  const char* dInfo = (getDeviceInfo())->c_str();
+  debugD("\nKeyStore :: generateAndSaveQRCode: Device Info: %s",dInfo);
+  String dInfoStr = String(dInfo);
+  urlEncode(dInfoStr);
+  debugD("\nKeyStore :: generateAndSaveQRCode: URL Encoded Device Info: %s",dInfoStr.c_str());
+  String qrCodeGenLink = String(qrCodeGenURL);
+  qrCodeGenLink.concat(dInfoStr);
+  debugD("\nKeyStore :: generateAndSaveQRCode: qrCodeGenLink: %s",qrCodeGenLink.c_str());
+
+  //Hardcoded URL Encoded qrCodeGenLink for reference
+  //String qrCodeGenLink = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=%7B%22deviceID%22%3A%22eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc%22%2C%22name%22%3A%22BoT-ESP-32%22%2C%22makerID%22%3A%22469908A3-8F6C-46AC-84FA-4CF1570E564B%22%2C%22publicKey%22%3A%22ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQC5hDDJ9mvJj77rV2fm6cXpklEq2lO7TDYVBWvnVdP5JJrPfwW3XGBk%2Ft7S9jmuxcq%2BwGep%2F1YELMCGenXt%2FM8Qhy0694m9gSB8aqOiNo9EC9%2BWRRjAwpV7ObeJex8EiuqP8eUe9INfTATPS3GCHfqnUJc%2Fufw652bA5HFdD3no3Vvnp0iuJwKiitvVy26mrcqhayXqDM5uzNGFLZof9On%2FGwfcDcpkKhL4LNtvWutB80M3BxY2G8UL1vT0QILln37Mm5lIHPt7JCrN8vVqwT5fBCuej5khEUsOMb9i5bzjF26CEyepZPgr%2FxdRk8sxHsCok%2F0W23zzf4iLDtVyXZJp%20lokeshkot%40hcl.com%5Cn%22%2C%22multipair%22%3A0%7D";
+  //debugD("\nKeyStore :: generateAndSaveQRCode: qrCodeGenLink: %s",qrCodeGenLink.c_str());
+
+  HTTPClient* httpClient = new HTTPClient();
+  httpClient->begin(qrCodeGenLink,getQRCACert());
+  //Set HTTP Call timeout to sufficient value
+  httpClient->setTimeout(1*60*1000);
+  int httpCode = httpClient->GET();
+  if(httpCode > 0){
+    debugD("\nKeyStore :: generateAndSaveQRCode: HTTP return code for GET call to generate QR Code: %d",httpCode);
+    if(httpCode == HTTP_CODE_OK){
+      uint8_t* buffer = NULL;
+      debugI("\nKeyStore :: generateAndSaveQRCode: QR Code generation is successful");
+      qrCodeGenerated = true;
+      int len = httpClient->getSize();
+      debugD("\nKeyStore :: generateAndSaveQRCode: Content-length: %d",len);
+      WiFiClient* stream = httpClient->getStreamPtr();
+      if(httpClient->connected() && (len>0 || len == -1)){
+        size_t size = stream->available();
+        debugD("\nKeyStore :: generateAndSaveQRCode: QR Code image size: %u",size);
+        if(size){
+          buffer = new uint8_t[size];
+          int rc = stream->readBytes(buffer,size);
+          debugD("\nKeyStore :: generateAndSaveQRCode: Amount of bytes read into buffer: %d",rc);
+          //Save buffer data into SPIFFS
+          qrCodeSaved = saveQRCode(buffer,size);
+          delete buffer;
+        }
+        else {
+          debugD("\nKeyStore :: generateAndSaveQRCode: QR Code Data not available to save to SPIFFS");
+        }
+      }
+      else {
+        debugD("\nKeyStore :: generateAndSaveQRCode: HTTP Client not connected OR No Content Available");
+      }
+    }
+    else {
+      debugD("\nKeyStore :: generateAndSaveQRCode: HTTP GET Call to generate QR Code Failed with code: %d",httpCode);
+    }
+  }
+  else {
+    debugD("\nKeyStore :: generateAndSaveQRCode: HTTP GET Call to generate QR Code Failed with code: %d",httpCode);
+  }
+  //Cleanup HTTP Client Resources
+  httpClient->end();
+  delete httpClient;
+ }
+ else
+  debugE("\nKeyStore :: generateAndSaveQRCode: Board not connected to WiFi");
+
+ qrCodeStatus = (qrCodeGenerated && qrCodeSaved);
+ return qrCodeStatus;
+}
+
+bool KeyStore :: saveQRCode(const uint8_t* buffer, const size_t bufferSize){
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: saveQRCode: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  File file = SPIFFS.open(QRCODE_FILE, FILE_WRITE);
+  if(!file){
+    debugE("\nKeyStore :: saveQRCode: There was an error opening the file - %s for saving QR Code", QRCODE_FILE);
+    return false;
+  }
+
+  int bytesWritten = file.write(buffer,bufferSize);
+  debugD("\nKeyStore :: saveQRCode: Amount of bytes written to file - %s for saving QR Code: %d", QRCODE_FILE,bytesWritten);
+
+  return ((bytesWritten>0)?true:false);
+}
+
+bool KeyStore :: isQRCodeGeneratedandSaved(){
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: isQRCodeGeneratedandSaved: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  qrCodeStatus = SPIFFS.exists(QRCODE_FILE);
+  return qrCodeStatus;
+}
+
+bool KeyStore :: resetQRCodeStatus(){
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: resetQRCodeStatus: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+  if(SPIFFS.remove(QRCODE_FILE)){
+    qrCodeStatus = false;
+    return true;
+  }
+  else
+    return false;
 }
