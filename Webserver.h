@@ -36,6 +36,7 @@ class Webserver
     AsyncWebServer *server;
     ConfigurationService *config;
     BluetoothService *ble;
+    bool isDevicePaired();
 };
 
 #endif

@@ -18,6 +18,7 @@ void ConfigurationService :: initialize(){
   store->loadJSONConfiguration();
   store->initializeEEPROM();
   store->retrieveAllKeys();
+  store->generateAndSaveQRCode();
   store->setDeviceState(DEVICE_NEW);
   debugD("\nConfigurationService :: initialize: Configuration successfully initialized");
 }
