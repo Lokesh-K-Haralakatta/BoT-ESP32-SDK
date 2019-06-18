@@ -42,7 +42,7 @@ void ControllerService :: getQRCode(AsyncWebServerRequest *request){
   }
   if(qrCodeStatus){
     debugI("\nControllerService :: getQRCode: QR Code exists on SPIFFS, serving through webresponse");
-    request->send(SPIFFS,"/qrcode.png","image/png");
+    request->send(SPIFFS,QRCODE_FILE,"image/svg+xml");
   }
   else{
     debugE("\nControllerService :: getQRCode: QR Code not available on SPIFFS, returning 404 as web response");

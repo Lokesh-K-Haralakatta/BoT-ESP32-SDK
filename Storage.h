@@ -6,14 +6,14 @@
 #ifndef Storage_h
 #define Storage_h
 #include "BoTESP32SDK.h"
+#include "QrCode.hpp"
 #define JSON_CONFIG_FILE "/configuration.json"
 #define PRIVATE_KEY_FILE "/private.key"
 #define PUBLIC_KEY_FILE "/public.key"
 #define API_KEY_FILE "/api.pem"
 #define CA_CERT_FILE "/cacert.cer"
 #define ACTIONS_FILE "/actions.json"
-#define QRC_CA_CERT "/qrcCaCert.cer"
-#define QRCODE_FILE "/qrcode.png"
+#define QRCODE_FILE "/qrcode.svg"
 #define NOT_LOADED 0
 #define LOADED 1
 #define DEVICE_STATE_ADDR 0
@@ -28,7 +28,6 @@ class KeyStore {
     bool isPublicKeyLoaded();
     bool isAPIKeyLoaded();
     bool isCACertLoaded();
-    bool isQRCACertLoaded();
     bool isQRCodeGeneratedandSaved();
     const char* getWiFiSSID();
     const char* getWiFiPasswd();
@@ -39,7 +38,6 @@ class KeyStore {
     const char* getDevicePublicKey();
     const char* getAPIPublicKey();
     const char* getCACert();
-    const char* getQRCACert();
     void setHTTPS(const bool https);
     const bool getHTTPS();
     const char* getDeviceName();
@@ -77,8 +75,7 @@ class KeyStore {
     void loadFileContents(const char* filePath, byte keyType);
     KeyStore();
     std::vector <struct Action> actionsList;
-    bool saveQRCode(const uint8_t* buffer, const size_t bufferSize);
-    void urlEncode(String& deviceInfo);
+    bool saveQRCode(qrcodegen::QrCode qr);
 };
 
 #endif

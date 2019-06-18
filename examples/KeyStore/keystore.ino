@@ -68,10 +68,6 @@ void loop(){
       debugI("\n CA Certificate Contents: \n%s\n", store->getCACert());
     }
 
-    if(store->isQRCACertLoaded()){
-      debugI("\n QR Code API CA Certificate Contents: \n%s\n", store->getQRCACert());
-    }
-
     debugI("\nDeviceInformation: %s", (store->getDeviceInfo())->c_str());
 
     //Initialize actions to save to file
