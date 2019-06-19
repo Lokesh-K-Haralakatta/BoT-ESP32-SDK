@@ -29,6 +29,7 @@ class KeyStore {
     bool isAPIKeyLoaded();
     bool isCACertLoaded();
     bool isQRCodeGeneratedandSaved();
+    bool isDeviceMultipair();
     const char* getWiFiSSID();
     const char* getWiFiPasswd();
     const char* getMakerID();
@@ -55,6 +56,7 @@ class KeyStore {
     String *wifiSSID;
     String *wifiPASSWD;
     String *https;
+    String *multipair;
     String *makerID;
     String *deviceID;
     String *deviceName;

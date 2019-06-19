@@ -15,7 +15,8 @@ void setup(){
   store = KeyStore :: getKeyStoreInstance();
 
   store->loadJSONConfiguration();
-
+  store->initializeEEPROM();
+  
   //Get WiFi Credentials from given configuration
   //const char* WIFI_SSID = store->getWiFiSSID();
   //const char* WIFI_PASSWD = store->getWiFiPasswd();
@@ -45,6 +46,17 @@ void loop(){
       debugI("\n Device Name: %s", store->getDeviceName());
       debugI("\n Altternate Device ID: %s", store->getAlternateDeviceID());
     }
+
+    //Set DeviceState based on pair type
+    if(store->isDeviceMultipair()){
+      debugI("\n Device is Multipair enabled, setting state to DEVICE_MULTIPAIR");
+      store->setDeviceState(DEVICE_MULTIPAIR);
+    }
+    else {
+      debugI("\n Device is not Multipair enabled, setting state to DEVICE_NEW");
+      store->setDeviceState(DEVICE_NEW);
+    }
+    debugI("\n Device State Value: %d",store->getDeviceState());
 
     //Explicitly set Device name
     store->setDeviceName("keystore-device");

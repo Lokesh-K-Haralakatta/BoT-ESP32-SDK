@@ -21,6 +21,7 @@ KeyStore :: KeyStore(){
   wifiSSID = NULL;
   wifiPASSWD = NULL;
   https = NULL;
+  multipair = NULL;
   makerID = NULL;
   deviceID = NULL;
   deviceName = NULL;
@@ -146,6 +147,12 @@ void KeyStore :: loadJSONConfiguration(){
       https = new String(httpsFlag);
     }
 
+    const char* multiPairFlag = json["multipair"] | "false";
+    if(multiPairFlag != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred MULTIPAIR Flag from configuration: %s",multiPairFlag);
+      multipair = new String(multiPairFlag);
+    }
+
     const char* mId = json["maker_id"] | "maker_id";
     if(mId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Pasred MakerID from configuration: %s",mId);
@@ -241,6 +248,13 @@ bool KeyStore :: isAPIKeyLoaded(){
 
 bool KeyStore :: isCACertLoaded(){
   return((caCertLoadStatus == LOADED)?true:false);
+}
+
+bool KeyStore :: isDeviceMultipair(){
+  if(multipair != NULL && multipair->equalsIgnoreCase("true"))
+    return true;
+  else
+    return false;
 }
 
 void KeyStore :: initializeEEPROM(){
@@ -537,7 +551,7 @@ bool KeyStore :: saveQRCode(QrCode qr){
   while(svgFooterBytes[i] != '\0'){
     bytesWritten += file.write(svgFooterBytes[i++]);
   }
-  
+
   //Close qrcode file
   file.close();
 

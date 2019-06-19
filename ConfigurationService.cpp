@@ -19,7 +19,12 @@ void ConfigurationService :: initialize(){
   store->initializeEEPROM();
   store->retrieveAllKeys();
   store->generateAndSaveQRCode();
-  store->setDeviceState(DEVICE_NEW);
+  //Check device pair type and assign state accordingly
+  if(store->isDeviceMultipair())
+    store->setDeviceState(DEVICE_MULTIPAIR);
+  else
+    store->setDeviceState(DEVICE_NEW);
+  debugD("\nConfigurationService :: initialize: Device State: %d",store->getDeviceState());  
   debugD("\nConfigurationService :: initialize: Configuration successfully initialized");
 }
 

@@ -65,9 +65,11 @@ void BluetoothService :: initializeBLE(const char* dName){
   doc["publicKey"] = store->getDevicePublicKey();
   doc["multipair"] = 0;
 
-  if(store->getDeviceState() == DEVICE_MULTIPAIR)
+  if(store->getDeviceState() == DEVICE_MULTIPAIR){
     doc["multipair"] = 1;
-
+    doc["aid"] = store->getAlternateDeviceID();
+  }
+  
   char dInfo[1024];
   doc.printTo(dInfo);
 
