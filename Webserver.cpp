@@ -152,7 +152,20 @@ void Webserver :: startServer(){
       //Otherwise waits till device gets paired using FINN APP either by
       //BLE client connects and key exchanges happen or by QR Code
       if(isDevicePaired()){
-        debugI("\nWebserver :: startServer: Device is already paired, no need to initialize and configure");
+        debugI("\nWebserver :: startServer: Device is already paired, checking device's state is valid or not");
+        //Below situation occurs when the same device is switched between Multipair and Singlepair
+        //Reset Device State and Initialize
+        if((!store->isDeviceMultipair() && store->getDeviceState() == DEVICE_MULTIPAIR) ||
+           (store->isDeviceMultipair() && store->getDeviceState() != DEVICE_MULTIPAIR))
+        {
+          debugI("\nWebserver :: startServer: Invalid device state, initializing as new device");
+          store->resetDeviceState();
+          store->resetQRCodeStatus();
+          config->initialize();
+          config->configureDevice();
+        }
+        else
+          debugI("\nWebserver :: startServer: Valid device state, no need to initialize and configure");
       }
       else {
         debugI("\nWebserver :: startServer: Device is not paired yet, needs initialization");

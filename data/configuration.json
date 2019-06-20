@@ -1,9 +1,9 @@
 {
 	"wifi_ssid": "PJioWiFi",
 	"wifi_passwd": "qwertyuiop",
-	"https": "false",
+	"https": "true",
 	"maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
 	"device_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc",
-	"multipair": "true",
+	"multipair": "false",
 	"alt_device_id": "KA-04 ME-3475"
 }

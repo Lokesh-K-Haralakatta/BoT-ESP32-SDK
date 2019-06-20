@@ -56,7 +56,7 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   JsonObject& doc = jsonBuffer.createObject();
   char body[100];
 
-  if(store->getDeviceState() != DEVICE_NEW){
+  if(store->getDeviceState() > DEVICE_NEW){
     doc["message"] = "Device is already paired";
     doc.printTo(body);
     debugW("\nControllerService :: pairDevice: %s", body);

@@ -84,6 +84,9 @@ void setup()
   //Load the given configuration details from the SPIFFS
   store->loadJSONConfiguration();
 
+  //Initialize EEPROM to load previous device state if any
+  store->initializeEEPROM();
+
   //Get the given makerID from the configuration
   const char* makerID = store->getMakerID();
 
@@ -118,8 +121,16 @@ void loop()
 {
   //Check for Webserver availability to trigger the action
   if(server->isServerAvailable()){
-    //Check for the device state, should be active
-    if(store->getDeviceState() == DEVICE_ACTIVE){
+    int dState = store->getDeviceState();
+    switch(dState){
+      case DEVICE_NEW: debugI("\nsdkSample: Device State is DEVICE_NEW"); break;
+      case DEVICE_PAIRED: debugI("\nsdkSample: Device State is DEVICE_PAIRED"); break;
+      case DEVICE_ACTIVE: debugI("\nsdkSample: Device State is DEVICE_ACTIVE"); break;
+      case DEVICE_MULTIPAIR: debugI("\nsdkSample: Device State is DEVICE_MULTIPAIR"); break;
+      default: debugI("\nsdkSample: Device State is INVALID");
+    }
+    //Check for the device state, should be active to trigger the action
+    if(dState >= DEVICE_ACTIVE){
       //Trying to trigger an action with frequency as "minutely"
       debugI("\nsdkSample: Device State is ACTIVE and triggering the minutely action - %s", actionIDMinutely.c_str());
       triggerAnAction(actionIDMinutely.c_str());
@@ -194,7 +205,7 @@ void loop()
 
       //Set HTTP Call timeout as 2 mins
       httpClient->setTimeout(2*60*1000);
-      
+
       //Call GET on httpClient to pair the device
       int httpCode = httpClient->GET();
 
@@ -251,7 +262,13 @@ void triggerAnAction(const char* actionID){
   httpClient->begin((server->getBoardIP()).toString(),port,"/actions");
 
   //Prepare body with actionID
-  String body = (String)"{\"actionID\": \"" + actionID +   "\"}";
+  String body = (String)"{\"actionID\": \"" + actionID +   "\"";
+
+  //Add alternativeID if device is DEVICE_MULTIPAIR
+  if(store->isDeviceMultipair())
+    body.concat(",\"alternativeID\": \"" + String(store->getAlternateDeviceID()) +"\"");
+  body.concat(" } ");
+  debugI("\nsdkSample: triggerAction Body contents: %s",body.c_str());
 
   //Set required headers for HTTP Call
   httpClient->addHeader("Content-Type", "application/json");
