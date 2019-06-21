@@ -52,19 +52,23 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - The `configuration.json` is expected to contain below given mandatory key-value pairs:
     - WiFi SSID Name
     - WiFi SSID Password
-    - HTTPS Support
     - Maker ID
     - Device ID
-
-  - Below given is sample snippet of `configuration.json` file:
+  - The key-value pairs required for Multipair functionality are optional. Be default, the multipair functionaity is disabled. To enable, explicity 2 parameters need to be provided through `configuration.json`
+    - Multipair flag value as true
+    - Value for Alternative Device Id
+  - By default, the HTTPS feature is enabled. To disable HTTPS and have only HTTP to communicate with BoT Service, explicitly it has to be speciifed through `https` parameter set to false in `configuration.json`
+  - Below given is sample snippet of `configuration.json` file including all key-value pairs:
       ```
         {
-            "wifi_ssid": "PJioWiFi",
-            "wifi_passwd": "qwertyuiop",
-            "https": "false",
-            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
-            "device_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc"
-         }
+	          "wifi_ssid": "PJioWiFi",
+	          "wifi_passwd": "qwertyuiop",
+	          "https": "true",
+	          "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
+	          "device_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc",
+	          "multipair": "false",
+	          "alt_device_id": "KA-04 ME-3475"
+        }
 
       ```
 - **Device Key-Pair for secure data exchange**
