@@ -9,13 +9,14 @@
 #include <Webserver.h>
 
 KeyStore* store;
-Webserver *server = NULL;
+Webserver *server;
 
 void setup(){
   store = KeyStore :: getKeyStoreInstance();
 
   store->loadJSONConfiguration();
-
+  store->initializeEEPROM();
+  
   //Get WiFi Credentials from given configuration
   //const char* WIFI_SSID = store->getWiFiSSID();
   //const char* WIFI_PASSWD = store->getWiFiPasswd();
@@ -26,11 +27,12 @@ void setup(){
 
   //Instantiate Webserver by using the custom WiFi credentials
   bool loadConfig = false;
-  int debugILevel = BoT_INFO;
+  int debugILevel = BoT_DEBUG;
   server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,debugILevel);
 
   //Enable board to connect to WiFi Network
   server->connectWiFi();
+
 }
 
 void loop(){
@@ -41,8 +43,24 @@ void loop(){
       debugI("\n WiFi Passwd: %s", store->getWiFiPasswd());
       debugI("\n Maker ID: %s", store->getMakerID());
       debugI("\n Device ID: %s", store->getDeviceID());
+      debugI("\n Device Name: %s", store->getDeviceName());
       debugI("\n Altternate Device ID: %s", store->getAlternateDeviceID());
     }
+
+    //Set DeviceState based on pair type
+    if(store->isDeviceMultipair()){
+      debugI("\n Device is Multipair enabled, setting state to DEVICE_MULTIPAIR");
+      store->setDeviceState(DEVICE_MULTIPAIR);
+    }
+    else {
+      debugI("\n Device is not Multipair enabled, setting state to DEVICE_NEW");
+      store->setDeviceState(DEVICE_NEW);
+    }
+    debugI("\n Device State Value: %d",store->getDeviceState());
+
+    //Explicitly set Device name
+    store->setDeviceName("keystore-device");
+    debugI("\n Device Name after reset: %s", store->getDeviceName());
 
     store->retrieveAllKeys();
 
@@ -61,6 +79,8 @@ void loop(){
     if(store->isCACertLoaded()){
       debugI("\n CA Certificate Contents: \n%s\n", store->getCACert());
     }
+
+    debugI("\nDeviceInformation: %s", (store->getDeviceInfo())->c_str());
 
     //Initialize actions to save to file
     const char* id1 = "E6509B49-5048-4151-B965-BB7B2DBC7905";
@@ -132,6 +152,17 @@ void loop(){
       for (std::vector<struct Action>::iterator i = actionsList.begin() ; i != actionsList.end(); ++i){
         debugI("\n %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
       }
+    }
+
+    //Check QR Code generation and saving functionality
+    if(store->isQRCodeGeneratedandSaved()){
+      debugI("\n QR Code is already generated and saved to SPIFFS, resetting it's status");
+      store->resetQRCodeStatus();
+      store->generateAndSaveQRCode();
+    }
+    else {
+      debugI("\n QR Code is not generated and saved to SPIFFS, now generating and saving to SPIFFS");
+      store->generateAndSaveQRCode();
     }
   }
   else {

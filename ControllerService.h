@@ -17,6 +17,7 @@ class ControllerService {
           ControllerService();
           void getActions(AsyncWebServerRequest *request);
           void pairDevice(AsyncWebServerRequest *request);
+          void getQRCode(AsyncWebServerRequest *request);
           void triggerAction(AsyncWebServerRequest *request, JsonVariant &json);
   private:
     KeyStore* store;

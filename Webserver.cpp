@@ -29,11 +29,11 @@ Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd, co
     WiFi_SSID = new String(ssid);
     WiFi_Passwd = new String(passwd);
   }
+  store = KeyStore::getKeyStoreInstance();
 }
 
 void Webserver :: connectWiFi(){
   if(WiFi_SSID == NULL || WiFi_Passwd == NULL){
-    store = KeyStore::getKeyStoreInstance();
     store->loadJSONConfiguration();
     store->initializeEEPROM();
     WiFi_SSID = new String(store->getWiFiSSID());
@@ -89,6 +89,18 @@ bool Webserver :: isWiFiConnected(){
    return (WiFi.status() == WL_CONNECTED)?true:false;
 }
 
+bool Webserver :: isDevicePaired(){
+  //Check pairing status for the device
+  PairingService* ps = new PairingService();
+  String psResponse = ps->getPairingStatus();
+  delete ps;
+
+  if((psResponse.indexOf("true")) != -1)
+    return true;
+  else
+    return false;
+}
+
 void Webserver :: startServer(){
    if(isWiFiConnected() == true){
      debugD("\nWebserver :: startServer: Starting the Async Webserver...");
@@ -106,6 +118,7 @@ void Webserver :: startServer(){
         JsonObject& root = response->getRoot();
         root["actionsEndPoint"] = "/actions";
         root["pairingEndPoint"] = "/pairing";
+        root["qrCodeEndPoint"] = "/qrcode";
         response->setLength();
         request->send(response);
       });
@@ -120,6 +133,11 @@ void Webserver :: startServer(){
          cs.pairDevice(request);
       });
 
+      server->on("/qrcode", HTTP_GET, [](AsyncWebServerRequest *request){
+         ControllerService cs;
+         cs.getQRCode(request);
+      });
+
       AsyncCallbackJsonWebHandler* actionHandler = new AsyncCallbackJsonWebHandler("/actions", [](AsyncWebServerRequest *request, JsonVariant &json) {
         ControllerService cs;
         cs.triggerAction(request,json);
@@ -130,30 +148,41 @@ void Webserver :: startServer(){
       serverStatus = STARTED;
       debugI("\nWebserver :: startServer: BoT Async Webserver started on ESP-32 board at port: %d, \nAccessible using the URL: http://%s:%d/", port,(getBoardIP().toString()).c_str(),port);
 
-      //Check pairing status for the device
-      PairingService* ps = new PairingService();
-      String psResponse = ps->getPairingStatus();
-      delete ps;
-
       //Device is already paired, then device initialization is skipped
-      //Otherwise waits till BLE client connects and key exchanges happen followed by device configuration
-      if((psResponse.indexOf("true")) != -1){
-        debugI("\nWebserver :: startServer: Device is already paired, no need to initialize and configure");
+      //Otherwise waits till device gets paired using FINN APP either by
+      //BLE client connects and key exchanges happen or by QR Code
+      if(isDevicePaired()){
+        debugI("\nWebserver :: startServer: Device is already paired, checking device's state is valid or not");
+        //Below situation occurs when the same device is switched between Multipair and Singlepair
+        //Reset Device State and Initialize
+        if((!store->isDeviceMultipair() && store->getDeviceState() == DEVICE_MULTIPAIR) ||
+           (store->isDeviceMultipair() && store->getDeviceState() != DEVICE_MULTIPAIR))
+        {
+          debugI("\nWebserver :: startServer: Invalid device state, initializing as new device");
+          store->resetDeviceState();
+          store->resetQRCodeStatus();
+          config->initialize();
+          config->configureDevice();
+        }
+        else
+          debugI("\nWebserver :: startServer: Valid device state, no need to initialize and configure");
       }
       else {
         debugI("\nWebserver :: startServer: Device is not paired yet, needs initialization");
+        config->initialize();
         debugD("\nWebserver :: startServer: Free Heap before BLE Init: %u", ESP.getFreeHeap());
         ble->initializeBLE();
         bool bleClientConnected = false;
-        //Wait till BLE Client connects to BLE Server
+        unsigned long startTime = millis();
+        //Wait till device gets paired from FINN APP for 2 mins through BLE
         do {
           delay(2000);
           bleClientConnected = ble->isBLEClientConnected();
           if(!bleClientConnected)
-            debugI("\nWebserver :: startServer: Waiting for BLE Client to connect and exchange keys");
+            debugI("\nWebserver :: startServer: Waiting for BLE Client to connect...");
           else
-            debugI("\nWebserver :: startServer: BLE Client connected to BLE Server");
-        }while(!bleClientConnected);
+            debugI("\nWebserver :: startServer: BLE Client connected to BLE Server...");
+        }while(!bleClientConnected && (millis() - startTime)<(2*60*1000));
 
         //Wait till BLE Client disconnects from BLE Server
         while(bleClientConnected){
@@ -166,9 +195,19 @@ void Webserver :: startServer(){
         if(!bleClientConnected) ble->deInitializeBLE();
         debugD("\nWebserver :: startServer: Free Heap after BLE deInit: %u", ESP.getFreeHeap());
 
-        //Proceed with device initialization and followed by configuring
-        config->initialize();
-        config->configureDevice();
+        //If device does not get paired through BLE,
+        //wait now till it gets paired through QR Code if QR Code is available
+        if(store->isQRCodeGeneratedandSaved()){
+          while(!isDevicePaired()){
+            debugI("\nWebserver :: startServer: Waiting for device pairing through QR Code...");
+            delay(2000);
+          }
+          //Proceed with configuring the device
+          config->configureDevice();
+        }
+        else
+          debugW("\nWebserver :: startServer: QR Code not available for the device, try again!!!");
+
      }
    }
    else {

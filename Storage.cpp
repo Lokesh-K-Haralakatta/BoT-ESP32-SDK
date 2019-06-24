@@ -5,7 +5,7 @@
 */
 
 #include "Storage.h"
-
+using namespace qrcodegen;
 KeyStore* KeyStore::store = NULL;
 
 KeyStore* KeyStore:: getKeyStoreInstance(){
@@ -21,18 +21,58 @@ KeyStore :: KeyStore(){
   wifiSSID = NULL;
   wifiPASSWD = NULL;
   https = NULL;
+  multipair = NULL;
   makerID = NULL;
   deviceID = NULL;
+  deviceName = NULL;
+  deviceInfo = NULL;
   altDeviceID = NULL;
   privateKey = NULL;
   publicKey = NULL;
   apiKey = NULL;
   caCert = NULL;
+  qrCACert = NULL;
+  qrCodeStatus = false;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
   publicKeyLoadStatus = NOT_LOADED;
   apiKeyLoadStatus = NOT_LOADED;
   caCertLoadStatus = NOT_LOADED;
+}
+
+String* KeyStore :: getDeviceInfo(){
+  if(deviceInfo != NULL){
+    debugD("\nKeyStore :: getDeviceInfo: Already collected device info");
+    return deviceInfo;
+  }
+
+  if(isJSONConfigLoaded() && isPublicKeyLoaded()){
+    debugD("\nKeyStore :: getDeviceInfo: Getting device specific data");
+    const char* deviceID = getDeviceID();
+    const char* deviceName = getDeviceName();
+    const char* makerID = getMakerID();
+    const char* publicKey = getDevicePublicKey();
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& doc = jsonBuffer.createObject();
+    doc["deviceID"] = deviceID;
+    doc["name"] = deviceName;
+    doc["makerID"] = makerID;
+    doc["publicKey"] = publicKey;
+    doc["multipair"] = 0;
+    if (getDeviceState() == DEVICE_MULTIPAIR) {
+      doc["multipair"] = 1;
+      doc["aid"] = getAlternateDeviceID();
+    }
+
+    char dInfo[1024];
+    doc.printTo(dInfo);
+    debugD("\nKeyStore :: getDeviceInfo: Data: %s", dInfo);
+    debugD("\nKeyStore :: getDeviceInfo: Length: %d", strlen(dInfo));
+
+    deviceInfo = new String(dInfo);
+  }
+  return deviceInfo;
 }
 
 void KeyStore :: setDeviceState(int state){
@@ -62,6 +102,7 @@ void KeyStore :: loadJSONConfiguration(){
       return;
     }
 
+  if(SPIFFS.exists(JSON_CONFIG_FILE)){
     File file = SPIFFS.open(JSON_CONFIG_FILE);
     if(!file){
       jsonCfgLoadStatus = NOT_LOADED;
@@ -106,6 +147,12 @@ void KeyStore :: loadJSONConfiguration(){
       https = new String(httpsFlag);
     }
 
+    const char* multiPairFlag = json["multipair"] | "false";
+    if(multiPairFlag != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred MULTIPAIR Flag from configuration: %s",multiPairFlag);
+      multipair = new String(multiPairFlag);
+    }
+
     const char* mId = json["maker_id"] | "maker_id";
     if(mId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Pasred MakerID from configuration: %s",mId);
@@ -118,6 +165,12 @@ void KeyStore :: loadJSONConfiguration(){
       deviceID = new String(dId);
     }
 
+    const char* dName = json["device_name"] | "BoT-ESP-32";
+    if(dName != nullptr){
+      LOG("\nKeyStore :: loadJSONConfiguration: Pasred deviceName from configuration: %s",dName);
+      deviceName = new String(dName);
+    }
+
     const char* adId = json["alt_device_id"] | "alt_device_id";
     if(adId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Pasred alternate deviceID from configuration: %s",adId);
@@ -127,7 +180,8 @@ void KeyStore :: loadJSONConfiguration(){
     delete buffer;
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
-  }
+   }
+ }
 }
 
 void KeyStore :: setHTTPS(const bool httpsFlag){
@@ -145,6 +199,19 @@ const bool KeyStore :: getHTTPS(){
     return true;
   else
     return false;
+}
+
+const char* KeyStore :: getDeviceName(){
+  return (deviceName != NULL) ? deviceName->c_str() : NULL;
+}
+
+void KeyStore :: setDeviceName(const char* dName){
+  if(deviceName != NULL){
+    delete deviceName;
+    deviceName = NULL;
+  }
+  if(dName != NULL)
+    deviceName = new String(dName);
 }
 
 const char* KeyStore :: getWiFiSSID(){
@@ -183,6 +250,13 @@ bool KeyStore :: isCACertLoaded(){
   return((caCertLoadStatus == LOADED)?true:false);
 }
 
+bool KeyStore :: isDeviceMultipair(){
+  if(multipair != NULL && multipair->equalsIgnoreCase("true"))
+    return true;
+  else
+    return false;
+}
+
 void KeyStore :: initializeEEPROM(){
   EEPROM.begin(EEPROM_SIZE);
 }
@@ -212,6 +286,7 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
       return;
     }
 
+  if(SPIFFS.exists(filePath)){
     File file = SPIFFS.open(filePath);
     if(!file){
       #ifndef DEBUG_DISABLED
@@ -260,6 +335,7 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
     #else
       LOG("\nKeyStore :: loadFileContents: Key Contents loaded from file - %s", filePath);
     #endif
+  }
 }
 
 const char* KeyStore :: getDevicePrivateKey(){
@@ -376,4 +452,132 @@ bool KeyStore :: saveActions(std::vector <struct Action> aList){
 
   file.close();
   return true;
+}
+
+bool KeyStore :: generateAndSaveQRCode(){
+  //QR Code is already generated and saved to SPIFFS, just return true
+  if(isQRCodeGeneratedandSaved()){
+    debugD("\nKeyStore :: generateAndSaveQRCode: QR Code already generated and saved to SPIFFS");
+    return qrCodeStatus;
+  }
+
+  //Otherwise generate QR Code and Save to SPIFFS, set qrCodeStatus to true
+  qrCodeStatus = false;
+
+  const char* dInfo = (getDeviceInfo())->c_str();
+  debugD("\nKeyStore :: generateAndSaveQRCode: Device Info: %s",dInfo);
+
+  QrCode qr = QrCode::encodeText(dInfo, QrCode::Ecc::QRLOW);
+  debugD("\nKeyStore :: generateAndSaveQRCode: Size of Generated QR Code: %d",qr.getSize());
+
+  //Save generated QR Code onto file
+  qrCodeStatus = saveQRCode(qr);
+
+  return qrCodeStatus;
+}
+
+bool KeyStore :: saveQRCode(QrCode qr){
+  const int border = 4;
+  const int size = qr.getSize();
+
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: saveQRCode: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  File file = SPIFFS.open(QRCODE_FILE, FILE_WRITE);
+  if(!file){
+    debugE("\nKeyStore :: saveQRCode: There was an error opening the file - %s for saving QR Code", QRCODE_FILE);
+    return false;
+  }
+
+  //Prepare SVG Header
+  String svgHeader = String("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+         svgHeader += String("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n");
+	       svgHeader += String("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 ");
+	       svgHeader += String((size + border * 2));
+         svgHeader += String(" ");
+         svgHeader += String((size + border * 2));
+         svgHeader += String("\" stroke=\"none\">\n");
+	       svgHeader += String("\t<rect width=\"100%\" height=\"100%\" fill=\"#FFFFFF\"/>\n");
+	       svgHeader += String("\t<path d=\"");
+
+  //Get SVG Header Byte values
+  const char* svgHeaderBytes = svgHeader.c_str();
+
+  //Write SVG Header into qrcode File
+  int bytesWritten = 0;
+  int i = 0;
+  while(svgHeaderBytes[i] != '\0'){
+    bytesWritten += file.write(svgHeaderBytes[i++]);
+  }
+  debugD("\nKeyStore :: saveQRCode: Amount of bytes written to file - %s for SVG Header: %d", QRCODE_FILE,bytesWritten);
+
+  //Write individual qrcode modules values to file
+  for (int y = 0; y < size; y++) {
+		for (int x = 0; x < size; x++) {
+			if (qr.getModule(x, y)) {
+				if (x != 0 || y != 0)
+					bytesWritten += file.write(' ');
+        //Prepare svgData value
+        String* svgData = new String("M");
+				        svgData->concat(x + border);
+                svgData->concat(",");
+                svgData->concat(y + border);
+                svgData->concat("h1v1h-1z");
+
+        //Get bytes from svgData
+        const char* svgDataBytes = svgData->c_str();
+        //Write svgData to qrcode file
+        i=0;
+        while(svgDataBytes[i]!='\0'){
+          bytesWritten += file.write(svgDataBytes[i++]);
+        }
+        //Release memory holding svgData
+        delete svgData;
+			}
+		}
+	}
+
+  //Write SVG footer to qrcode file
+  String svgFooter = String("\" fill=\"#000000\"/>\n");
+	       svgFooter += String("</svg>\n");
+
+  //Get SVG Footer Byte values
+  const char* svgFooterBytes = svgFooter.c_str();
+
+  //Write SVG Footer bytes to file
+  i = 0;
+  while(svgFooterBytes[i] != '\0'){
+    bytesWritten += file.write(svgFooterBytes[i++]);
+  }
+
+  //Close qrcode file
+  file.close();
+
+  debugD("\nKeyStore :: saveQRCode: Total amount of bytes written to file - %s for QRCode: %d", QRCODE_FILE,bytesWritten);
+  return ((bytesWritten>0)?true:false);
+}
+
+bool KeyStore :: isQRCodeGeneratedandSaved(){
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: isQRCodeGeneratedandSaved: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  qrCodeStatus = SPIFFS.exists(QRCODE_FILE);
+  return qrCodeStatus;
+}
+
+bool KeyStore :: resetQRCodeStatus(){
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: resetQRCodeStatus: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+  if(SPIFFS.remove(QRCODE_FILE)){
+    qrCodeStatus = false;
+    return true;
+  }
+  else
+    return false;
 }

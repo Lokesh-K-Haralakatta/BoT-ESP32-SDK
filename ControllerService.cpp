@@ -33,13 +33,30 @@ void ControllerService :: getActions(AsyncWebServerRequest *request){
   }
 }
 
+void ControllerService :: getQRCode(AsyncWebServerRequest *request){
+  //Check QR Code generation qrCodeStatus
+  bool qrCodeStatus = store->isQRCodeGeneratedandSaved();
+  if(!qrCodeStatus){
+    debugD("\nControllerService :: getQRCode: Generating QR Code and saving to SPIFFS");
+    qrCodeStatus = store->generateAndSaveQRCode();
+  }
+  if(qrCodeStatus){
+    debugI("\nControllerService :: getQRCode: QR Code exists on SPIFFS, serving through webresponse");
+    request->send(SPIFFS,QRCODE_FILE,"image/svg+xml");
+  }
+  else{
+    debugE("\nControllerService :: getQRCode: QR Code not available on SPIFFS, returning 404 as web response");
+    request->send(404,"text/plain","QR Code not available on SPIFFS");
+  }
+}
+
 void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   store->initializeEEPROM();
   DynamicJsonBuffer jsonBuffer;
   JsonObject& doc = jsonBuffer.createObject();
   char body[100];
 
-  if(store->getDeviceState() != DEVICE_NEW){
+  if(store->getDeviceState() > DEVICE_NEW){
     doc["message"] = "Device is already paired";
     doc.printTo(body);
     debugW("\nControllerService :: pairDevice: %s", body);

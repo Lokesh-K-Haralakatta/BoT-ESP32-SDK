@@ -30,7 +30,7 @@ void setup() {
 
   //Instantiate Webserver by using the custom WiFi credentials
   bool loadConfig = false;
-  int logLevel = BoT_ERROR;
+  int logLevel = BoT_INFO;
   server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
   //Enable board to connect to WiFi Network
@@ -44,8 +44,7 @@ void loop() {
   if(server->isWiFiConnected()){
     //Calling getDeviceInfo after initializing should return DeviceInformation
     configService->initialize(); // This internally sets device state as NEW
-    debugI("\nDeviceInformation: %s", (configService->getDeviceInfo())->c_str());
-
+    
     //Configuring the device for NEW Device
     configService->configureDevice();
     debugI("\nDevice State after configure for NEW Device: %d", store->getDeviceState());

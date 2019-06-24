@@ -28,20 +28,20 @@ bool BluetoothService :: isBLEClientConnected(){
 }
 
 void BluetoothService :: initializeBLE(const char* dName){
+  store->loadJSONConfiguration();
+  store->retrieveAllKeys();
+  debugD("\nBluetoothService :: initializeBLE: Loaded config and all keys from KeyStore");
+
   if(dName != NULL){
     deviceName = new char[strlen(dName)+1];
     strcpy(deviceName,dName);
   }
   else {
-    deviceName = new char[15];
-    strcpy(deviceName,"BoT-ESP-32");
+    const char* dName = store->getDeviceName();
+    deviceName = new char[strlen(dName)+1];
+    strcpy(deviceName,dName);
   }
-
   debugD("\nBluetoothService :: initializeBLE: DeviceName set to %s", deviceName);
-
-  store->loadJSONConfiguration();
-  store->retrieveAllKeys();
-  debugD("\nBluetoothService :: initializeBLE: Loaded config and all keys from KeyStore");
 
   BLEDevice::init(deviceName);
   debugD("\nBluetoothService :: initializeBLE: BLEDevice::init done");
@@ -63,7 +63,13 @@ void BluetoothService :: initializeBLE(const char* dName){
   doc["deviceID"] = store->getDeviceID();
   doc["makerID"] = store->getMakerID();
   doc["publicKey"] = store->getDevicePublicKey();
+  doc["multipair"] = 0;
 
+  if(store->getDeviceState() == DEVICE_MULTIPAIR){
+    doc["multipair"] = 1;
+    doc["aid"] = store->getAlternateDeviceID();
+  }
+  
   char dInfo[1024];
   doc.printTo(dInfo);
 

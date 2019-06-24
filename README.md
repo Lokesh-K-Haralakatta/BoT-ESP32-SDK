@@ -33,12 +33,16 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Update the configuration details and key-pair details in the files present in data directory
   - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
   - Sketch has code to trigger actions with various frequencies like minutely, hourly, daily, monthly,half-yearly, yearly and always
-  - Pair the new device through Companion Application using Bluetooth Communication, if device is not yet paired
-  - Define the actions in maker portal, add service in companion app, update the actionIDs properly before executing the sketch
   - Remove the comments for required action to be triggered based on the action frequency
   - Compile and Upload sketch to ESP32 board using Arduino IDE
   - Flash data directory contents using Arduino IDE -> Tools -> ESP32 Sketch Data Upload option
-  - Open Serial Monitor Window in Arduino IDE to observe the sketch flow
+  - Wait for couple of seconds, the sketch should start running and connect to specified WiFi Network present in Sketch / Configuration
+  - After ESP-32 board successfully connecting to specified WiFi Network, make a note of it's IP Address
+  - Specified deviceID present in `configuration.json` is new, then SDK internally generates and saves QR Code for the device
+  - Pair the new device through Companion Application using BLE or using saved QR Code
+  - The QR Code can be accessed using the webserver's end point `/qrcode` running on ESP-32 board
+  - Define the actions in maker portal, add service in companion app, update the actionIDs properly before executing the sketch
+  - Open Serial Monitor Window in Arduino IDE to observe the sketch flow or SDK also supports RemoteDebug feature use `telnet ipAddr`
   - Once device is paired, observe the action getting triggered for every 1 minute
 
 ### Guidelines to develop sketch using ESP-32 SDK
@@ -48,19 +52,23 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - The `configuration.json` is expected to contain below given mandatory key-value pairs:
     - WiFi SSID Name
     - WiFi SSID Password
-    - HTTPS Support
     - Maker ID
     - Device ID
-
-  - Below given is sample snippet of `configuration.json` file:
+  - The key-value pairs required for Multipair functionality are optional. Be default, the multipair functionaity is disabled. To enable, explicity 2 parameters need to be provided through `configuration.json`
+    - Multipair flag value as true
+    - Value for Alternative Device Id
+  - By default, the HTTPS feature is enabled. To disable HTTPS and have only HTTP to communicate with BoT Service, explicitly it has to be speciifed through `https` parameter set to false in `configuration.json`
+  - Below given is sample snippet of `configuration.json` file including all key-value pairs:
       ```
         {
-            "wifi_ssid": "PJioWiFi",
-            "wifi_passwd": "qwertyuiop",
-            "https": "false",
-            "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
-            "device_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc"
-         }
+	          "wifi_ssid": "PJioWiFi",
+	          "wifi_passwd": "qwertyuiop",
+	          "https": "true",
+	          "maker_id": "469908A3-8F6C-46AC-84FA-4CF1570E564B",
+	          "device_id": "eb25d0ba-2dcd-4db2-8f96-a4fbe54dbffc",
+	          "multipair": "false",
+	          "alt_device_id": "KA-04 ME-3475"
+        }
 
       ```
 - **Device Key-Pair for secure data exchange**
@@ -152,6 +160,10 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - As we have an instance to `Webserver` Class, next is to invoke member function `connectWiFi()` to make ESP32 board get connected to set WiFi Network within `Webserver` instance.
   - Next, we have member function `isWiFiConnected()` to invoke to make sure ESP32 board connected to WiFi Network
   - As we have confirmation on ESP-32 connected to WiFi Network, next step is to invoke member function `startServer()` to start AsyncWebserver on ESP-32 board
+  - The AsyncWebserver on ESP-32 board provides below list of end points
+    - `/pairing`: Used to wait for change of device state and activate the device
+    - `/actions`: Used to retrieve the list of the actions defined for the makerID
+    - `/qrcode`: Used to access the generated and saved QR Code for the device
   - Above sequence of steps are depicted in below given code snippet
       ```
         .......
@@ -167,7 +179,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         }
 
       ```
-  - The call to `server->startServer` internally makes call to BLE initialization enabling device pairing through Bluetooth with the companion application trying to communicate from iOS / Android device
+  - The call to `server->startServer` internally makes call to BLE initialization enabling device pairing through Bluetooth with the companion application trying to communicate from iOS / Android device and also generates and saves QR Code for the device onto SPIFFS
+  - Hit the endpoint `/qrcode` to get access to device QRCode and pair the device using FINN APP from iOS / Android device
   - Device gets paired successfully, then call to activate the device is made and the device is ready to trigger the actions if device activation is successful
   - Device fails in getting paired, then we can re-attempt to pair the device using the end point `/pairing` defined by the webserver
 
@@ -225,8 +238,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
 
       ```
 
-- **Triggering the defined action using AsyncWebserver end point `/pairing`**
-  - We can trigger the defined actions periodically using the `/pairing` end point
+- **Triggering the defined action using AsyncWebserver end point `/actions`**
+  - We can trigger the defined actions periodically using the `/actions` end point
   - Below given code snippet shows simple HTTPClient making POST call on `/actions`
       ```
         .....
