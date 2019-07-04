@@ -230,6 +230,37 @@ const char* KeyStore :: getDeviceID(){
   return (deviceID != NULL) ? deviceID->c_str() : NULL;
 }
 
+const char* KeyStore ::generateUuid4() {
+  uint8_t uuid[16];
+  String* uuidStr = new String();
+
+  // Generate a Version 4 UUID according to RFC4122
+  for (int i=0;i<16;i++) uuid[i] = esp_random();
+
+  // Although the UUID contains 128 bits, only 122 of those are random.
+  // The other 6 bits are fixed, to indicate a version number.
+  uuid[6] = 0x40 | (0x0F & uuid[6]);
+  uuid[8] = 0x80 | (0x3F & uuid[8]);
+
+  //Convert generated uuid to string format
+  for (int i=0; i<16; i++) {
+    if (i==4) *uuidStr += "-";
+    if (i==6) *uuidStr += "-";
+    if (i==8) *uuidStr += "-";
+    if (i==10) *uuidStr += "-";
+    int topDigit = uuid[i] >> 4;
+    int bottomDigit = uuid[i] & 0x0f;
+    // High hex digit
+    *uuidStr += "0123456789abcdef"[topDigit];
+    // Low hex digit
+    *uuidStr += "0123456789abcdef"[bottomDigit];
+  }
+
+  debugD("\nKeyStore :: generateuuid4 : %s", uuidStr->c_str());
+
+  return uuidStr->c_str();
+}
+
 const char* KeyStore :: getAlternateDeviceID(){
   return (altDeviceID != NULL) ? altDeviceID->c_str() : NULL;
 }

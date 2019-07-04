@@ -39,6 +39,7 @@ class KeyStore {
     const char* getDevicePublicKey();
     const char* getAPIPublicKey();
     const char* getCACert();
+    const char* generateUuid4();
     void setHTTPS(const bool https);
     const bool getHTTPS();
     const char* getDeviceName();
