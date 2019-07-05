@@ -18,6 +18,7 @@ BoTService :: BoTService(){
   wifiClient = NULL;
   httpClient = NULL;
   fullURI = NULL;
+  botResponse = NULL;
   store = KeyStore :: getKeyStoreInstance();
 }
 
@@ -113,7 +114,7 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
   return retData;
 }
 
-String BoTService :: get(const char* endPoint){
+String* BoTService :: get(const char* endPoint){
   store->loadJSONConfiguration();
   store->retrieveAllKeys();
   https = store->getHTTPS();
@@ -121,6 +122,12 @@ String BoTService :: get(const char* endPoint){
   fullURI = new String(uriPath);
   fullURI->concat(endPoint);
   debugD("\nBoTService :: get: URI: %s", fullURI->c_str());
+
+  if(botResponse != NULL){
+    delete botResponse;
+    botResponse = NULL;
+    debugD("\nBoTService :: get: botResponse memory released from previous GET call");
+  }
 
   if(WiFi.status() == WL_CONNECTED){
     debugD("\nBoTService :: get: WiFi Status: Connected");
@@ -149,7 +156,8 @@ String BoTService :: get(const char* endPoint){
         if(!wifiClient->connect((char*)HOST, HTTPS_PORT)){
           debugE("\nBoTService :: get: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
           freeObjects();
-          return "wifiSecureClient connection to server failed, can not verify SSL Finger Print";
+          botResponse = new String("wifiSecureClient connection to server failed, can not verify SSL Finger Print");
+          return botResponse;
         }
         else {
           debugI("\nBoTService :: get: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
@@ -160,7 +168,8 @@ String BoTService :: get(const char* endPoint){
           else {
             debugE("\nBoTService :: get: SSL Finger Print Verification Failed...");
             freeObjects();
-            return "SSL Finger Print Verification Failed in BoTService GET";
+            botResponse = new String("SSL Finger Print Verification Failed in BoTService GET");
+            return botResponse;
           }
         }
       }
@@ -183,9 +192,10 @@ String BoTService :: get(const char* endPoint){
       int httpCode = httpClient->GET();
       debugD("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
 
-      const char* errorMSG = httpClient->errorToString(httpCode).c_str();
+      if(httpCode < 0)
+        botResponse = new String(httpClient->errorToString(httpCode));
 
-      String payload = httpClient->getString();
+      String* payload = new String(httpClient->getString());
       httpClient->end();
 
       //Deallocate memory allocated for objects
@@ -196,49 +206,56 @@ String BoTService :: get(const char* endPoint){
         debugI("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
 
         if(httpCode == HTTP_CODE_OK) {
-          int firstDoTIdx = payload.indexOf(".");
+          int firstDoTIdx = payload->indexOf(".");
           if (firstDoTIdx != -1) {
-            int secDoTIdx = payload.indexOf(".",firstDoTIdx+1);
-            String encodedPayload = payload.substring(firstDoTIdx+1 , secDoTIdx);
-            return(decodePayload(encodedPayload));
+            int secDoTIdx = payload->indexOf(".",firstDoTIdx+1);
+            String* encodedPayload = new String(payload->substring(firstDoTIdx+1 , secDoTIdx));
+            delete payload;
+            botResponse = decodePayload(encodedPayload);
+            delete encodedPayload;
+            return(botResponse);
           }
         }
         else {
-          debugE("\nBoTService :: get: HTTP GET with endpoint %s, failed, error: %s", endPoint, errorMSG);
-          return errorMSG;
+          debugE("\nBoTService :: get: HTTP GET with endpoint %s failed", endPoint);
+          botResponse = new String("HTTP GET failed");
+          return botResponse;
         }
       }
       else {
-        debugE("\nBoTService :: get: HTTP GET with endPoint %s, failed, error: %s", endPoint, errorMSG);
-        return errorMSG;
+        debugE("\nBoTService :: get: HTTP GET with endPoint %s failed", endPoint);
+        botResponse = new String("HTTP GET failed");
+        return botResponse;
       }
     }
     else {
       debugE("\nBoTService :: get: httpClient->begin failed....");
       //Deallocate memory allocated for objects
       freeObjects();
-
-      return "httpClient->begin failed....";
+      botResponse = new String("httpClient->begin failed....");
+      return botResponse;
     }
   }
   else {
     LOG("\nBoTService :: get: Board Not Connected to WiFi...");
-    return "Board Not Connected to WiFi...";
+    botResponse = new String("Board Not Connected to WiFi...");
+    return botResponse;
   }
 }
 
-String BoTService :: decodePayload(String encodedPayload){
-  int payloadLength = encodedPayload.length() + 1;
-  unsigned char decoded[payloadLength];
-  String ss(encodedPayload);
+String* BoTService :: decodePayload(String* encodedPayload){
+  int payloadLength = encodedPayload->length() + 1;
+  unsigned char* decoded = new unsigned char[payloadLength];
+  //String ss(encodedPayload);
 
-  base64url_decode((char *)ss.c_str(), ss.length() , decoded);
+  base64url_decode((char *)encodedPayload->c_str(), encodedPayload->length() , decoded);
   debugD("\nBoTService :: decodePayload: Decoded String: %s", decoded);
 
   DynamicJsonBuffer jsonBuffer;
   JsonObject& root = jsonBuffer.parseObject(decoded);
-  String botValue = root["bot"];
-  debugD("\nBoTService :: decodePayload: response value: %s",botValue.c_str());
+  String* botValue = new String(root.get<const char*>("bot"));
+  delete decoded;
+  debugD("\nBoTService :: decodePayload: botValue: %s",botValue->c_str());
 
   return botValue;
 }
@@ -317,9 +334,11 @@ String BoTService :: post(const char* endPoint, const char* payload){
       httpClient->addHeader("Content-Length",String(body.length()));
 
       int httpCode = httpClient->POST(body);
-      const char* errorMSG = httpClient->errorToString(httpCode).c_str();
+      String errorMSG;
+      if(httpCode < 0)
+        errorMSG = httpClient->errorToString(httpCode);
 
-      String payload = httpClient->getString();
+      String* payload = new String(httpClient->getString());
       httpClient->end();
 
       //Deallocate memory allocated for objects
@@ -330,21 +349,26 @@ String BoTService :: post(const char* endPoint, const char* payload){
         debugI("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
 
         if(httpCode == HTTP_CODE_OK) {
-          int firstDoTIdx = payload.indexOf(".");
+          int firstDoTIdx = payload->indexOf(".");
           if (firstDoTIdx != -1) {
-            int secDoTIdx = payload.indexOf(".",firstDoTIdx+1);
-            String encodedPayload = payload.substring(firstDoTIdx+1 , secDoTIdx);
-            return(decodePayload(encodedPayload));
+            int secDoTIdx = payload->indexOf(".",firstDoTIdx+1);
+            String* encodedPayload = new String(payload->substring(firstDoTIdx+1 , secDoTIdx));
+            delete payload;
+            String response = String(decodePayload(encodedPayload)->c_str());
+            delete encodedPayload;
+            return(response);
           }
         }
         else {
-          debugE("\nBoTService :: post: HTTP POST with endpoint %s, failed, error: %s", endPoint, errorMSG);
-          return String(errorMSG);
+          debugE("\nBoTService :: post: HTTP POST with endpoint %s failed", endPoint);
+          errorMSG = String("HTTP POST failed");
+          return errorMSG;
         }
       }
       else {
-        debugE("\nBoTService :: post: HTTP POST with endPoint %s, failed, error: %s", endPoint, errorMSG);
-        return String(errorMSG);
+        debugE("\nBoTService :: post: HTTP POST with endPoint %s failed", endPoint);
+        errorMSG = String("HTTP POST failed");
+        return errorMSG;
       }
     }
     else {

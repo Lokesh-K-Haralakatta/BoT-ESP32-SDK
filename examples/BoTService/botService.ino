@@ -30,7 +30,7 @@ void setup() {
 
   //Instantiate Webserver by using the custom WiFi credentials
   bool loadConfig = false;
-  int logLevel = BoT_ERROR;
+  int logLevel = BoT_INFO;
   server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
   //Enable board to connect to WiFi Network
@@ -49,7 +49,7 @@ void loop() {
     bot = new BoTService();
 
     //GET Pairing Status
-    debugI("\nPair Status: %s", bot->get("/pair").c_str());
+    debugI("\nPair Status: %s", bot->get("/pair")->c_str());
 
     //Deallocate
     delete bot;
@@ -58,7 +58,7 @@ void loop() {
     bot = new BoTService();
 
     //GET Actions defined in Maker Portal
-    debugI("\nActions: %s", bot->get("/actions").c_str());
+    debugI("\nActions: %s", bot->get("/actions")->c_str());
 
     //Deallocate
     delete bot;
@@ -68,8 +68,8 @@ void loop() {
     JsonObject& doc = jsonBuffer.createObject();
     JsonObject& botData = doc.createNestedObject("bot");
     botData["deviceID"] = store->getDeviceID();
-    botData["actionID"] = "749081B8-664D-4A15-908E-1C3F6590930D";
-    botData["queueID"] = "749081B8-6688-4A99-908E-1C3F6590930D";
+    botData["actionID"] = "A42ABD19-3226-47AB-8045-8129DBDF117E";
+    botData["queueID"] = store->generateUuid4();
 
     char payload[200];
     doc.printTo(payload);
@@ -82,9 +82,10 @@ void loop() {
 
     //Deallocate
     delete bot;
+
   }
   else {
-  LOG("\nbotService: ESP-32 board not connected to WiFi Network, try again");
+  LOG("\nsdkSample: ESP-32 board not connected to WiFi Network, try again");
   //Enable board to connect to WiFi Network
   server->connectWiFi();
   }

@@ -137,43 +137,43 @@ void KeyStore :: loadJSONConfiguration(){
 
     const char* passwd = json["wifi_passwd"] | "wifi_passwd";
     if(passwd != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred WiFi Password from configuration: %s",passwd);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed WiFi Password from configuration: %s",passwd);
       wifiPASSWD = new String(passwd);
     }
 
     const char* httpsFlag = json["https"] | "true";
     if(httpsFlag != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred HTTPS Flag from configuration: %s",httpsFlag);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed HTTPS Flag from configuration: %s",httpsFlag);
       https = new String(httpsFlag);
     }
 
     const char* multiPairFlag = json["multipair"] | "false";
     if(multiPairFlag != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred MULTIPAIR Flag from configuration: %s",multiPairFlag);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed MULTIPAIR Flag from configuration: %s",multiPairFlag);
       multipair = new String(multiPairFlag);
     }
 
     const char* mId = json["maker_id"] | "maker_id";
     if(mId != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred MakerID from configuration: %s",mId);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed MakerID from configuration: %s",mId);
       makerID = new String(mId);
     }
 
     const char* dId = json["device_id"] | "device_id";
     if(dId != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred deviceID from configuration: %s",dId);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed deviceID from configuration: %s",dId);
       deviceID = new String(dId);
     }
 
     const char* dName = json["device_name"] | "BoT-ESP-32";
     if(dName != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred deviceName from configuration: %s",dName);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed deviceName from configuration: %s",dName);
       deviceName = new String(dName);
     }
 
     const char* adId = json["alt_device_id"] | "alt_device_id";
     if(adId != nullptr){
-      LOG("\nKeyStore :: loadJSONConfiguration: Pasred alternate deviceID from configuration: %s",adId);
+      LOG("\nKeyStore :: loadJSONConfiguration: Parsed alternate deviceID from configuration: %s",adId);
       altDeviceID = new String(adId);
     }
 

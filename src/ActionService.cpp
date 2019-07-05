@@ -101,21 +101,21 @@ bool ActionService :: updateTriggeredTimeForAction(const char* actionID){
   }
 }
 
-String ActionService :: getActions(){
+String* ActionService :: getActions(){
   BoTService *bot = new BoTService();
-  String actions = bot->get(ACTIONS_END_POINT);
+  String* actions = bot->get(ACTIONS_END_POINT);
   delete bot;
 
-  debugD("\nActionService :: getActions: %s", actions.c_str());
+  debugD("\nActionService :: getActions: %s", actions->c_str());
 
   if(!actionsList.empty()){
     actionsList.clear();
     debugD("\nActionService :: getActions: cleared contents of previous actions");
   }
 
-  if(actions.indexOf("[") != -1 && actions.indexOf("]") != -1){
+  if(actions->indexOf("[") != -1 && actions->indexOf("]") != -1){
     DynamicJsonBuffer jsonBuffer;
-    JsonArray& actionsArray = jsonBuffer.parseArray(actions);
+    JsonArray& actionsArray = jsonBuffer.parseArray(*actions);
     if(actionsArray.success()){
         int actionsCount = actionsArray.size();
         debugD("\nActionService :: getActions: JSON Actions array parsed successfully");
@@ -140,14 +140,14 @@ String ActionService :: getActions(){
       debugE("\nActionService :: getActions: JSON Actions array parsed failed!");
       debugW("\nActionService :: getActions: use locally stored actions, if available");
       actionsList = store->retrieveActions();
-      return "";
+      return NULL;
     }
   }
   else {
     debugE("\nActionService :: getActions: Could not retrieve actions from server");
     debugW("\nActionService :: getActions: use locally stored actions, if available");
     actionsList = store->retrieveActions();
-    return "";
+    return NULL;
   }
 }
 
@@ -181,10 +181,10 @@ void ActionService :: updateActionsLastTriggeredTime(){
 
 bool ActionService :: isValidAction(const char* actionID){
   //Get fresh list of actions from server
-  String actions = getActions();
+  String* actions = getActions();
 
   //Update lastTriggeredTime for actions from saved details if actions successfully retrieved from BoT Server
-  if(!actions.equals("")){
+  if(!actions->equals("")){
     debugD("\nActionService :: isValidAction: Actions retrieved from BoT Server, calling updateActionsLastTriggeredTime");
     updateActionsLastTriggeredTime();
   }
