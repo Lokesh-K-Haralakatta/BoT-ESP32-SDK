@@ -29,7 +29,7 @@ void setup() {
 
   //Instantiate Webserver by using the custom WiFi credentials
   bool loadConfig = false;
-  int logLevel = BoT_ERROR;
+  int logLevel = BoT_INFO;
   server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
   //Enable board to connect to WiFi Network
@@ -42,7 +42,7 @@ void loop() {
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
     //GET Actions for given device from BoT Service
-    if(actService->getActions() != ""){
+    if(actService->getActions() != NULL){
       debugI("\nactionService: Actions retrieval from server is success..");
     }
     else {
@@ -50,7 +50,7 @@ void loop() {
     }
 
     //Trigger an action defined with the deviceID
-    const char* actionID = "0097430C-FA78-4087-9B78-3AC7FEEF2245";
+    const char* actionID = "A42ABD19-3226-47AB-8045-8129DBDF117E";
     debugI("\nactionService: Response from triggering action: %s", actService->triggerAction(actionID).c_str());
 
   }

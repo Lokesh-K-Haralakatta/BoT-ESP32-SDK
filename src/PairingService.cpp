@@ -21,11 +21,11 @@ bool PairingService :: isPairable(){
   return (store->getDeviceState() == DEVICE_NEW?true:false);
 }
 
-String PairingService :: getPairingStatus(){
+String* PairingService :: getPairingStatus(){
   BoTService* bots = new BoTService();
-  String response = bots->get(PAIRING_END_POINT);
+  String* response = bots->get(PAIRING_END_POINT);
   delete bots;
-  debugD("\nPairingService :: getPairingStatus : %s", response.c_str());
+  debugD("\nPairingService :: getPairingStatus : %s", response->c_str());
   return response;
 }
 
@@ -36,11 +36,11 @@ bool PairingService :: pollPairingStatus(){
 
   debugD("\nPairingService :: pollPairingStatus: Started polling BoT for pairing status for the device...");
   int counter = 1;
-  String response;
+  String* response;
   do {
     debugD("\nPairingService :: pollPairingStatus: Checking pairing status, attempt %d of %d", counter,MAXIMUM_TRIES);
     response = getPairingStatus();
-    if(response.indexOf("true") != -1){
+    if(response->indexOf("true") != -1){
       return true;
     }
     ++counter;

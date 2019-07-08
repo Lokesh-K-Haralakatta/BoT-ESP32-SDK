@@ -15,11 +15,11 @@ ControllerService :: ControllerService(){
 }
 
 void ControllerService :: getActions(AsyncWebServerRequest *request){
-  String response = actionService->getActions();
+  String* response = actionService->getActions();
   DynamicJsonBuffer jsonBuffer;
   JsonObject& doc = jsonBuffer.createObject();
 
-  if(response.equals("")){
+  if(response->equals("")){
     doc["message"] = "Unable to retrieve actions";
     char body[100];
     doc.printTo(body);
@@ -27,7 +27,7 @@ void ControllerService :: getActions(AsyncWebServerRequest *request){
     request->send(503, "application/json", body);
   }
   else {
-    const char* responseString = response.c_str();
+    const char* responseString = response->c_str();
     debugD("\nControllerService :: getActions: %s", responseString);
     request->send(200, "application/json", responseString);
   }

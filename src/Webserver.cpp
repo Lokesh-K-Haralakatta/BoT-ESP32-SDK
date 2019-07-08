@@ -92,10 +92,10 @@ bool Webserver :: isWiFiConnected(){
 bool Webserver :: isDevicePaired(){
   //Check pairing status for the device
   PairingService* ps = new PairingService();
-  String psResponse = ps->getPairingStatus();
+  String* psResponse = ps->getPairingStatus();
   delete ps;
 
-  if((psResponse.indexOf("true")) != -1)
+  if((psResponse->indexOf("true")) != -1)
     return true;
   else
     return false;

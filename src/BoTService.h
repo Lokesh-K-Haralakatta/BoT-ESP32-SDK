@@ -22,7 +22,7 @@ class BoTService {
   public:
     BoTService();
     ~BoTService();
-    String get(const char* endPoint);
+    String* get(const char* endPoint);
     String post(const char* endPoint, const char* payload);
   private:
     char* hostURL;
@@ -33,9 +33,10 @@ class BoTService {
     HTTPClient* httpClient;
     KeyStore* store;
     String *fullURI;
+    String *botResponse;
     const char* mbedtlsError(int errnum);
     String encodeJWT(const char* header, const char* payload);
-    String decodePayload(String encodedPayload);
+    String* decodePayload(String* encodedPayload);
     void freeObjects();
 };
 

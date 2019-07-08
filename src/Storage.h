@@ -47,6 +47,7 @@ class KeyStore {
     void setDeviceState(int);
     void resetDeviceState();
     const int getDeviceState();
+    const char* getDeviceStatusMsg();
     std::vector <struct Action> retrieveActions();
     bool saveActions(std::vector <struct Action> aList);
     String *getDeviceInfo();
@@ -62,6 +63,7 @@ class KeyStore {
     String *deviceID;
     String *deviceName;
     String *deviceInfo;
+    String *deviceStatus;
     String *altDeviceID;
     String *privateKey;
     String *publicKey;

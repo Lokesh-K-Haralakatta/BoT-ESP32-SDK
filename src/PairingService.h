@@ -18,7 +18,7 @@ class PairingService {
   public:
     PairingService();
     void pairDevice();
-    String getPairingStatus();
+    String* getPairingStatus();
   private:
     KeyStore *store;
     bool isPairable();

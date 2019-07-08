@@ -24,7 +24,7 @@ void ConfigurationService :: initialize(){
     store->setDeviceState(DEVICE_MULTIPAIR);
   else
     store->setDeviceState(DEVICE_NEW);
-  debugD("\nConfigurationService :: initialize: Device State: %d",store->getDeviceState());  
+  debugD("\nConfigurationService :: initialize: Device State: %d",store->getDeviceState());
   debugD("\nConfigurationService :: initialize: Configuration successfully initialized");
 }
 
@@ -40,7 +40,7 @@ void ConfigurationService :: configureDevice(){
           break;
       case DEVICE_ACTIVE:
           debugD("\nConfigurationService :: configureDevice: Device is already active");
-          debugD("\nConfigurationService :: configureDevice: %s", (actionService->getActions()).c_str());
+          debugD("\nConfigurationService :: configureDevice: %s", (actionService->getActions())->c_str());
           break;
   }
 }

@@ -22,7 +22,7 @@ class ActionService {
   public:
     ActionService();
     String triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
-    String getActions();
+    String* getActions();
   private:
     KeyStore *store;
     WiFiUDP ntpUDP;
