@@ -18,7 +18,7 @@ class SDKWrapper {
           SDKWrapper();
           String* getActions();
           bool pairAndActivateDevice();
-          bool triggerAction(JsonVariant &json);
+          bool triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
   private:
     KeyStore* store;
     PairingService* pairService;

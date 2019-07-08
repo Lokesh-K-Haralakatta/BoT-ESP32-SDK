@@ -105,14 +105,7 @@
   }
 
  void loop(){
-   int dState = store->getDeviceState();
-   switch(dState){
-     case DEVICE_NEW: debugI("\nsdkWrapperSample: Device State is DEVICE_NEW"); break;
-     case DEVICE_PAIRED: debugI("\nsdkWrapperSample: Device State is DEVICE_PAIRED"); break;
-     case DEVICE_ACTIVE: debugI("\nsdkWrapperSample: Device State is DEVICE_ACTIVE"); break;
-     case DEVICE_MULTIPAIR: debugI("\nsdkWrapperSample: Device State is DEVICE_MULTIPAIR"); break;
-     default: debugI("\nsdkWrapperSample: Device State is INVALID");
-   }
+   debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
 
    //Get actions from BoT Server
    String* actions = sdk->getActions();
@@ -143,9 +136,15 @@
       //Trigger the action if it's defined with the maker portal
       if(actionFound){
         debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
+        if(sdk->triggerAction(actionIDMinutely.c_str())){
+          debugI("\nsdkWrapperSample :: Triggering action successful");
+        }
+        else {
+          debugE("\nsdkWrapperSample :: Triggering action failed!");
+        }
       }
       else {
-        debugW("\nsdkWrapperSample :: Cannot trigger action - %s", actionIDMinutely.c_str());
+        debugW("\nsdkWrapperSample :: Action - %s not found in maker portal", actionIDMinutely.c_str());
       }
    }
    else {

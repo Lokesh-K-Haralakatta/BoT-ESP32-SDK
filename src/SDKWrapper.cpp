@@ -31,6 +31,7 @@ bool SDKWrapper :: pairAndActivateDevice(){
     debugI("\nSDKWrapper :: pairAndActivateDevice: Device is already paired, checking device's state is valid or not");
     //Below situation occurs when the same device is switched between Multipair and Singlepair
     //Reset Device State and Initialize
+    debugI("\nSDKWrapper :: pairAndActivateDevice: Device State -> %s",store->getDeviceStatusMsg());
     if((!store->isDeviceMultipair() && store->getDeviceState() == DEVICE_MULTIPAIR) ||
        (store->isDeviceMultipair() && store->getDeviceState() != DEVICE_MULTIPAIR))
     {
@@ -106,4 +107,43 @@ bool SDKWrapper :: pairAndActivateDevice(){
 
 String* SDKWrapper :: getActions(){
   return actionService->getActions();
+}
+
+bool SDKWrapper :: triggerAction(const char* actionID, const char* value, const char* altID){
+  if(store->getDeviceState() < DEVICE_ACTIVE){
+    debugW("\nSDKWrapper :: triggerAction : Invalid Device state to trigger action");
+    return false;
+  }
+  else {
+    if(actionID == NULL){
+      debugW("\nSDKWrapper :: triggerAction : Missing actionID");
+      return false;
+    }
+    else {
+      if((store->getDeviceState() == DEVICE_MULTIPAIR) && altID == NULL){
+        if((altID = store->getAlternateDeviceID()) == NULL){
+          debugW("\nSDKWrapper :: triggerAction : Missing alternateID");
+          return false;
+        }
+        else {
+          debugD("\nSDKWrapper :: triggerAction : deviceAltID : %s", altID);
+        }
+      }
+
+      String response = actionService->triggerAction(actionID,value,altID);
+      debugD("\nSDKWrapper :: triggerAction: Response: %s", response.c_str());
+      if(response.indexOf("OK") != -1) {
+        debugI("\nSDKWrapper :: triggerAction: Action triggered successful");
+        return true;
+      }
+      else if(response.indexOf("Action not found") != -1){
+        debugW("\nSDKWrapper :: triggerAction: Action not triggered as its not found");
+        return false;
+      }
+      else {
+        debugE("\nSDKWrapper :: triggerAction: Action triggerring failed, check parameters and try again");
+        return false;
+      }
+    }
+  }
 }

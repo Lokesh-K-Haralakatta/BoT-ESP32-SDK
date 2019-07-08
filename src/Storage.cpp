@@ -26,6 +26,7 @@ KeyStore :: KeyStore(){
   deviceID = NULL;
   deviceName = NULL;
   deviceInfo = NULL;
+  deviceStatus = NULL;
   altDeviceID = NULL;
   privateKey = NULL;
   publicKey = NULL;
@@ -87,6 +88,32 @@ void KeyStore :: resetDeviceState(){
 
 const int KeyStore :: getDeviceState(){
   return EEPROM.read(DEVICE_STATE_ADDR);
+}
+
+const char* KeyStore :: getDeviceStatusMsg(){
+  if(deviceStatus != NULL){
+    delete deviceStatus;
+    deviceStatus = NULL;
+  }
+
+  initializeEEPROM();
+  int dState = getDeviceState();
+  switch(dState){
+    case DEVICE_NEW: deviceStatus = new String("DEVICE_NEW"); break;
+    case DEVICE_PAIRED: deviceStatus = new String("DEVICE_PAIRED"); break;
+    case DEVICE_ACTIVE: deviceStatus = new String("DEVICE_ACTIVE"); break;
+    case DEVICE_MULTIPAIR: deviceStatus = new String("DEVICE_MULTIPAIR"); break;
+    default: deviceStatus = new String("INVALID");
+  }
+  const char* dStatus = NULL;
+  if(deviceStatus != NULL){
+    dStatus = deviceStatus->c_str();
+    debugD("\nKeyStore :: getDeviceStatusMsg : Device State : %s", dStatus);
+  }
+  else {
+    debugE("\nKeyStore :: getDeviceStatusMsg : deviceStatus is NULL");
+  }
+  return dStatus;
 }
 
 bool KeyStore :: isJSONConfigLoaded(){
