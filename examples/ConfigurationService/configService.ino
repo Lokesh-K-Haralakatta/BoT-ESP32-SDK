@@ -5,59 +5,69 @@
 */
 
 #include <ConfigurationService.h>
-//Onboard LED Pin
-int ledPin = 2;
+#include <Webserver.h>
 
 ConfigurationService* configService;
 KeyStore *store;
-void setup() {
+Webserver *server;
 
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+void setup() {
 
   store = KeyStore :: getKeyStoreInstance();
   store->loadJSONConfiguration();
   store->initializeEEPROM();
 
-  const char* WIFI_NAME = store->getWiFiSSID();
-  const char* WIFI_PASSWORD = store->getWiFiPasswd();
+  //Get WiFi Credentials from given configuration
+  //const char* WIFI_SSID = store->getWiFiSSID();
+  //const char* WIFI_PASSWD = store->getWiFiPasswd();
 
-  LOG("\nConnecting to %s", WIFI_NAME);
-  //WiFi.disconnect();
-  WiFi.begin(WIFI_NAME, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    LOG("\nTrying to connect to Wifi Network - %s", WIFI_NAME);
-  }
+  //Provide custom WiFi Credentials
+  const char* WIFI_SSID = "LJioWiFi";
+  const char* WIFI_PASSWD = "adgjmptw";
 
-  LOG("\nSuccessfully connected to WiFi network - %s", WIFI_NAME);
-  LOG("\nIP address: ");
-  Serial.println(WiFi.localIP());
+  //Override HTTPS
+  store->setHTTPS(true);
+
+  //Instantiate Webserver by using the custom WiFi credentials
+  bool loadConfig = false;
+  int logLevel = BoT_INFO;
+  server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+
+  //Enable board to connect to WiFi Network
+  server->connectWiFi();
 
   configService = new ConfigurationService();
-
-  //Calling getDeviceInfo after initializing should return DeviceInformation
-  configService->initialize(); // This internally sets device state as NEW
-  LOG("\nDeviceInformation: %s", (configService->getDeviceInfo())->c_str());
-
-  //Configuring the device for NEW Device
-  //configService->configureDevice();
-  //LOG("\nDevice State: %d", store->getDeviceState());
-
-  //Configuring the device for PAIRED Device
-  //store->setDeviceState(DEVICE_PAIRED);
-  //configService->configureDevice();
-  //LOG("\nDevice State: %d", store->getDeviceState());
-
-  //Configuring the device for ACTIVE Device
-  store->setDeviceState(DEVICE_ACTIVE);
-  configService->configureDevice();
-  LOG("\nDevice State: %d", store->getDeviceState());
 }
 
 void loop() {
-  digitalWrite(ledPin, LOW);
-  delay(1000);
-  digitalWrite(ledPin, HIGH);
-  delay(1000);
+  //Proceed further if board connects to WiFi Network
+  if(server->isWiFiConnected()){
+    //Calling getDeviceInfo after initializing should return DeviceInformation
+    configService->initialize(); // This internally sets device state as NEW
+    
+    //Configuring the device for NEW Device
+    configService->configureDevice();
+    debugI("\nDevice State after configure for NEW Device: %d", store->getDeviceState());
+
+    //Configuring the device for PAIRED Device
+    store->setDeviceState(DEVICE_PAIRED);
+    configService->configureDevice();
+    debugI("\nDevice State after configure for PAIRED Device: %d", store->getDeviceState());
+
+    //Configuring the device for ACTIVE Device
+    store->setDeviceState(DEVICE_ACTIVE);
+    configService->configureDevice();
+    debugI("\nDevice State after configure for ACTIVE Device: %d", store->getDeviceState());
+  }
+  else {
+    LOG("\nconfigService: ESP-32 board not connected to WiFi Network, try again");
+    //Enable board to connect to WiFi Network
+    server->connectWiFi();
+  }
+
+  #ifndef DEBUG_DISABLED
+    Debug.handle();
+  #endif
+
+  delay(1*60*1000);
 }

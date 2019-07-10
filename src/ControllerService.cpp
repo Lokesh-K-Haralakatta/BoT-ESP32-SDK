@@ -15,21 +15,38 @@ ControllerService :: ControllerService(){
 }
 
 void ControllerService :: getActions(AsyncWebServerRequest *request){
-  String response = actionService->getActions();
+  String* response = actionService->getActions();
   DynamicJsonBuffer jsonBuffer;
   JsonObject& doc = jsonBuffer.createObject();
 
-  if(response.equals("")){
+  if(response->equals("")){
     doc["message"] = "Unable to retrieve actions";
     char body[100];
     doc.printTo(body);
-    LOG("\nControllerService :: getActions: %s", body);
+    debugE("\nControllerService :: getActions: %s", body);
     request->send(503, "application/json", body);
   }
   else {
-    const char* responseString = response.c_str();
-    LOG("\nControllerService :: getActions: %s", responseString);
+    const char* responseString = response->c_str();
+    debugD("\nControllerService :: getActions: %s", responseString);
     request->send(200, "application/json", responseString);
+  }
+}
+
+void ControllerService :: getQRCode(AsyncWebServerRequest *request){
+  //Check QR Code generation qrCodeStatus
+  bool qrCodeStatus = store->isQRCodeGeneratedandSaved();
+  if(!qrCodeStatus){
+    debugD("\nControllerService :: getQRCode: Generating QR Code and saving to SPIFFS");
+    qrCodeStatus = store->generateAndSaveQRCode();
+  }
+  if(qrCodeStatus){
+    debugI("\nControllerService :: getQRCode: QR Code exists on SPIFFS, serving through webresponse");
+    request->send(SPIFFS,QRCODE_FILE,"image/svg+xml");
+  }
+  else{
+    debugE("\nControllerService :: getQRCode: QR Code not available on SPIFFS, returning 404 as web response");
+    request->send(404,"text/plain","QR Code not available on SPIFFS");
   }
 }
 
@@ -39,26 +56,26 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   JsonObject& doc = jsonBuffer.createObject();
   char body[100];
 
-  if(store->getDeviceState() != DEVICE_NEW){
+  if(store->getDeviceState() > DEVICE_NEW){
     doc["message"] = "Device is already paired";
     doc.printTo(body);
-    LOG("\nControllerService :: pairDevice: %s", body);
+    debugW("\nControllerService :: pairDevice: %s", body);
     request->send(403, "application/json", body);
   }
   else {
     pairService->pairDevice();
     int deviceState = store->getDeviceState();
-    LOG("\nControllerService :: pairDevice: Device state after return from pairService->pairDevice() : %d",deviceState);
+    debugD("\nControllerService :: pairDevice: Device state after return from pairService->pairDevice() : %d",deviceState);
     if( deviceState != DEVICE_NEW){
       doc["message"] = "Device pairing successful";
       doc.printTo(body);
-      LOG("\nControllerService :: pairDevice: %s", body);
+      debugD("\nControllerService :: pairDevice: %s", body);
       request->send(200, "application/json", body);
     }
     else {
       doc["message"] = "Unable to pair device";
       doc.printTo(body);
-      LOG("\nControllerService :: pairDevice: %s", body);
+      debugE("\nControllerService :: pairDevice: %s", body);
       request->send(503, "application/json", body);
     }
   }
@@ -73,7 +90,7 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
   if(store->getDeviceState() < DEVICE_ACTIVE){
     doc["message"] = "Device not activated";
     doc.printTo(body);
-    LOG("\nControllerService :: triggerAction: %s", body);
+    debugE("\nControllerService :: triggerAction: %s", body);
     request->send(403, "application/json", body);
   }
   else {
@@ -82,14 +99,14 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
     if(jsonObj.containsKey("actionID") == false){
       doc["message"] = "Missing parameter `actionID`";
       doc.printTo(body);
-      LOG("\nControllerService :: triggerAction: %s", body);
+      debugE("\nControllerService :: triggerAction: %s", body);
       request->send(400, "application/json", body);
     }
     else if((store->getDeviceState() == DEVICE_MULTIPAIR) &&
             (jsonObj.containsKey("alternativeID") == false)){
       doc["message"] = "Missing parameter `AlternativeID`";
       doc.printTo(body);
-      LOG("\nControllerService :: triggerAction: %s", body);
+      debugE("\nControllerService :: triggerAction: %s", body);
       request->send(400, "application/json", body);
     }
     else {
@@ -98,24 +115,24 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
       const char* altID = (jsonObj.containsKey("alternativeID"))?jsonObj.get<const char*>("alternativeID"):NULL;
 
       String response = actionService->triggerAction(actionID, value, altID);
-      LOG("\nControllerService :: triggerAction: Response: %s", response.c_str());
+      debugD("\nControllerService :: triggerAction: Response: %s", response.c_str());
 
       if(response.indexOf("OK") != -1) {
         doc["message"] = "Action triggered successful";
         doc.printTo(body);
-        LOG("\nControllerService :: triggerAction: %s", body);
+        debugD("\nControllerService :: triggerAction: %s", body);
         request->send(200, "application/json", body);
       }
       else if(response.indexOf("Action not found") != -1){
         doc["message"] = "Action not triggered as its not found";
         doc.printTo(body);
-        LOG("\nControllerService :: triggerAction: %s", body);
+        debugE("\nControllerService :: triggerAction: %s", body);
         request->send(404, "application/json", body);
       }
       else {
         doc["message"] = "Action triggerring failed, check parameters and try again";
         doc.printTo(body);
-        LOG("\nControllerService :: triggerAction: %s", body);
+        debugE("\nControllerService :: triggerAction: %s", body);
         request->send(503, "application/json", body);
       }
     }

@@ -12,11 +12,11 @@ ActivationService :: ActivationService(){
 }
 
 bool ActivationService :: pollActivationStatus(){
-  LOG("\nActivationService :: pollActivationStatus: Started polling BoT for activation status for the device...");
+  debugD("\nActivationService :: pollActivationStatus: Started polling BoT for activation status for the device...");
   int counter = 1;
   String response;
   do {
-    LOG("\nActivationService :: pollActivationStatus: Checking activation status, attempt %d of %d", counter,MAXIMUM_TRIES);
+    debugD("\nActivationService :: pollActivationStatus: Checking activation status, attempt %d of %d", counter,MAXIMUM_TRIES);
     response = sendActivationRequest();
     if(response.equals("")){
       return true;
@@ -38,11 +38,11 @@ String ActivationService :: sendActivationRequest(){
 
   char payload[100];
   doc.printTo(payload);
-  LOG("\nActivationService :: sendActivationRequest: Minified JSON payload to send: %s", payload);
+  debugD("\nActivationService :: sendActivationRequest: Minified JSON payload to send: %s", payload);
 
   BoTService *bot = new BoTService();
   String response = bot->post(ACTIVATION_END_POINT,payload);
-  LOG("\nActivationService :: sendActivationRequest: Response from bot->post: %s",response.c_str());
+  debugD("\nActivationService :: sendActivationRequest: Response from bot->post: %s",response.c_str());
   delete bot;
 
   return response;
@@ -52,9 +52,9 @@ void ActivationService :: activateDevice(){
   store->initializeEEPROM();
   if(pollActivationStatus() == true){
     store->setDeviceState(DEVICE_ACTIVE);
-    LOG("\nActivationService :: activateDevice: Activation successful. Triggering actions enabled");
+    debugI("\nActivationService :: activateDevice: Activation successful. Triggering actions enabled");
   }
   else {
-    LOG("\nActivationService :: activateDevice: Unable to activate device, try activating again");
+    debugW("\nActivationService :: activateDevice: Unable to activate device, try activating again");
   }
 }

@@ -18,7 +18,7 @@
 class Webserver
 {
   public:
-    Webserver(bool loadConfig, const char *ssid = NULL, const char *passwd = NULL);
+    Webserver(bool loadConfig, const char *ssid = NULL, const char *passwd = NULL, const int logLevel = BoT_INFO);
     bool isWiFiConnected();
     bool isServerAvailable();
     void blinkLED();
@@ -29,12 +29,14 @@ class Webserver
     int port;
     int ledPin;
     int serverStatus;
+    int debugLevel;
     String *WiFi_SSID;
     String *WiFi_Passwd;
     KeyStore *store;
     AsyncWebServer *server;
     ConfigurationService *config;
     BluetoothService *ble;
+    bool isDevicePaired();
 };
 
 #endif
