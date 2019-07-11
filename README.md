@@ -24,24 +24,42 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download ZIP from repository and install through Arduino IDE
   - The required configuration file and keys are available in the path `Arduino/libraries/BoT-ESP32-SDK/data` directory
   - Update the required configuration in `configuration.json` file and replace the key-pair files by retaining the same file names
-  - Sample example sketch - sdkSample.ino is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/SDKSample` directory
+  - Webserver endpoints usage sample sketch - `sdkSample.ino` is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/sdkSample` directory
+  - SDKWrapper methods usage sample sketch - `sdkWrapperSample.ino` is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/sdkWrapperSample` directory
   - Make sure the line `#define DEBUG_DISABLED true` is commented in the file `BoTESP32SDK.h` to have Remote Redug feature enabled
 
 - **Steps to execute sdkSample as it's purpose is to trigger the given action for every 1 minute**
-  - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/SDKSample/sdkSample.ino` into Arduino IDE Sketches directory
+  - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/sdkSample` into Arduino IDE Sketches directory
   - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into sdkSample sketch data directory
   - Update the configuration details and key-pair details in the files present in data directory
   - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
   - Sketch has code to trigger actions with various frequencies like minutely, hourly, daily, monthly,half-yearly, yearly and always
   - Remove the comments for required action to be triggered based on the action frequency
+  - Define the actions in [Maker Portal](https://maker.bankingofthings.io/login), update the actionIDs properly before executing the sketch
   - Compile and Upload sketch to ESP32 board using Arduino IDE
-  - Flash data directory contents using Arduino IDE -> Tools -> ESP32 Sketch Data Upload option
+  - Upload data directory contents using `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` option onto ESP-32 board
   - Wait for couple of seconds, the sketch should start running and connect to specified WiFi Network present in Sketch / Configuration
   - After ESP-32 board successfully connecting to specified WiFi Network, make a note of it's IP Address
   - Specified deviceID present in `configuration.json` is new, then SDK internally generates and saves QR Code for the device
-  - Pair the new device through Companion Application using BLE or using saved QR Code
+  - Pair the new device through [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) using BLE or using saved QR Code
   - The QR Code can be accessed using the webserver's end point `/qrcode` running on ESP-32 board
-  - Define the actions in maker portal, add service in companion app, update the actionIDs properly before executing the sketch
+  - Add the required service(s) in the [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) while pairing the device to enable action(s) to be triggered from the device
+  - Open Serial Monitor Window in Arduino IDE to observe the sketch flow or SDK also supports RemoteDebug feature use `telnet ipAddr`
+  - Once device is paired, observe the action getting triggered for every 1 minute
+  
+- **Steps to execute sdkWrapperSample as it's purpose is to directly call SDKWrapper methods to getActions and triggerAction for every 1 minute without using Async Webserver end points**
+  - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/sdkWrapperSample` into Arduino IDE Sketches directory
+  - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into sdkWrapperSample sketch data directory
+  - Update the configuration details and key-pair details in the files present in data directory
+  - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
+  - Define the actions in [Maker Portal](https://maker.bankingofthings.io/login), update the actionID properly before executing the sketch
+  - Compile and Upload sketch to ESP32 board using Arduino IDE
+  - Upload data directory contents using `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` option onto ESP-32 board
+  - Wait for couple of seconds, the sketch should start running and connect to specified WiFi Network present in Sketch / Configuration
+  - After ESP-32 board successfully connecting to specified WiFi Network, make a note of it's IP Address
+  - Specified deviceID present in `configuration.json` is new, then SDK internally kicks of BLE pairing and indefinitely waits for pairing get done through [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) followed by activating the device for triggering the actions
+  - Pair the new device through [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) using BLE feature
+  - Add service in [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) for the device to enable action trigger
   - Open Serial Monitor Window in Arduino IDE to observe the sketch flow or SDK also supports RemoteDebug feature use `telnet ipAddr`
   - Once device is paired, observe the action getting triggered for every 1 minute
 
@@ -162,7 +180,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - As we have confirmation on ESP-32 connected to WiFi Network, next step is to invoke member function `startServer()` to start AsyncWebserver on ESP-32 board
   - The AsyncWebserver on ESP-32 board provides below list of end points
     - `/pairing`: Used to wait for change of device state and activate the device
-    - `/actions`: Used to retrieve the list of the actions defined for the makerID
+    - `/actions`: Used to retrieve the list of the actions defined for the makerID as well as trigger an action
     - `/qrcode`: Used to access the generated and saved QR Code for the device
   - Above sequence of steps are depicted in below given code snippet
       ```
@@ -189,25 +207,26 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Below given code snippet shows simple HTTPClient code to retrieve actions from BoT Service
       ```
         .......
-        if(server->isServerAvailable()){
-          httpClient->begin((server->getBoardIP()).toString(),3001,"/actions");
-          int httpCode = httpClient->GET();
-          String payload = httpClient->getString();
-          httpClient->end();
+           if(server->isServerAvailable()){
+             //Retrieve defined actions for given makerID
+             httpClient->begin((server->getBoardIP()).toString(),3001,"/actions");
+             //Set HTTP Call timeout as 2 mins
+             httpClient->setTimeout(2*60*1000);
 
-          if(httpCode == 200){
-            LOG("\nActions Retrieved from BoT Service: %s", payload.c_str());
-          }
-          else {
-            LOG("\nActions Retrieval failed with httpCode - %d", httpCode);
-          }
-        }
-        else {
-          LOG("\nWebserver not available on ESP32 board!");
-        }
+             int httpCode = httpClient->GET();
+             String payload = httpClient->getString();
+             httpClient->end();
+
+             if(httpCode == 200){
+               debugI("\nstartAsyncServer: Actions Retrieved from BoT Service: %s", payload.c_str());
+             }
+             else {
+               debugI("\nstartAsyncServer: Actions Retrieval failed with httpCode - %d", httpCode);
+             }
         .......
 
       ```
+  - The complete sketch is available at path `examples/AsyncWebServer/startAsyncServer.ino`
 
 - **Pairing the device followed by activating it to trigger actions using AsyncWebserver end point `/pairing`**
   - We can activate the paired device by hitting the defined end point `/pairing` to trigger actions
@@ -215,20 +234,23 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
       ```
         .......
         if(server->isServerAvailable()){
-          httpClient->begin((server->getBoardIP()).toString(),3001,"/pairing");
-          int httpCode = httpClient->GET();
-          String payload = httpClient->getString();
+          httpClient->begin((server->getBoardIP()).toString(),port,"/pairing");
+          //Set HTTP Call timeout as 2 mins
+          httpClient->setTimeout(2*60*1000);
+
+          httpCode = httpClient->GET();
+          payload = httpClient->getString();
           httpClient->end();
 
           if(httpCode == 200){
             if(store->getDeviceState() == DEVICE_ACTIVE){
-              LOG("\nDevice Activation Successful");
+              debugI("\nstartAsyncServer: Device Activation Successful");
             }
-            else
-              LOG("\nDevice Not Activated, try again");
-          }
+            else {
+              debugI("\nstartAsyncServer: Device Not Activated, try again");
+            }
           else {
-            LOG("\nCalling /pairing failed with httpCode - %d", httpCode);
+            debugI("\nstartAsyncServer: Calling /pairing failed with httpCode - %d", httpCode);
           }
         }
         else {
@@ -237,7 +259,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         .......
 
       ```
-
+  - The complete sketch is available at path `examples/AsyncWebServer/startAsyncServer.ino`
+  
 - **Triggering the defined action using AsyncWebserver end point `/actions`**
   - We can trigger the defined actions periodically using the `/actions` end point
   - Below given code snippet shows simple HTTPClient making POST call on `/actions`
@@ -246,25 +269,42 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         //Check for Webserver availability to trigger the action
         if(server->isServerAvailable()){
           //Check for the device state, should be active
-          if(store->getDeviceState() == DEVICE_ACTIVE){
-            LOG("\nsdkSample: Device State is ACTIVE and triggering the action - %s", actionID.c_str());
-
+          if(store->getDeviceState() >= DEVICE_ACTIVE){
             //Instantiate HTTP Client to send HTTP Request to trigger the action
             httpClient = new HTTPClient();
             httpClient->begin((server->getBoardIP()).toString(),port,"/actions");
 
             //Prepare body with actionID
-            String body = (String)"{\"actionID\": \"" + actionID +   "\"}";
+            String body = (String)"{\"actionID\": \"" + actionID +   "\"";
+
+            //Add alternativeID if device is DEVICE_MULTIPAIR
+            if(store->isDeviceMultipair()){
+              body.concat(",\"alternativeID\": \"" + String(store->getAlternateDeviceID()) +"\"");
+            }
+            body.concat(" } ");
+            debugI("\nsdkSample: triggerAction Body contents: %s",body.c_str());
 
             //Set required headers for HTTP Call
             httpClient->addHeader("Content-Type", "application/json");
             httpClient->addHeader("Content-Length",String(body.length()));
 
-            //Trigger action
+            //Set HTTP Call timeout as 2 mins
+            httpClient->setTimeout(2*60*1000);
+
+            //Call HTTP Post to trigger action
             int httpCode = httpClient->POST(body);
 
             //Get response body contents
             String payload = httpClient->getString();
+
+            //Check for successful triggerring of given action
+            if(httpCode == 200){
+               triggerCount++;
+               debugI("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
+            }
+            else {
+               debugE("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+            }
 
             //End http
             httpClient->end();
@@ -272,25 +312,21 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
             //Deallocate memory allocated for httpClient
             delete httpClient;
 
-            //Check for successful triggerring of given action
-            if(httpCode == 200){
-              triggerCount++;
-              LOG("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
-            }
-            else {
-              LOG("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
-            }
-          }
-          else {
-            LOG("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
-
             ......
           }
           .......
 
       ```
-  - Complete sketch is available at the path `examples/SDKSample/sdkSample.ino` as part of ESP-32 SDK
+  - Complete sketch is available at the path `examples/sdkSample/sdkSample.ino`
 
+- **Consuming ESP-32 SDK using SDKWrapper Class**
+  - SDK also supports it's direct usage as another module / library through the SDKWrapper Class Methods
+  - SDKWrapper Class provides following methods, those can be directly used in the sketch bypassing the dependency on Webserver
+    - `pairAndActivateDevice`: Used to pair the device with FINN Mobile Application through BLE
+    - `getActions`: Used to retrieve all the available actions defined at the provided maker portal in JSON String format
+    - `triggerAction`: Used to trigger an action for Single Pair as well as for Multipair device
+  - The sample workflow for using the SDKWrapper Class methods are showcased in the example sketch `sdkWrapperSample.ino` available at the path `examples/sdkWrapperSample`
+  
 - **Must do steps before compiling and uploading sketch to ESP-32 board**
   - Make sure the data directory contents are proper for the sketch
   - Flash the data directory contents onto board from `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` Option
