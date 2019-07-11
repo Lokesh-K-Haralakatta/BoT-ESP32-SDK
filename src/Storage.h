@@ -81,6 +81,7 @@ class KeyStore {
     KeyStore();
     std::vector <struct Action> actionsList;
     bool saveQRCode(qrcodegen::QrCode qr);
+    void clearActionsList();
 };
 
 #endif

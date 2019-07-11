@@ -21,6 +21,7 @@ class PairingService {
     String* getPairingStatus();
   private:
     KeyStore *store;
+    BoTService *bot;
     bool isPairable();
     bool isMultipair();
     bool pollPairingStatus();

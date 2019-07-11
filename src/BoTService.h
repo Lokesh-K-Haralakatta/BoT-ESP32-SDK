@@ -20,11 +20,11 @@
 
 class BoTService {
   public:
-    BoTService();
-    ~BoTService();
+    static BoTService* getBoTServiceInstance();
     String* get(const char* endPoint);
     String post(const char* endPoint, const char* payload);
   private:
+    static BoTService *bot;
     char* hostURL;
     char* uriPath;
     int port;
@@ -38,6 +38,8 @@ class BoTService {
     String encodeJWT(const char* header, const char* payload);
     String* decodePayload(String* encodedPayload);
     void freeObjects();
+    BoTService();
+    ~BoTService();
 };
 
 #endif

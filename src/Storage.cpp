@@ -424,11 +424,36 @@ const char* KeyStore :: getCACert(){
   return NULL;
 }
 
+void KeyStore :: clearActionsList(){
+  int pos = 0;
+  std::vector<struct Action>::iterator i;
+  while(!actionsList.empty()){
+    i = actionsList.begin();
+    if(i->actionID != NULL){
+      delete i->actionID;
+      i->actionID = NULL;
+    }
+    if(i->actionFrequency != NULL){
+      delete i->actionFrequency;
+      i->actionFrequency = NULL;
+    }
+    actionsList.erase(i);
+    pos++;
+    debugD("\nKeyStore :: clearActionsList : Freed memory and erased action at position - %d",pos);
+  }
+}
+
 std::vector <struct Action>  KeyStore :: retrieveActions(){
   //Clear previous actions details
   if(!actionsList.empty()){
-    actionsList.clear();
-    debugD("\nKeyStore :: retrieveActions: Cleared contents of previous actions present in ActionsList");
+    clearActionsList();
+    if(actionsList.empty()){
+      debugD("\nKeyStore :: retrieveActions: Cleared contents of previous actions present in ActionsList");
+    }
+    else {
+      debugE("\nKeyStore :: retrieveActions: Not cleared contents of previous actions present, returning the same back");
+      return actionsList;
+    }
   }
 
   if(!SPIFFS.begin(true)){

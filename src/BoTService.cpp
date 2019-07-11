@@ -5,6 +5,15 @@
 */
 
 #include "BoTService.h"
+BoTService* BoTService::bot = NULL;
+
+BoTService* BoTService :: getBoTServiceInstance(){
+  if(bot == NULL){
+    bot = new BoTService();
+  }
+
+  return bot;
+}
 
 BoTService :: BoTService(){
   hostURL = new char[strlen(HOST)+1];
@@ -23,8 +32,22 @@ BoTService :: BoTService(){
 }
 
 BoTService :: ~BoTService(){
-  delete uriPath;
-  delete hostURL;
+  if(uriPath != NULL) {
+    delete uriPath;
+    uriPath = NULL;
+  }
+
+  if(hostURL != NULL) {
+    delete hostURL;
+    hostURL = NULL;
+  }
+
+  if(botResponse != NULL){
+    delete botResponse;
+    botResponse = NULL;
+  }
+
+  freeObjects();
 }
 
 const char* BoTService :: mbedtlsError(int errnum) {
@@ -213,7 +236,13 @@ String* BoTService :: get(const char* endPoint){
             delete payload;
             botResponse = decodePayload(encodedPayload);
             delete encodedPayload;
+            debugD("\nBoTService :: get: botResponse: \n%s\n",botResponse->c_str());
             return(botResponse);
+          }
+          else {
+            debugE("\nBoTService :: get: Response body is not as expected:\n%s\n",payload->c_str());
+            botResponse = new String("Response body is not as expected");
+            return botResponse;
           }
         }
         else {

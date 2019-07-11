@@ -34,7 +34,7 @@
 
 #include <Storage.h>
 #include <Webserver.h>
-#include <BoTService.h>
+#include <SDKWrapper.h>
 #include <FlowMeter.h>
 
 //Custom WiFi Credentials
@@ -44,6 +44,7 @@
 //Declare service variables
 KeyStore *store = NULL;
 Webserver *server = NULL;
+SDKWrapper *sdk = NULL;
 
 //Webserver Port
 const int port = 3001;
@@ -126,6 +127,9 @@ void setup()
 
     //Start the Async Webserver on ESP32 board to initialize, configure the device
     server->startServer();
+
+    //Instantiate SDK Wrapper
+    sdk = new SDKWrapper();
 
     //create a task to trigger notification, with priority 1 and executed on core 0
     xTaskCreatePinnedToCore(
@@ -231,35 +235,13 @@ void notificationTask( void * pvParameters ){
                   debugI(" Autonomous payment done for %d liters of consumed water", NOTIFY_4); break;
         }
 
-        BoTService* bot = NULL;
-        //Prepare JSON Data to trigger an Action through POST call
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& doc = jsonBuffer.createObject();
-        JsonObject& botData = doc.createNestedObject("bot");
-        botData["deviceID"] = store->getDeviceID();
-        botData["actionID"] = notifyUUID;
-        botData["queueID"] = store->generateUuid4();
-
-        char payload[200];
-        doc.printTo(payload);
-        debugI("Minified JSON Data to trigger Notification: %s", payload);
-
-        //Create BoT Service Instance
-        bot = new BoTService();
-
-        //Hit End point to post
-        String response = bot->post("/actions",payload);
-
-        //Deallocate
-        delete bot;
-
         //Turn Off Notify Flag if notification triggered successful
-        if(response.indexOf("OK") != -1){
+        if(sdk->triggerAction(notifyUUID)){
           notify = false;
           debugI("Notification triggered successfull, turned off notify flag");
         }
         else
-          debugE("Notification trigger failed with response - %s",response.c_str());
+          debugE("Autonomous Notification failed...");
       }
       else
         LOG("\nServer not available to trigger outstanding notification");
@@ -280,38 +262,16 @@ void paymentTask( void * pvParameters ){
     if(action){
       if(server->isServerAvailable()){
         debugI("Triggering payment for consumption of %d liters of water",NOTIFY_4);
-        BoTService* bot = NULL;
-        //Prepare JSON Data to trigger an Action through POST call
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& doc = jsonBuffer.createObject();
-        JsonObject& botData = doc.createNestedObject("bot");
-        botData["deviceID"] = store->getDeviceID();
-        botData["actionID"] = actionUUID.c_str();
-        botData["queueID"] = store->generateUuid4();
-
-        char payload[200];
-        doc.printTo(payload);
-        debugI("Minified JSON Data to trigger payment: %s", payload);
-
-        //Create BoT Service Instance
-        bot = new BoTService();
-
-        //Hit End point to post
-        String response = bot->post("/actions",payload);
-
-        //Deallocate
-        delete bot;
-
         //Turn Off action flag if payment is successful
-        if(response.indexOf("OK") != -1){
+        if(sdk->triggerAction(actionUUID.c_str())){
           action = false;
           debugI("Payment successful, turned off action flag");
           //Set notify flag to send payment done notification
-          notify = true;
           notifyID = 5;
+          notify = true;
         }
         else
-          debugE("Payment trigger failed with response - %s",response.c_str());
+          debugE("Autonomous payment failed...");
       }
       else
         LOG("\nServer not available to trigger outstanding payment");

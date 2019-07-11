@@ -9,20 +9,20 @@
 
 ControllerService :: ControllerService(){
   store = KeyStore :: getKeyStoreInstance();
-  pairService = new PairingService();
-  actionService = new ActionService();
-  configService = new ConfigurationService();
 }
 
 void ControllerService :: getActions(AsyncWebServerRequest *request){
+  ActionService* actionService = new ActionService();
   String* response = actionService->getActions();
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& doc = jsonBuffer.createObject();
+  delete actionService;
 
-  if(response->equals("")){
+  if(response == NULL){
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& doc = jsonBuffer.createObject();
     doc["message"] = "Unable to retrieve actions";
     char body[100];
     doc.printTo(body);
+    jsonBuffer.clear();
     debugE("\nControllerService :: getActions: %s", body);
     request->send(503, "application/json", body);
   }
@@ -59,22 +59,28 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   if(store->getDeviceState() > DEVICE_NEW){
     doc["message"] = "Device is already paired";
     doc.printTo(body);
+    jsonBuffer.clear();
     debugW("\nControllerService :: pairDevice: %s", body);
     request->send(403, "application/json", body);
   }
   else {
+    PairingService* pairService = new PairingService();
     pairService->pairDevice();
+    delete pairService;
+
     int deviceState = store->getDeviceState();
     debugD("\nControllerService :: pairDevice: Device state after return from pairService->pairDevice() : %d",deviceState);
     if( deviceState != DEVICE_NEW){
       doc["message"] = "Device pairing successful";
       doc.printTo(body);
+      jsonBuffer.clear();
       debugD("\nControllerService :: pairDevice: %s", body);
       request->send(200, "application/json", body);
     }
     else {
       doc["message"] = "Unable to pair device";
       doc.printTo(body);
+      jsonBuffer.clear();
       debugE("\nControllerService :: pairDevice: %s", body);
       request->send(503, "application/json", body);
     }
@@ -90,6 +96,7 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
   if(store->getDeviceState() < DEVICE_ACTIVE){
     doc["message"] = "Device not activated";
     doc.printTo(body);
+    jsonBuffer.clear();
     debugE("\nControllerService :: triggerAction: %s", body);
     request->send(403, "application/json", body);
   }
@@ -99,6 +106,7 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
     if(jsonObj.containsKey("actionID") == false){
       doc["message"] = "Missing parameter `actionID`";
       doc.printTo(body);
+      jsonBuffer.clear();
       debugE("\nControllerService :: triggerAction: %s", body);
       request->send(400, "application/json", body);
     }
@@ -106,6 +114,7 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
             (jsonObj.containsKey("alternativeID") == false)){
       doc["message"] = "Missing parameter `AlternativeID`";
       doc.printTo(body);
+      jsonBuffer.clear();
       debugE("\nControllerService :: triggerAction: %s", body);
       request->send(400, "application/json", body);
     }
@@ -114,24 +123,29 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
       const char* value = (jsonObj.containsKey("value"))?jsonObj.get<const char*>("value"):NULL;
       const char* altID = (jsonObj.containsKey("alternativeID"))?jsonObj.get<const char*>("alternativeID"):NULL;
 
+      ActionService* actionService = new ActionService();
       String response = actionService->triggerAction(actionID, value, altID);
+      delete actionService;
       debugD("\nControllerService :: triggerAction: Response: %s", response.c_str());
 
       if(response.indexOf("OK") != -1) {
         doc["message"] = "Action triggered successful";
         doc.printTo(body);
+        jsonBuffer.clear();
         debugD("\nControllerService :: triggerAction: %s", body);
         request->send(200, "application/json", body);
       }
       else if(response.indexOf("Action not found") != -1){
         doc["message"] = "Action not triggered as its not found";
         doc.printTo(body);
+        jsonBuffer.clear();
         debugE("\nControllerService :: triggerAction: %s", body);
         request->send(404, "application/json", body);
       }
       else {
         doc["message"] = "Action triggerring failed, check parameters and try again";
         doc.printTo(body);
+        jsonBuffer.clear();
         debugE("\nControllerService :: triggerAction: %s", body);
         request->send(503, "application/json", body);
       }

@@ -36,6 +36,9 @@ void setup() {
   //Enable board to connect to WiFi Network
   server->connectWiFi();
 
+  //Get BoT Service Instance
+  bot = BoTService::getBoTServiceInstance();
+
 }
 
 void loop() {
@@ -45,23 +48,10 @@ void loop() {
 
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
-    //Create BoT Service Instance
-    bot = new BoTService();
-
     //GET Pairing Status
     debugI("\nPair Status: %s", bot->get("/pair")->c_str());
-
-    //Deallocate
-    delete bot;
-
-    //Create BoT Service Instance
-    bot = new BoTService();
-
     //GET Actions defined in Maker Portal
     debugI("\nActions: %s", bot->get("/actions")->c_str());
-
-    //Deallocate
-    delete bot;
 
     //Prepare JSON Data to trigger an Action through POST call
     StaticJsonBuffer<200> jsonBuffer;
@@ -75,14 +65,7 @@ void loop() {
     doc.printTo(payload);
     debugI("\nMinified JSON Data to trigger Action: %s", payload);
 
-    //Create BoT Service Instance
-    bot = new BoTService();
-
     debugI("\nResponse from triggering action: %s", bot->post("/actions",payload).c_str());
-
-    //Deallocate
-    delete bot;
-
   }
   else {
   LOG("\nsdkSample: ESP-32 board not connected to WiFi Network, try again");

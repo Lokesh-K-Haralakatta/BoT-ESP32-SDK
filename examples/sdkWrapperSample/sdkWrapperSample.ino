@@ -26,9 +26,11 @@
   2. Initializes the configuration, connects to given WiFi Network
   3. Pairs the device using BLE with the FINN Application
   4. Gets the actions defined at provided makerID portal
-  5. Triggers the provided actionID
+  5. Triggers the provided actionID at an interval of 1 minute it if's found in maker portal
 
   */
+
+
 
   #include <Storage.h>
   #include <Webserver.h>
@@ -51,6 +53,9 @@
 
   //Variable to keep track of action triggered
   int triggerCount = 0;
+
+  //Flag to check existence of the action
+  bool actionFound = false;
 
   void setup()
   {
@@ -94,7 +99,35 @@
       //Pair and Activate the device for first time
       if(sdk->pairAndActivateDevice()){
          debugI("\nsdkWrapperSample: Device is Paired and Activated for Autonomous Payments");
-      }
+         //Get actions from BoT Server
+         if(server->isWiFiConnected()){
+           String* actions = sdk->getActions();
+           //If actions are present, they are in JSON String
+           //Parse them to check given action is there or not
+           if(actions != NULL){
+             DynamicJsonBuffer jsonBuffer;
+             JsonArray& actionsArray = jsonBuffer.parseArray(*actions);
+             if(actionsArray.success()){
+                 int actionsCount = actionsArray.size();
+                 debugI("\nsdkWrapperSample :: JSON Actions array parsed successfully");
+                 debugI("\nsdkWrapperSample :: Number of actions returned: %d", actionsCount);
+                 //Check whether given action is present in returned actions list
+                 for(byte i=0 ; i < actionsCount; i++){
+                    const char* actionID = actionsArray[i]["actionID"];
+                    const char* frequency = actionsArray[i]["frequency"];
+                    if(actionIDMinutely.equals(actionID)){
+                      debugI("\nsdkWrapperSample :: Action Found in actionsArray");
+                      debugI("\nsdkWrapperSample :: Action ID: %s", actionID);
+                      debugI("\nsdkWrapperSample :: Action Frequency: %s", frequency);
+                      actionFound = true;
+                      break;
+                    }
+                  }
+              }
+              jsonBuffer.clear();
+            }
+          }
+        }
       else {
          debugI("\nsdkWrapperSample: Device is not Paired");
       }
@@ -105,50 +138,35 @@
   }
 
  void loop(){
-   debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
-
-   //Get actions from BoT Server
-   String* actions = sdk->getActions();
-
-   //If actions are present, they are in JSON String
-   //Parse them to check given action is there or not
-   bool actionFound = false;
-   if(actions != NULL){
-     DynamicJsonBuffer jsonBuffer;
-     JsonArray& actionsArray = jsonBuffer.parseArray(*actions);
-     if(actionsArray.success()){
-         int actionsCount = actionsArray.size();
-         debugI("\nsdkWrapperSample :: JSON Actions array parsed successfully");
-         debugI("\nsdkWrapperSample :: Number of actions returned: %d", actionsCount);
-         //Check whether given action is present in returned actions list
-         for(byte i=0 ; i < actionsCount; i++){
-            const char* actionID = actionsArray[i]["actionID"];
-            const char* frequency = actionsArray[i]["frequency"];
-            if(actionIDMinutely.equals(actionID)){
-              debugI("\nsdkWrapperSample :: Action Found in actionsArray");
-              debugI("\nsdkWrapperSample :: Action ID: %s", actionID);
-              debugI("\nsdkWrapperSample :: Action Frequency: %s", frequency);
-              actionFound = true;
-              break;
-            }
-          }
-      }
-      //Trigger the action if it's defined with the maker portal
-      if(actionFound){
-        debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
-        if(sdk->triggerAction(actionIDMinutely.c_str())){
-          debugI("\nsdkWrapperSample :: Triggering action successful");
-        }
-        else {
-          debugE("\nsdkWrapperSample :: Triggering action failed!");
-        }
-      }
-      else {
-        debugW("\nsdkWrapperSample :: Action - %s not found in maker portal", actionIDMinutely.c_str());
-      }
+   if(server->isWiFiConnected()){
+     int dState = store->getDeviceState();
+     debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
+     //Check for the device state, should be active to trigger the action
+     if(dState >= DEVICE_ACTIVE){
+       //Trigger the action if it's defined with the maker portal
+       if(actionFound){
+         debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
+         if(sdk->triggerAction(actionIDMinutely.c_str())){
+           triggerCount++;
+           debugI("\nsdkWrapperSample :: Triggering action successful for %d times",triggerCount);
+         }
+         else {
+           debugE("\nsdkWrapperSample :: Triggering action failed!");
+         }
+       }
+       else {
+         debugW("\nsdkWrapperSample :: Action - %s not found in maker portal", actionIDMinutely.c_str());
+       }
+     }
+     else {
+       debugI("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
+       sdk->pairAndActivateDevice();
+     }
    }
    else {
-     debugW("\nsdkWrapperSample: None actions defined with Maker");
+     debugW("\nsdkWrapperSample :: Board not connected to WiFi, try connecting again!");
+     //Enable board to connect to WiFi Network
+     server->connectWiFi();
    }
 
    #ifndef DEBUG_DISABLED

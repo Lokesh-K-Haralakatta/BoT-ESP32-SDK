@@ -9,9 +9,8 @@
 
 ConfigurationService :: ConfigurationService(){
   store = KeyStore :: getKeyStoreInstance();
-  pairService = new PairingService();
-  activateService = new ActivationService();
-  actionService = new ActionService();
+  pairService = NULL;
+  activateService = NULL;
 }
 
 void ConfigurationService :: initialize(){
@@ -32,15 +31,20 @@ void ConfigurationService :: configureDevice(){
   switch (store->getDeviceState()) {
       case DEVICE_NEW:
           debugD("\nConfigurationService :: configureDevice: Device not paired yet, Initializing pairing...");
+          pairService = new PairingService();
           pairService->pairDevice();
+          delete pairService;
+          pairService = NULL;
           break;
       case DEVICE_PAIRED:
           debugD("\nConfigurationService :: configureDevice: Device paired but not activated, Initializing activation process...");
+          activateService = new ActivationService();
           activateService->activateDevice();
+          delete activateService;
+          activateService = NULL;
           break;
       case DEVICE_ACTIVE:
           debugD("\nConfigurationService :: configureDevice: Device is already active");
-          debugD("\nConfigurationService :: configureDevice: %s", (actionService->getActions())->c_str());
           break;
   }
 }

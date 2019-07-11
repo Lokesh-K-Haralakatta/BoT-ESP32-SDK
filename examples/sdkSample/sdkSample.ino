@@ -122,13 +122,7 @@ void loop()
   //Check for Webserver availability to trigger the action
   if(server->isServerAvailable()){
     int dState = store->getDeviceState();
-    switch(dState){
-      case DEVICE_NEW: debugI("\nsdkSample: Device State is DEVICE_NEW"); break;
-      case DEVICE_PAIRED: debugI("\nsdkSample: Device State is DEVICE_PAIRED"); break;
-      case DEVICE_ACTIVE: debugI("\nsdkSample: Device State is DEVICE_ACTIVE"); break;
-      case DEVICE_MULTIPAIR: debugI("\nsdkSample: Device State is DEVICE_MULTIPAIR"); break;
-      default: debugI("\nsdkSample: Device State is INVALID");
-    }
+    debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
     //Check for the device state, should be active to trigger the action
     if(dState >= DEVICE_ACTIVE){
       //Trying to trigger an action with frequency as "minutely"
@@ -144,18 +138,12 @@ void loop()
       /*
       //Trying to trigger an action with frequency as "daily"
 
-      //Simulate the duration between last triggered time is more than a day from now by saving last triggered time as older than a day in to ACTIONS_FILE
-      //updateActionLtt(actionIDDaily.c_str(),"daily",1557220108);
-
       debugI("\nsdkSample: Device State is ACTIVE and triggering the daily action - %s", actionIDDaily.c_str());
       triggerAnAction(actionIDDaily.c_str());
       */
 
       /*
       //Trying to trigger an action with frequency as "weekly"
-
-      //Simulate the duration between last triggered time is more than a week from now by saving last triggered time as older than a week in to ACTIONS_FILE
-      //updateActionLtt(actionIDWeekly.c_str(),"weekly",1556701708);
 
       debugI("\nsdkSample: Device State is ACTIVE and triggering the weekly action - %s", actionIDWeekly.c_str());
       triggerAnAction(actionIDWeekly.c_str());
@@ -164,9 +152,6 @@ void loop()
       /*
       //Trying to trigger an action with frequency as "monthly"
 
-      //Simulate the duration between last triggered time is more than a month from now by saving last triggered time as older than a month in to ACTIONS_FILE
-      //updateActionLtt(actionIDMonthly.c_str(),"monthly",1554109708);
-
       debugI("\nsdkSample: Device State is ACTIVE and triggering the monthly action - %s", actionIDMonthly.c_str());
       triggerAnAction(actionIDMonthly.c_str());
       */
@@ -174,18 +159,12 @@ void loop()
       /*
       //Trying to trigger an action with frequency as "half-yearly"
 
-      //Simulate the duration between last triggered time is more than 6 months from now by saving last triggered time as older than 6 months in to ACTIONS_FILE
-      //updateActionLtt(actionIDHYearly.c_str(),"half_yearly",1533114508);
-
       debugI("\nsdkSample: Device State is ACTIVE and triggering the half-yearly action - %s", actionIDHYearly.c_str());
       triggerAnAction(actionIDHYearly.c_str());
       */
 
       /*
       //Trying to trigger an action with frequency as "yearly"
-
-      //Simulate the duration between last triggered time is more than a year from now by saving last triggered time as older than a year in to ACTIONS_FILE
-      //updateActionLtt(actionIDYearly.c_str(),"yearly",1522573708);
 
       debugI("\nsdkSample: Device State is ACTIVE and triggering the yearly action - %s", actionIDYearly.c_str());
       triggerAnAction(actionIDYearly.c_str());
@@ -298,24 +277,4 @@ void triggerAnAction(const char* actionID){
   //Deallocate memory allocated for httpClient
   delete httpClient;
 
-}
-
-void updateActionLtt(const char* actionID, const char* frequency, const unsigned long ltt){
-  //Initialize action details to save to file
-  const char* id1 = actionID;
-  const char* freq1 = frequency;
-  const unsigned long ltt1 = ltt;
-
-  std::vector <struct Action> actionsList;
-
-  struct Action item1;
-  item1.actionID = new char[strlen(id1)+1];
-  item1.actionFrequency = new char[strlen(freq1)+1];
-
-  strcpy(item1.actionID,id1);
-  strcpy(item1.actionFrequency,freq1);
-  item1.triggeredTime = ltt1;
-  actionsList.push_back(item1);
-
-  store->saveActions(actionsList);
 }
