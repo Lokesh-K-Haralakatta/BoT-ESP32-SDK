@@ -16,8 +16,8 @@ ActionService :: ~ActionService(){
   delete timeClient;
 }
 
-String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
-  String response = "";
+String* ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
+  String* response = NULL;
   debugD("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
   debugD("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
@@ -56,7 +56,7 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
     response = bot->post(ACTIONS_END_POINT,payload);
 
     //Update the trigger time for the actionID if its success
-    if(response.indexOf("OK") != -1){
+    if(response->indexOf("OK") != -1){
       debugI("\nActionService :: triggerAction: Action %s successful ",actionID);
       /* if(updateTriggeredTimeForAction(actionID)){
         debugD("\nActionService :: triggerAction: Action trigger time - %lu updated to %s",presentActionTriggerTimeInSeconds,actionID);
@@ -66,7 +66,7 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
       } */
     }
     else {
-      debugE("\nActionService :: triggerAction: Failed with response - %s",response.c_str());
+      debugE("\nActionService :: triggerAction: Failed with response - %s",response->c_str());
     }
 
     //Save the actions present in actionsList to ACTIONS_FILE for reference

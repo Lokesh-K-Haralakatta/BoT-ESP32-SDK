@@ -33,6 +33,7 @@ KeyStore :: KeyStore(){
   apiKey = NULL;
   caCert = NULL;
   qrCACert = NULL;
+  uuidStr = NULL;
   qrCodeStatus = false;
   jsonCfgLoadStatus = NOT_LOADED;
   privateKeyLoadStatus = NOT_LOADED;
@@ -68,6 +69,7 @@ String* KeyStore :: getDeviceInfo(){
 
     char dInfo[1024];
     doc.printTo(dInfo);
+    jsonBuffer.clear();
     debugD("\nKeyStore :: getDeviceInfo: Data: %s", dInfo);
     debugD("\nKeyStore :: getDeviceInfo: Length: %d", strlen(dInfo));
 
@@ -94,6 +96,7 @@ const char* KeyStore :: getDeviceStatusMsg(){
   if(deviceStatus != NULL){
     delete deviceStatus;
     deviceStatus = NULL;
+    debugD("\nKeyStore :: getDeviceStatusMsg : Released memory for deviceStatus Message");
   }
 
   initializeEEPROM();
@@ -159,52 +162,93 @@ void KeyStore :: loadJSONConfiguration(){
     const char* ssid = json["wifi_ssid"] | "wifi_ssid";
     if(ssid != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed WiFi SSID from configuration: %s",ssid);
+      if(wifiSSID != NULL){
+        delete wifiSSID;
+        wifiSSID = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for wifiSSID");
+      }
       wifiSSID = new String(ssid);
     }
 
     const char* passwd = json["wifi_passwd"] | "wifi_passwd";
     if(passwd != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed WiFi Password from configuration: %s",passwd);
+      if(wifiPASSWD != NULL){
+        delete wifiPASSWD;
+        wifiPASSWD = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for wifiPASSWD");
+      }
       wifiPASSWD = new String(passwd);
     }
 
     const char* httpsFlag = json["https"] | "true";
     if(httpsFlag != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed HTTPS Flag from configuration: %s",httpsFlag);
+      if(https != NULL){
+        delete https;
+        https = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for https");
+      }
       https = new String(httpsFlag);
     }
 
     const char* multiPairFlag = json["multipair"] | "false";
     if(multiPairFlag != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed MULTIPAIR Flag from configuration: %s",multiPairFlag);
+      if(multipair != NULL){
+        delete multipair;
+        multipair = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for multipair");
+      }
       multipair = new String(multiPairFlag);
     }
 
     const char* mId = json["maker_id"] | "maker_id";
     if(mId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed MakerID from configuration: %s",mId);
+      if(makerID != NULL){
+        delete makerID;
+        makerID = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for makerID");
+      }
       makerID = new String(mId);
     }
 
     const char* dId = json["device_id"] | "device_id";
     if(dId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed deviceID from configuration: %s",dId);
+      if(deviceID != NULL){
+        delete deviceID;
+        deviceID = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for deviceID");
+      }
       deviceID = new String(dId);
     }
 
     const char* dName = json["device_name"] | "BoT-ESP-32";
     if(dName != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed deviceName from configuration: %s",dName);
+      if(deviceName != NULL){
+        delete deviceName;
+        deviceName = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for deviceName");
+      }
       deviceName = new String(dName);
     }
 
     const char* adId = json["alt_device_id"] | "alt_device_id";
     if(adId != nullptr){
       LOG("\nKeyStore :: loadJSONConfiguration: Parsed alternate deviceID from configuration: %s",adId);
+      if(altDeviceID != NULL){
+        delete altDeviceID;
+        altDeviceID = NULL;
+        LOG("\nKeyStore :: loadJSONConfiguration: Released memory for altDeviceID");
+      }
       altDeviceID = new String(adId);
     }
 
     delete buffer;
+    jsonBuffer.clear();
     jsonCfgLoadStatus = LOADED;
     LOG("\nKeyStore :: loadJSONConfiguration: Configuration loaded from %s file",JSON_CONFIG_FILE);
    }
@@ -212,8 +256,10 @@ void KeyStore :: loadJSONConfiguration(){
 }
 
 void KeyStore :: setHTTPS(const bool httpsFlag){
-  if(https != NULL)
+  if(https != NULL){
     delete https;
+    https = NULL;
+  }
 
   if(httpsFlag)
     https = new String("true");
@@ -259,7 +305,13 @@ const char* KeyStore :: getDeviceID(){
 
 const char* KeyStore ::generateUuid4() {
   uint8_t uuid[16];
-  String* uuidStr = new String();
+
+  if(uuidStr != NULL){
+    delete uuidStr;
+    uuidStr = NULL;
+  }
+
+  uuidStr = new String();
 
   // Generate a Version 4 UUID according to RFC4122
   for (int i=0;i<16;i++) uuid[i] = esp_random();
@@ -373,16 +425,32 @@ void KeyStore :: loadFileContents(const char* filePath, byte kType){
     file.close();
 
     switch(kType){
-      case 1: privateKey = new String(buffer);
+      case 1: if(privateKey != NULL){
+                  delete privateKey;
+                  privateKey = NULL;
+              }
+              privateKey = new String(buffer);
               privateKeyLoadStatus = LOADED;
               break;
-      case 2: publicKey = new String(buffer);
+      case 2: if(publicKey != NULL){
+                  delete publicKey;
+                  publicKey = NULL;
+              }
+              publicKey = new String(buffer);
               publicKeyLoadStatus = LOADED;
               break;
-      case 3: apiKey = new String(buffer);
+      case 3: if(apiKey != NULL){
+                  delete apiKey;
+                  apiKey = NULL;
+              }
+              apiKey = new String(buffer);
               apiKeyLoadStatus = LOADED;
               break;
-      case 4: caCert = new String(buffer);
+      case 4: if(caCert != NULL){
+                  delete caCert;
+                  caCert = NULL;
+              }
+              caCert = new String(buffer);
               caCertLoadStatus = LOADED;
               break;
     }
@@ -490,10 +558,12 @@ std::vector <struct Action>  KeyStore :: retrieveActions(){
 
         actionsList.push_back(actionItem);
       }
+      jb.clear();
       return actionsList;
     }
     else {
       debugE("\nKeyStore :: retrieveActions: Error while parsing retrieved JSON Array from the file - %s", ACTIONS_FILE);
+      jb.clear();
       return actionsList;
     }
   }
@@ -533,7 +603,9 @@ bool KeyStore :: saveActions(std::vector <struct Action> aList){
   actionsArray.printTo(file);
   debugD("\nKeyStore :: saveActions: Number of bytes written to %s: %d",ACTIONS_FILE,nBytes);
 
+  jb.clear();
   file.close();
+
   return true;
 }
 

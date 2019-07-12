@@ -42,10 +42,7 @@ void setup() {
 }
 
 void loop() {
-  #ifndef DEBUG_DISABLED
-    Debug.handle();
-  #endif
-
+  debugI("\nAvalable free heap at the beginning: %lu",ESP.getFreeHeap());
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
     //GET Pairing Status
@@ -54,7 +51,7 @@ void loop() {
     debugI("\nActions: %s", bot->get("/actions")->c_str());
 
     //Prepare JSON Data to trigger an Action through POST call
-    StaticJsonBuffer<200> jsonBuffer;
+    DynamicJsonBuffer jsonBuffer;
     JsonObject& doc = jsonBuffer.createObject();
     JsonObject& botData = doc.createNestedObject("bot");
     botData["deviceID"] = store->getDeviceID();
@@ -63,15 +60,22 @@ void loop() {
 
     char payload[200];
     doc.printTo(payload);
+    jsonBuffer.clear();
     debugI("\nMinified JSON Data to trigger Action: %s", payload);
 
-    debugI("\nResponse from triggering action: %s", bot->post("/actions",payload).c_str());
+    debugI("\nResponse from triggering action: %s", bot->post("/actions",payload)->c_str());
   }
   else {
   LOG("\nsdkSample: ESP-32 board not connected to WiFi Network, try again");
   //Enable board to connect to WiFi Network
   server->connectWiFi();
   }
+
+  debugI("\nAvalable free heap at the end: %lu",ESP.getFreeHeap());
+
+  #ifndef DEBUG_DISABLED
+    Debug.handle();
+  #endif
 
   delay(1*60*1000);
 }

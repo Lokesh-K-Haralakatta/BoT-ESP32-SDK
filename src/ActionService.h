@@ -22,7 +22,7 @@ class ActionService {
   public:
     ActionService();
     ~ActionService();
-    String triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
+    String* triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
     String* getActions();
   private:
     KeyStore *store;

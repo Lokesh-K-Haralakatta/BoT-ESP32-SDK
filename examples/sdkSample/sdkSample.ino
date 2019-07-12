@@ -119,6 +119,7 @@ void setup()
 
 void loop()
 {
+  debugI("\nAvalable free heap at the beginning of loop: %lu",ESP.getFreeHeap());
   //Check for Webserver availability to trigger the action
   if(server->isServerAvailable()){
     int dState = store->getDeviceState();
@@ -205,6 +206,10 @@ void loop()
         debugE("\nsdkSample: Device pairing failed with httpCode - %d and message: %s", httpCode, payload.c_str());
       }
     }
+
+    //Put delay to reclaim the released memory
+    delay(1000);
+    debugI("\nAvalable free heap at the end of loop: %lu",ESP.getFreeHeap());
 
     #ifndef DEBUG_DISABLED
       Debug.handle();

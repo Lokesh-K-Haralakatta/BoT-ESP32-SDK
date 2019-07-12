@@ -28,6 +28,7 @@ BoTService :: BoTService(){
   httpClient = NULL;
   fullURI = NULL;
   botResponse = NULL;
+  encodedJWTPayload = NULL;
   store = KeyStore :: getKeyStoreInstance();
 }
 
@@ -127,14 +128,26 @@ String BoTService :: encodeJWT(const char* header, const char* payload) {
 
   char base64Signature[600];
   base64url_encode((unsigned char *)oBuf, retSize, base64Signature);
-  char* retData = (char*)malloc(strlen((char*)headerAndPayload) + 1 + strlen((char*)base64Signature) + 1);
-  sprintf(retData, "%s.%s", headerAndPayload, base64Signature);
+
+  if(encodedJWTPayload != NULL){
+    free(encodedJWTPayload);
+    encodedJWTPayload = NULL;
+    debugD("\nBoTService :: encodeJWT: Freed previous encodedPayload memory");
+  }
+
+  encodedJWTPayload = (char*)malloc(strlen((char*)headerAndPayload) + 1 + strlen((char*)base64Signature) + 1);
+  sprintf(encodedJWTPayload, "%s.%s", headerAndPayload, base64Signature);
   debugD("\nBoTService :: encodeJWT: encoded return data is ready");
 
   delay(100);
-  mbedtls_pk_free(&pk_context);
 
-  return retData;
+  //Free memory allocated for mbedtls structures
+  mbedtls_ctr_drbg_free(&ctr_drbg);
+  mbedtls_entropy_free(&entropy);
+  mbedtls_pk_free(&pk_context);
+  debugD("\nBoTService :: encodeJWT: Freed memory allocated for mbedtls structures");
+
+  return encodedJWTPayload;
 }
 
 String* BoTService :: get(const char* endPoint){
@@ -162,8 +175,8 @@ String* BoTService :: get(const char* endPoint){
       const char* caCert = store->getCACert();
       if( caCert != NULL){
         //LOG("\nCA Certificate Contents: \n%s\n",caCert);
-        wifiClient->setCACert(caCert);
         debugD("\nBoTService :: get: CACert set to wifiClient");
+        wifiClient->setCACert(caCert);
       }
       else {
         debugW("\nBoTService :: get: store->getCACert returned NULL, hence turning off https");
@@ -284,23 +297,27 @@ String* BoTService :: decodePayload(String* encodedPayload){
   JsonObject& root = jsonBuffer.parseObject(decoded);
   String* botValue = new String(root.get<const char*>("bot"));
   delete decoded;
+  jsonBuffer.clear();
   debugD("\nBoTService :: decodePayload: botValue: %s",botValue->c_str());
 
   return botValue;
 }
 
-String BoTService :: post(const char* endPoint, const char* payload){
+String* BoTService :: post(const char* endPoint, const char* payload){
 
   char* jwtHeader = "{\"alg\":\"RS256\",\"typ\":\"JWT\"}";
-  LOG("\nBoTService :: post: jwtHeader: %s", jwtHeader);
-  LOG("\nBoTService :: post: Given Payload: %s", payload);
+  debugD("\nBoTService :: post: jwtHeader: %s", jwtHeader);
+  debugD("\nBoTService :: post: Given Payload: %s", payload);
 
-  String botJWT = encodeJWT(jwtHeader, payload);
-  String body = (String)"{\"bot\": \"" + botJWT +   "\"}";
-
-  debugD("\nBoTService :: post: body contents after encoding: %s", body.c_str());
+  //Prepare Full URI
   fullURI = new String(uriPath);
   fullURI->concat(endPoint);
+
+  if(botResponse != NULL){
+    delete botResponse;
+    botResponse = NULL;
+    debugD("\nBoTService :: post: botResponse memory released from previous call");
+  }
 
   if(WiFi.status() == WL_CONNECTED){
     debugD("\nBoTService :: post: Everything good to make POST Call to BoT Service: %s", fullURI->c_str());
@@ -329,7 +346,8 @@ String BoTService :: post(const char* endPoint, const char* payload){
         if(!wifiClient->connect((char*)HOST, HTTPS_PORT)){
           debugE("\nBoTService :: post: wifiSecureClient connection to %s:%d failed",HOST, HTTPS_PORT);
           freeObjects();
-          return "wifiSecureClient connection to server failed, can not verify SSL Finger Print";
+          botResponse = new String("wifiSecureClient connection to server failed, can not verify SSL Finger Print");
+          return botResponse;
         }
         else {
           debugI("\nBoTService :: post: wifiSecureClient connection to %s:%d successful",HOST, HTTPS_PORT);
@@ -340,7 +358,8 @@ String BoTService :: post(const char* endPoint, const char* payload){
           else {
             debugE("\nBoTService :: post: SSL Finger Print Verification Failed...");
             freeObjects();
-            return "SSL Finger Print Verification Failed in BoTService POST";
+            botResponse = new String("SSL Finger Print Verification Failed in BoTService POST");
+            return botResponse;
           }
         }
       }
@@ -356,16 +375,28 @@ String BoTService :: post(const char* endPoint, const char* payload){
     }
 
     if(httpClientBegin){
+      //Encode the given payload using jwtHeader
+      String* botJWT = new String(encodeJWT(jwtHeader, payload));
+
+      //Prepare body contents for Post
+      String* body = new String("{\"bot\": \"");
+      body->concat(botJWT->c_str());
+      body->concat("\"}");
+
+      delete botJWT;
+      debugD("\nBoTService :: post: body contents after encoding: %s", body->c_str());
+
       httpClient->addHeader("makerID", store->getMakerID());
       httpClient->addHeader("deviceID", store->getDeviceID());
       httpClient->addHeader("Content-Type", "application/json");
       httpClient->addHeader("Connection","keep-alive");
-      httpClient->addHeader("Content-Length",String(body.length()));
+      httpClient->addHeader("Content-Length",String(body->length()));
 
-      int httpCode = httpClient->POST(body);
+      int httpCode = httpClient->POST(body->c_str());
+      delete body;
       String errorMSG;
       if(httpCode < 0)
-        errorMSG = httpClient->errorToString(httpCode);
+        botResponse = new String(httpClient->errorToString(httpCode));
 
       String* payload = new String(httpClient->getString());
       httpClient->end();
@@ -383,33 +414,35 @@ String BoTService :: post(const char* endPoint, const char* payload){
             int secDoTIdx = payload->indexOf(".",firstDoTIdx+1);
             String* encodedPayload = new String(payload->substring(firstDoTIdx+1 , secDoTIdx));
             delete payload;
-            String response = String(decodePayload(encodedPayload)->c_str());
+            botResponse = decodePayload(encodedPayload);
             delete encodedPayload;
-            return(response);
+            return(botResponse);
           }
         }
         else {
           debugE("\nBoTService :: post: HTTP POST with endpoint %s failed", endPoint);
-          errorMSG = String("HTTP POST failed");
-          return errorMSG;
+          botResponse = new String("HTTP POST failed");
+          return botResponse;
         }
       }
       else {
         debugE("\nBoTService :: post: HTTP POST with endPoint %s failed", endPoint);
-        errorMSG = String("HTTP POST failed");
-        return errorMSG;
+        botResponse = new String("HTTP POST failed");
+        return botResponse;
       }
     }
     else {
       debugE("\nBoTService :: post: httpClient->begin failed....");
       //Deallocate memory allocated for objects
       freeObjects();
-      return "httpClient->begin failed....";
+      botResponse = new String("httpClient->begin failed....");
+      return botResponse;
     }
   }
   else {
     LOG("\nBoTService :: post: Board Not Connected to WiFi...");
-    return String("Board Not Connected to WiFi...");
+    botResponse = new  String("Board Not Connected to WiFi...");
+    return botResponse;
   }
 }
 

@@ -70,6 +70,7 @@ class KeyStore {
     String *apiKey;
     String *caCert;
     String *qrCACert;
+    String *uuidStr;
     byte jsonCfgLoadStatus;
     byte privateKeyLoadStatus;
     byte publicKeyLoadStatus;

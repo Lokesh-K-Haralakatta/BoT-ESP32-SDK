@@ -11,7 +11,7 @@
 #include "base64url.h"
 #include "Storage.h"
 
-#define HOST "api.bankingofthings.io"
+#define HOST "api-dev.bankingofthings.io"
 #define URI "/bot_iot"
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
@@ -22,11 +22,12 @@ class BoTService {
   public:
     static BoTService* getBoTServiceInstance();
     String* get(const char* endPoint);
-    String post(const char* endPoint, const char* payload);
+    String* post(const char* endPoint, const char* payload);
   private:
     static BoTService *bot;
     char* hostURL;
     char* uriPath;
+    char* encodedJWTPayload;
     int port;
     bool https;
     WiFiClientSecure* wifiClient;

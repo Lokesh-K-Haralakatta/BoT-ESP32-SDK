@@ -21,7 +21,7 @@ class ActivationService {
   private:
     KeyStore *store;
     BoTService *bot;
-    String sendActivationRequest();
+    String* sendActivationRequest();
     bool pollActivationStatus();
 };
 #endif

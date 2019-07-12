@@ -124,18 +124,18 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
       const char* altID = (jsonObj.containsKey("alternativeID"))?jsonObj.get<const char*>("alternativeID"):NULL;
 
       ActionService* actionService = new ActionService();
-      String response = actionService->triggerAction(actionID, value, altID);
+      String* response = actionService->triggerAction(actionID, value, altID);
       delete actionService;
-      debugD("\nControllerService :: triggerAction: Response: %s", response.c_str());
+      debugD("\nControllerService :: triggerAction: Response: %s", response->c_str());
 
-      if(response.indexOf("OK") != -1) {
+      if(response->indexOf("OK") != -1) {
         doc["message"] = "Action triggered successful";
         doc.printTo(body);
         jsonBuffer.clear();
         debugD("\nControllerService :: triggerAction: %s", body);
         request->send(200, "application/json", body);
       }
-      else if(response.indexOf("Action not found") != -1){
+      else if(response->indexOf("Action not found") != -1){
         doc["message"] = "Action not triggered as its not found";
         doc.printTo(body);
         jsonBuffer.clear();

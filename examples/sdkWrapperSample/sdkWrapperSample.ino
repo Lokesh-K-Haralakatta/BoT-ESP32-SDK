@@ -138,6 +138,7 @@
   }
 
  void loop(){
+   debugI("\nAvalable free heap at the beginning of loop: %lu",ESP.getFreeHeap());
    if(server->isWiFiConnected()){
      int dState = store->getDeviceState();
      debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
@@ -168,6 +169,10 @@
      //Enable board to connect to WiFi Network
      server->connectWiFi();
    }
+
+   //Put delay to reclaim the released memory
+   delay(1000);
+   debugI("\nAvalable free heap at the end of loop: %lu",ESP.getFreeHeap());
 
    #ifndef DEBUG_DISABLED
      Debug.handle();
