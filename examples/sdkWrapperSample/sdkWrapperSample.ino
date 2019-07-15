@@ -160,7 +160,7 @@
        }
      }
      else {
-       debugI("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
+       debugI("\nsdkWrapperSample: Device State is not active to trigger the action, Try pairing the device again:");
        sdk->pairAndActivateDevice();
      }
    }
