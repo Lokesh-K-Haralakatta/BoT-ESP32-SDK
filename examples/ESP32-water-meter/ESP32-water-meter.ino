@@ -34,7 +34,7 @@
 
 #include <Storage.h>
 #include <Webserver.h>
-#include <BoTService.h>
+#include <SDKWrapper.h>
 #include <FlowMeter.h>
 
 //Custom WiFi Credentials
@@ -44,6 +44,7 @@
 //Declare service variables
 KeyStore *store = NULL;
 Webserver *server = NULL;
+SDKWrapper *sdk = NULL;
 
 //Webserver Port
 const int port = 3001;
@@ -124,9 +125,16 @@ void setup()
     //Enable board to connect to WiFi Network
     server->connectWiFi();
 
-    //Start the Async Webserver on ESP32 board to initialize, configure the device
-    server->startServer();
+    //Instantiate SDK Wrapper
+    sdk = new SDKWrapper();
 
+    //Pair and Activate the device for first time
+    if(sdk->pairAndActivateDevice()){
+       debugI("ESP32-Water-meter-sketch: Device is Paired and Activated for Autonomous Payments");
+    }
+    else {
+       debugW("ESP32-Water-meter-sketch: Device is not Activated for Autonomous Payments, will try again in next loop iteration");
+    }
     //create a task to trigger notification, with priority 1 and executed on core 0
     xTaskCreatePinnedToCore(
                     notificationTask,   /* Task function. */
@@ -152,59 +160,81 @@ void setup()
     Meter.reset();
   }
   else {
-    LOG("\nsdkSample: MakerID can not be NULL!");
+    LOG("ESP32-Water-meter-sketch: MakerID can not be NULL!");
   }
 }
 
 void loop() {
-  debugI("Water consumption measurement running on core: %d",xPortGetCoreID());
-  debugI("Checking for threshold values...");
+  debugI("ESP32-Water-meter-sketch: Avalable free heap at the beginning of loop: %lu",ESP.getFreeHeap());
+  if(server->isWiFiConnected()){
+    int dState = store->getDeviceState();
+    debugI("ESP32-Water-meter-sketch :: Device State -> %s",store->getDeviceStatusMsg());
+    //Check for the device state, should be active to trigger the action
+    if(dState >= DEVICE_ACTIVE){
+      debugI("ESP32-Water-meter-sketch: Water consumption measurement running on core: %d",xPortGetCoreID());
+      debugI("ESP32-Water-meter-sketch: Checking for threshold values...");
 
-  // randomly change simulation period and pulse rate
-  long frequency = random(flowSensor.capacity * flowSensor.kFactor);  // Hz
-  long period = random(3 * frequency, 5000);                      // ms
+      // randomly change simulation period and pulse rate
+      long frequency = random(flowSensor.capacity * flowSensor.kFactor);  // Hz
+      long period = random(3 * frequency, 5000);                      // ms
 
-  // simulate random flow meter pulses within a random period
-  for (long i = 0; i < (long) ((float) period * (float) frequency / 1000.0f); i++) {
-      Meter.count();
+      // simulate random flow meter pulses within a random period
+      for (long i = 0; i < (long) ((float) period * (float) frequency / 1000.0f); i++) {
+        Meter.count();
+      }
+
+      // wait that random period
+      delay(period);
+
+      // process the counted ticks
+      Meter.tick(period);
+
+      // Measure water consumption
+      int totalConsumption = Meter.getTotalVolume();
+      if(prevConsumedLtrs >= NOTIFY_4)
+        consumedLtrs = totalConsumption - prevConsumedLtrs;
+      else
+        consumedLtrs = totalConsumption;
+
+      debugI("ESP32-Water-meter-sketch: Total up time: %f Seconds",Meter.getTotalDuration() / 1000.0f);
+      debugI("ESP32-Water-meter-sketch: Total water consumed so far: %d liters",totalConsumption);
+      debugI("ESP32-Water-meter-sketch: Consumed water in this interval: %d liters",consumedLtrs);
+      if(consumedLtrs >= NOTIFY_1 && consumedLtrs < (NOTIFY_1 + (INTERVAL_THRESHOLD/10))){
+        notify = true;
+        notifyID = 1;
+      }
+      else if(consumedLtrs >= NOTIFY_2 && consumedLtrs < (NOTIFY_2 + (INTERVAL_THRESHOLD/10))){
+        notify = true;
+        notifyID = 2;
+      }
+      else if(consumedLtrs >= NOTIFY_3 && consumedLtrs < (NOTIFY_3 + (INTERVAL_THRESHOLD/10))){
+        notify = true;
+        notifyID = 3;
+      }
+      else if(consumedLtrs >= NOTIFY_4){
+        notify = true;
+        notifyID = 4;
+        action = true;
+        prevConsumedLtrs += NOTIFY_4;
+        debugI("ESP32-Water-meter-sketch: Previous consumed water in liters: %d", prevConsumedLtrs);
+        consumedLtrs = consumedLtrs%NOTIFY_4;
+      }
+    }
+    else {
+      debugI("ESP32-Water-meter-sketch: Device State is not active to trigger the action, Try pairing the device again:");
+      sdk->pairAndActivateDevice();
+    }
+  }
+  else {
+    debugW("ESP32-Water-meter-sketch :: Board not connected to WiFi, try connecting again!");
+    //Enable board to connect to WiFi Network
+    server->connectWiFi();
   }
 
-  // wait that random period
-  delay(period);
+  //Put delay to reclaim the released memory
+  delay(1000);
+  debugI("ESP32-Water-meter-sketch: Avalable free heap at the end of loop: %lu",ESP.getFreeHeap());
 
-  // process the counted ticks
-  Meter.tick(period);
-
-  // Measure water consumption
-  int totalConsumption = Meter.getTotalVolume();
-  if(prevConsumedLtrs >= NOTIFY_4)
-    consumedLtrs = totalConsumption - prevConsumedLtrs;
-  else
-    consumedLtrs = totalConsumption;
-
-  debugI("Total up time: %f Seconds",Meter.getTotalDuration() / 1000.0f);
-  debugI("Total water consumed so far: %d liters",totalConsumption);
-  debugI("Consumed water in this interval: %d liters",consumedLtrs);
-  if(consumedLtrs >= NOTIFY_1 && consumedLtrs < (NOTIFY_1 + (INTERVAL_THRESHOLD/10))){
-     notify = true;
-     notifyID = 1;
-  }
-  else if(consumedLtrs >= NOTIFY_2 && consumedLtrs < (NOTIFY_2 + (INTERVAL_THRESHOLD/10))){
-     notify = true;
-     notifyID = 2;
-  }
-  else if(consumedLtrs >= NOTIFY_3 && consumedLtrs < (NOTIFY_3 + (INTERVAL_THRESHOLD/10))){
-     notify = true;
-     notifyID = 3;
-  }
-  else if(consumedLtrs >= NOTIFY_4){
-     notify = true;
-     notifyID = 4;
-     action = true;
-     prevConsumedLtrs += NOTIFY_4;
-     debugI("Previous consumed water in liters: %d", prevConsumedLtrs);
-     consumedLtrs = consumedLtrs%NOTIFY_4;
-  }
 
   #ifndef DEBUG_DISABLED
       Debug.handle();
@@ -217,7 +247,7 @@ void notificationTask( void * pvParameters ){
     debugI("Notification Task running on core: %d",xPortGetCoreID());
     debugI("Checking for outstanding notifications to be triggered...");
     if(notify){
-      if(server->isServerAvailable()){
+      if(server->isWiFiConnected()){
         switch(notifyID){
           case 1: notifyUUID = NOTIFY_25_LTRS;
                   debugI(" %d liters of water consumed in this period", NOTIFY_1); break;
@@ -231,38 +261,20 @@ void notificationTask( void * pvParameters ){
                   debugI(" Autonomous payment done for %d liters of consumed water", NOTIFY_4); break;
         }
 
-        BoTService* bot = NULL;
-        //Prepare JSON Data to trigger an Action through POST call
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& doc = jsonBuffer.createObject();
-        JsonObject& botData = doc.createNestedObject("bot");
-        botData["deviceID"] = store->getDeviceID();
-        botData["actionID"] = notifyUUID;
-        botData["queueID"] = store->generateUuid4();
-
-        char payload[200];
-        doc.printTo(payload);
-        debugI("Minified JSON Data to trigger Notification: %s", payload);
-
-        //Create BoT Service Instance
-        bot = new BoTService();
-
-        //Hit End point to post
-        String response = bot->post("/actions",payload);
-
-        //Deallocate
-        delete bot;
-
         //Turn Off Notify Flag if notification triggered successful
-        if(response.indexOf("OK") != -1){
+        if(sdk->triggerAction(notifyUUID)){
           notify = false;
           debugI("Notification triggered successfull, turned off notify flag");
         }
-        else
-          debugE("Notification trigger failed with response - %s",response.c_str());
+        else {
+          debugE("Autonomous Notification failed...");
+        }
       }
-      else
-        LOG("\nServer not available to trigger outstanding notification");
+      else{
+        debugW("Board not connected to WiFi, try connecting again!");
+        //Enable board to connect to WiFi Network
+        server->connectWiFi();
+      }
     }
     #ifndef DEBUG_DISABLED
       Debug.handle();
@@ -278,43 +290,25 @@ void paymentTask( void * pvParameters ){
     debugI("Payment Task running on core: %d",xPortGetCoreID());
     debugI("Checking for outstanding payments to be triggered...");
     if(action){
-      if(server->isServerAvailable()){
+      if(server->isWiFiConnected()){
         debugI("Triggering payment for consumption of %d liters of water",NOTIFY_4);
-        BoTService* bot = NULL;
-        //Prepare JSON Data to trigger an Action through POST call
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& doc = jsonBuffer.createObject();
-        JsonObject& botData = doc.createNestedObject("bot");
-        botData["deviceID"] = store->getDeviceID();
-        botData["actionID"] = actionUUID.c_str();
-        botData["queueID"] = store->generateUuid4();
-
-        char payload[200];
-        doc.printTo(payload);
-        debugI("Minified JSON Data to trigger payment: %s", payload);
-
-        //Create BoT Service Instance
-        bot = new BoTService();
-
-        //Hit End point to post
-        String response = bot->post("/actions",payload);
-
-        //Deallocate
-        delete bot;
-
         //Turn Off action flag if payment is successful
-        if(response.indexOf("OK") != -1){
+        if(sdk->triggerAction(actionUUID.c_str())){
           action = false;
           debugI("Payment successful, turned off action flag");
           //Set notify flag to send payment done notification
-          notify = true;
           notifyID = 5;
+          notify = true;
         }
-        else
-          debugE("Payment trigger failed with response - %s",response.c_str());
+        else{
+          debugE("Autonomous payment failed...");
+        }
       }
-      else
-        LOG("\nServer not available to trigger outstanding payment");
+      else{
+        debugW("Board not connect to WiFi, trying again");
+        //Enable board to connect to WiFi Network
+        server->connectWiFi();
+      }
     }
     #ifndef DEBUG_DISABLED
       Debug.handle();

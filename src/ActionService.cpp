@@ -8,16 +8,21 @@
 
 ActionService :: ActionService(){
   store = KeyStore :: getKeyStoreInstance();
+  bot = BoTService :: getBoTServiceInstance();
   timeClient = new NTPClient(ntpUDP);
 }
 
-String ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
-  String response = "";
+ActionService :: ~ActionService(){
+  delete timeClient;
+}
+
+String* ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
+  String* response = NULL;
   debugD("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
   debugD("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
   presentActionTriggerTimeInSeconds = 0;
-  if(isValidAction(actionID)){
+  //if(isValidAction(actionID)){
     debugD("\nActionService :: triggerAction: %s is valid actionID, trying to trigger now", actionID);
     store->initializeEEPROM();
     store->loadJSONConfiguration();
@@ -45,37 +50,39 @@ String ActionService :: triggerAction(const char* actionID, const char* value, c
     char payload[200];
     doc.printTo(payload);
     debugD("\nActionService :: triggerAction: Minified JSON payload to triggerAction: %s", payload);
+    jsonBuffer.clear();
 
-    BoTService *bot = new BoTService();
+    //Trigger Action
     response = bot->post(ACTIONS_END_POINT,payload);
-    delete bot;
 
     //Update the trigger time for the actionID if its success
-    if(response.indexOf("OK") != -1){
-      debugI("\nActionService :: triggerAction: Action %s successful at time - %lu",actionID,presentActionTriggerTimeInSeconds);
-      if(updateTriggeredTimeForAction(actionID)){
+    if(response->indexOf("OK") != -1){
+      debugI("\nActionService :: triggerAction: Action %s successful ",actionID);
+      /* if(updateTriggeredTimeForAction(actionID)){
         debugD("\nActionService :: triggerAction: Action trigger time - %lu updated to %s",presentActionTriggerTimeInSeconds,actionID);
       }
       else {
         debugW("\nActionService :: triggerAction: Action trigger time - %lu failed to update to %s",presentActionTriggerTimeInSeconds,actionID);
-      }
+      } */
     }
     else {
-      debugE("\nActionService :: triggerAction: Failed with response - %s",response.c_str());
+      debugE("\nActionService :: triggerAction: Failed with response - %s",response->c_str());
     }
 
     //Save the actions present in actionsList to ACTIONS_FILE for reference
-    if(store->saveActions(actionsList)){
+    /*if(store->saveActions(actionsList)){
       debugD("\nActionService :: triggerAction: %d actions successfully saved to file - %s",actionsList.size(),ACTIONS_FILE);
     }
     else {
       debugE("\nActionService :: triggerAction: %d actions failed to save to file - %s",actionsList.size(),ACTIONS_FILE);
-    }
-  }
+    }*/
+
+  /* }
   else {
     debugE("\nActionService :: triggerAction: %s is invalid actionID", actionID);
     response = "{\"code\": \"404\", \"message\": \"Invalid Action\"}";
-  }
+  } */
+
   return response;
 }
 
@@ -101,17 +108,29 @@ bool ActionService :: updateTriggeredTimeForAction(const char* actionID){
   }
 }
 
+void ActionService :: clearActionsList(){
+  int pos = 0;
+  std::vector<struct Action>::iterator i;
+  while(!actionsList.empty()){
+    i = actionsList.begin();
+    if(i->actionID != NULL){
+      delete i->actionID;
+      i->actionID = NULL;
+    }
+    if(i->actionFrequency != NULL){
+      delete i->actionFrequency;
+      i->actionFrequency = NULL;
+    }
+    actionsList.erase(i);
+    pos++;
+    debugD("\nActionService :: clearActionsList : Freed memory and erased action at position - %d",pos);
+  }
+}
+
 String* ActionService :: getActions(){
-  BoTService *bot = new BoTService();
   String* actions = bot->get(ACTIONS_END_POINT);
-  delete bot;
 
   debugD("\nActionService :: getActions: %s", actions->c_str());
-
-  if(!actionsList.empty()){
-    actionsList.clear();
-    debugD("\nActionService :: getActions: cleared contents of previous actions");
-  }
 
   if(actions->indexOf("[") != -1 && actions->indexOf("]") != -1){
     DynamicJsonBuffer jsonBuffer;
@@ -121,6 +140,20 @@ String* ActionService :: getActions(){
         debugD("\nActionService :: getActions: JSON Actions array parsed successfully");
         debugD("\nActionService :: getActions: Number of actions returned: %d", actionsCount);
 
+        //Clear off previous stored actions before processing new set
+        if(!actionsList.empty()){
+          clearActionsList();
+          if(actionsList.empty()){
+            debugD("\nActionService :: getActions: Cleared contents of previous actions present in ActionsList");
+          }
+          else {
+            debugE("\nActionService :: getActions: Not cleared contents of previous actions present, retaining the same back");
+            jsonBuffer.clear();
+            return actions;
+          }
+        }
+
+        //Process the new set of actions and add to actionsList
         for(byte i=0 ; i < actionsCount; i++){
            const char* actionID = actionsArray[i]["actionID"];
            const char* frequency = actionsArray[i]["frequency"];
@@ -133,12 +166,18 @@ String* ActionService :: getActions(){
            strcpy(actionItem.actionFrequency,frequency);
            actionsList.push_back(actionItem);
         }
+
         debugI("\nActionService :: getActions: Added %d actions returned from server into actionsList", actionsList.size());
+        jsonBuffer.clear();
         return actions;
     }
     else {
       debugE("\nActionService :: getActions: JSON Actions array parsed failed!");
       debugW("\nActionService :: getActions: use locally stored actions, if available");
+      jsonBuffer.clear();
+      if(!actionsList.empty()){
+        clearActionsList();
+      }
       actionsList = store->retrieveActions();
       return NULL;
     }
@@ -146,6 +185,9 @@ String* ActionService :: getActions(){
   else {
     debugE("\nActionService :: getActions: Could not retrieve actions from server");
     debugW("\nActionService :: getActions: use locally stored actions, if available");
+    if(!actionsList.empty()){
+      clearActionsList();
+    }
     actionsList = store->retrieveActions();
     return NULL;
   }
@@ -184,7 +226,7 @@ bool ActionService :: isValidAction(const char* actionID){
   String* actions = getActions();
 
   //Update lastTriggeredTime for actions from saved details if actions successfully retrieved from BoT Server
-  if(!actions->equals("")){
+  if(actions != NULL){
     debugD("\nActionService :: isValidAction: Actions retrieved from BoT Server, calling updateActionsLastTriggeredTime");
     updateActionsLastTriggeredTime();
   }

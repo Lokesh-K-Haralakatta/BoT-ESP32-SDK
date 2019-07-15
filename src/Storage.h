@@ -70,6 +70,7 @@ class KeyStore {
     String *apiKey;
     String *caCert;
     String *qrCACert;
+    String *uuidStr;
     byte jsonCfgLoadStatus;
     byte privateKeyLoadStatus;
     byte publicKeyLoadStatus;
@@ -81,6 +82,7 @@ class KeyStore {
     KeyStore();
     std::vector <struct Action> actionsList;
     bool saveQRCode(qrcodegen::QrCode qr);
+    void clearActionsList();
 };
 
 #endif

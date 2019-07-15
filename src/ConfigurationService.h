@@ -22,7 +22,6 @@ class ConfigurationService {
           KeyStore* store;
           PairingService* pairService;
           ActivationService* activateService;
-          ActionService* actionService;
 };
 
 #endif

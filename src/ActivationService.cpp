@@ -9,16 +9,17 @@
 
 ActivationService :: ActivationService(){
   store = KeyStore :: getKeyStoreInstance();
+  bot = BoTService :: getBoTServiceInstance();
 }
 
 bool ActivationService :: pollActivationStatus(){
   debugD("\nActivationService :: pollActivationStatus: Started polling BoT for activation status for the device...");
   int counter = 1;
-  String response;
+  String* response = NULL;
   do {
     debugD("\nActivationService :: pollActivationStatus: Checking activation status, attempt %d of %d", counter,MAXIMUM_TRIES);
     response = sendActivationRequest();
-    if(response.equals("")){
+    if(response->equals("")){
       return true;
     }
     ++counter;
@@ -28,7 +29,7 @@ bool ActivationService :: pollActivationStatus(){
    return false;
 }
 
-String ActivationService :: sendActivationRequest(){
+String* ActivationService :: sendActivationRequest(){
   const char* deviceID = store->getDeviceID();
 
   DynamicJsonBuffer jsonBuffer;
@@ -39,11 +40,10 @@ String ActivationService :: sendActivationRequest(){
   char payload[100];
   doc.printTo(payload);
   debugD("\nActivationService :: sendActivationRequest: Minified JSON payload to send: %s", payload);
+  jsonBuffer.clear();
 
-  BoTService *bot = new BoTService();
-  String response = bot->post(ACTIVATION_END_POINT,payload);
-  debugD("\nActivationService :: sendActivationRequest: Response from bot->post: %s",response.c_str());
-  delete bot;
+  String* response = bot->post(ACTIVATION_END_POINT,payload);
+  debugD("\nActivationService :: sendActivationRequest: Response from bot->post: %s",response->c_str());
 
   return response;
 }

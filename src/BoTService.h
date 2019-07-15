@@ -20,13 +20,14 @@
 
 class BoTService {
   public:
-    BoTService();
-    ~BoTService();
+    static BoTService* getBoTServiceInstance();
     String* get(const char* endPoint);
-    String post(const char* endPoint, const char* payload);
+    String* post(const char* endPoint, const char* payload);
   private:
+    static BoTService *bot;
     char* hostURL;
     char* uriPath;
+    char* encodedJWTPayload;
     int port;
     bool https;
     WiFiClientSecure* wifiClient;
@@ -38,6 +39,8 @@ class BoTService {
     String encodeJWT(const char* header, const char* payload);
     String* decodePayload(String* encodedPayload);
     void freeObjects();
+    BoTService();
+    ~BoTService();
 };
 
 #endif
