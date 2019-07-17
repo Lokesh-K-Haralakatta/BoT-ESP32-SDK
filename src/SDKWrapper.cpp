@@ -130,13 +130,13 @@ bool SDKWrapper :: triggerAction(const char* actionID, const char* value, const 
         }
       }
 
-      String response = actionService->triggerAction(actionID,value,altID);
-      debugD("\nSDKWrapper :: triggerAction: Response: %s", response.c_str());
-      if(response.indexOf("OK") != -1) {
+      String* response = actionService->triggerAction(actionID,value,altID);
+      debugD("\nSDKWrapper :: triggerAction: Response: %s", response->c_str());
+      if(response->indexOf("OK") != -1) {
         debugI("\nSDKWrapper :: triggerAction: Action triggered successful");
         return true;
       }
-      else if(response.indexOf("Action not found") != -1){
+      else if(response->indexOf("Action not found") != -1){
         debugW("\nSDKWrapper :: triggerAction: Action not triggered as its not found");
         return false;
       }

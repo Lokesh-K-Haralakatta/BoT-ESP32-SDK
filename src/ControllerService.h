@@ -21,9 +21,5 @@ class ControllerService {
           void triggerAction(AsyncWebServerRequest *request, JsonVariant &json);
   private:
     KeyStore* store;
-    PairingService* pairService;
-    ActivationService* activateService;
-    ActionService* actionService;
-    ConfigurationService* configService;
 };
 #endif

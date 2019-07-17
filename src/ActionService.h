@@ -21,10 +21,12 @@
 class ActionService {
   public:
     ActionService();
-    String triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
+    ~ActionService();
+    String* triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
     String* getActions();
   private:
     KeyStore *store;
+    BoTService *bot;
     WiFiUDP ntpUDP;
     NTPClient *timeClient;
     unsigned long presentActionTriggerTimeInSeconds;
@@ -33,5 +35,6 @@ class ActionService {
     bool isValidActionFrequency(const struct Action*);
     void updateActionsLastTriggeredTime();
     bool updateTriggeredTimeForAction(const char* actionID);
+    void clearActionsList();
 };
 #endif

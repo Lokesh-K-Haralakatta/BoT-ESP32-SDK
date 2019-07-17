@@ -69,7 +69,7 @@ void BluetoothService :: initializeBLE(const char* dName){
     doc["multipair"] = 1;
     doc["aid"] = store->getAlternateDeviceID();
   }
-  
+
   char dInfo[1024];
   doc.printTo(dInfo);
 
@@ -114,23 +114,47 @@ void BluetoothService :: deInitializeBLE(){
   bleServer->removeService(bleService);
   debugD("\nBluetoothService :: deInitializeBLE: BLE Service removed from BLE Server...");
 
-  if(bleConfigureCharacteristic != NULL) delete bleConfigureCharacteristic;
-  if(bleNetworkCharacteristic != NULL) delete bleNetworkCharacteristic;
-  if(bleDeviceInfoCharacteristic != NULL) delete bleDeviceInfoCharacteristic;
-  if(bleDeviceCharacteristic != NULL) delete bleDeviceCharacteristic;
+  if(bleConfigureCharacteristic != NULL) {
+    delete bleConfigureCharacteristic;
+    bleConfigureCharacteristic = NULL;
+  }
+
+  if(bleNetworkCharacteristic != NULL) {
+    delete bleNetworkCharacteristic;
+    bleNetworkCharacteristic = NULL;
+  }
+
+  if(bleDeviceInfoCharacteristic != NULL) {
+    delete bleDeviceInfoCharacteristic;
+    bleDeviceInfoCharacteristic = NULL;
+  }
+
+  if(bleDeviceCharacteristic != NULL) {
+    delete bleDeviceCharacteristic;
+    bleDeviceCharacteristic = NULL;
+  }
+
   debugD("\nBluetoothService :: deInitializeBLE: All characteristics memory freed...");
 
-  if(bleService != NULL) delete bleService;
-  debugD("\nBluetoothService :: deInitializeBLE: BLE Service instance freed...");
+  if(bleService != NULL) {
+    delete bleService;
+    bleService = NULL;
+    debugD("\nBluetoothService :: deInitializeBLE: BLE Service instance freed...");
+  }
 
-  if(bleServer != NULL) delete bleServer;
-  debugD("\nBluetoothService :: deInitializeBLE:  BLE Server instance freed...");
+  if(bleServer != NULL) {
+    delete bleServer;
+    bleServer = NULL;
+    debugD("\nBluetoothService :: deInitializeBLE:  BLE Server instance freed...");
+  }
 
   BLEDevice::deinit(true);
   debugD("\nBluetoothService :: deInitializeBLE: BLE Device deinitialized...");
 
-  if(deviceName != NULL) delete deviceName;
-  debugD("\nBluetoothService :: deInitializeBLE: Memory used for deviceName freed...");
+  delete deviceName;
+  if(deviceName != NULL) {
+    debugD("\nBluetoothService :: deInitializeBLE: Memory used for deviceName freed...");
+  }
 
   debugD("\nBluetoothService :: deInitializeBLE: Done...");
 }

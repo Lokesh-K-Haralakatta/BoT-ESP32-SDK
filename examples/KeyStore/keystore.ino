@@ -16,7 +16,7 @@ void setup(){
 
   store->loadJSONConfiguration();
   store->initializeEEPROM();
-  
+
   //Get WiFi Credentials from given configuration
   //const char* WIFI_SSID = store->getWiFiSSID();
   //const char* WIFI_PASSWD = store->getWiFiPasswd();
@@ -57,6 +57,7 @@ void loop(){
       store->setDeviceState(DEVICE_NEW);
     }
     debugI("\n Device State Value: %d",store->getDeviceState());
+    debugI("\n Device Status Msg: %s",store->getDeviceStatusMsg());
 
     //Explicitly set Device name
     store->setDeviceName("keystore-device");
@@ -99,6 +100,18 @@ void loop(){
     const char* freq4 = "weekly";
     const unsigned long ltt4 = 1557225987;
 
+    const char* id5 = "C257DB70-AE57-4409-B94E-678CB1567FA6";
+    const char* freq5 = "monthly";
+    const unsigned long ltt5 = 1557226000;
+
+    const char* id6 = "D93F99E1-011B-4609-B04E-AEDBA98A7C5F";
+    const char* freq6 = "half-yearly";
+    const unsigned long ltt6 = 1557226100;
+
+    const char* id7 = "0097430C-FA78-4087-9B78-3AC7FEEF2245";
+    const char* freq7 = "yearly";
+    const unsigned long ltt7 = 1557226100;
+
     std::vector <struct Action> actionsList;
 
     struct Action item1;
@@ -135,6 +148,30 @@ void loop(){
     strcpy(item4.actionFrequency,freq4);
     item4.triggeredTime = ltt4;
     actionsList.push_back(item4);
+
+    struct Action item5;
+    item5.actionID = new char[strlen(id5)+1];
+    item5.actionFrequency = new char[strlen(freq5)+1];
+    strcpy(item5.actionID,id5);
+    strcpy(item5.actionFrequency,freq5);
+    item5.triggeredTime = ltt5;
+    actionsList.push_back(item5);
+
+    struct Action item6;
+    item6.actionID = new char[strlen(id6)+1];
+    item6.actionFrequency = new char[strlen(freq6)+1];
+    strcpy(item6.actionID,id6);
+    strcpy(item6.actionFrequency,freq6);
+    item6.triggeredTime = ltt6;
+    actionsList.push_back(item6);
+
+    struct Action item7;
+    item7.actionID = new char[strlen(id7)+1];
+    item7.actionFrequency = new char[strlen(freq7)+1];
+    strcpy(item7.actionID,id7);
+    strcpy(item7.actionFrequency,freq7);
+    item7.triggeredTime = ltt7;
+    actionsList.push_back(item7);
 
     if(store->saveActions(actionsList)){
       debugI("\n %d actions saved to file - %s", actionsList.size(),ACTIONS_FILE);

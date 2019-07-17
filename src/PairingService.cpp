@@ -8,6 +8,7 @@
 
 PairingService :: PairingService(){
   store = KeyStore :: getKeyStoreInstance();
+  bot = BoTService :: getBoTServiceInstance();
 }
 
 bool PairingService :: isMultipair(){
@@ -22,9 +23,7 @@ bool PairingService :: isPairable(){
 }
 
 String* PairingService :: getPairingStatus(){
-  BoTService* bots = new BoTService();
-  String* response = bots->get(PAIRING_END_POINT);
-  delete bots;
+  String* response = bot->get(PAIRING_END_POINT);
   debugD("\nPairingService :: getPairingStatus : %s", response->c_str());
   return response;
 }
