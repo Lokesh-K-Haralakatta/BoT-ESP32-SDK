@@ -14,6 +14,7 @@
 #define CA_CERT_FILE "/cacert.cer"
 #define ACTIONS_FILE "/actions.json"
 #define QRCODE_FILE "/qrcode.svg"
+#define OFFLINE_ACTIONS_FILE "/offline.json"
 #define NOT_LOADED 0
 #define LOADED 1
 #define DEVICE_STATE_ADDR 0
@@ -53,6 +54,8 @@ class KeyStore {
     String *getDeviceInfo();
     bool generateAndSaveQRCode();
     bool resetQRCodeStatus();
+    std::vector <struct OfflineActionMetadata> retrieveOfflineActions(bool removeFile = false);
+    bool saveOfflineActions(std::vector <struct OfflineActionMetadata> aList);
   private:
     static KeyStore *store;
     String *wifiSSID;
@@ -81,8 +84,10 @@ class KeyStore {
     void loadFileContents(const char* filePath, byte keyType);
     KeyStore();
     std::vector <struct Action> actionsList;
+    std::vector <struct OfflineActionMetadata> offlineActionsList;
     bool saveQRCode(qrcodegen::QrCode qr);
     void clearActionsList();
+    void clearOfflineActionsList();
 };
 
 #endif

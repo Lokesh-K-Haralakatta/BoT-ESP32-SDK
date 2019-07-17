@@ -57,22 +57,7 @@ void BluetoothService :: initializeBLE(const char* dName){
 
   bleDeviceCharacteristic = bleService->createCharacteristic(DEVICE_CHARACTERISTIC_UUID,
                                                             BLECharacteristic::PROPERTY_READ);
-
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& doc = jsonBuffer.createObject();
-  doc["deviceID"] = store->getDeviceID();
-  doc["makerID"] = store->getMakerID();
-  doc["publicKey"] = store->getDevicePublicKey();
-  doc["multipair"] = 0;
-
-  if(store->getDeviceState() == DEVICE_MULTIPAIR){
-    doc["multipair"] = 1;
-    doc["aid"] = store->getAlternateDeviceID();
-  }
-
-  char dInfo[1024];
-  doc.printTo(dInfo);
-
+  const char* dInfo = store->getDeviceInfo()->c_str();
   debugD("\nBluetoothService :: initializeBLE: %s", dInfo);
   bleDeviceCharacteristic->setValue(std::string(dInfo));
 

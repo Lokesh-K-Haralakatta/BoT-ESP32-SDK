@@ -568,7 +568,7 @@ std::vector <struct Action>  KeyStore :: retrieveActions(){
     }
   }
   else {
-    debugE("\nFile - %s does not exist to read action details",ACTIONS_FILE);
+    debugW("\nFile - %s does not exist to read action details",ACTIONS_FILE);
     return actionsList;
   }
 }
@@ -735,4 +735,171 @@ bool KeyStore :: resetQRCodeStatus(){
   }
   else
     return false;
+}
+
+void KeyStore :: clearOfflineActionsList(){
+  int pos = 0;
+  std::vector<struct OfflineActionMetadata>::iterator i;
+  while(!offlineActionsList.empty()){
+    i = offlineActionsList.begin();
+    if(i->actionID != NULL){
+      delete i->actionID;
+      i->actionID = NULL;
+    }
+    if(i->deviceID != NULL){
+      delete i->deviceID;
+      i->deviceID = NULL;
+    }
+    if(i->makerID != NULL){
+      delete i->makerID;
+      i->makerID = NULL;
+    }
+    if(i->queueID != NULL){
+      delete i->queueID;
+      i->queueID = NULL;
+    }
+    if(i->alternateID != NULL){
+      delete i->alternateID;
+      i->alternateID = NULL;
+    }
+
+    offlineActionsList.erase(i);
+    pos++;
+    debugD("\nKeyStore :: clearOfflineActionsList: Freed memory and erased action at position - %d",pos);
+  }
+}
+
+std::vector <struct OfflineActionMetadata> KeyStore :: retrieveOfflineActions(bool removeOfflineActionsFile){
+  //Clear previous offline actions present in offline actions list
+  if(!offlineActionsList.empty()){
+    clearOfflineActionsList();
+    if(offlineActionsList.empty()){
+      debugD("\nKeyStore :: retrieveOfflineActions: Cleared contents of previous offline actions present in offlineActionsList");
+    }
+    else {
+      debugD("\nKeyStore :: retrieveOfflineActions: Failed in clearing contents of previous offline actions present, returning the same back");
+      return offlineActionsList;
+    }
+  }
+
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: retrieveOfflineActions: An Error has occurred while mounting SPIFFS");
+    return offlineActionsList;
+  }
+
+  if(SPIFFS.exists(OFFLINE_ACTIONS_FILE)){
+    File file = SPIFFS.open(OFFLINE_ACTIONS_FILE, FILE_READ);
+    if(!file){
+      debugE("\nKeyStore :: retrieveOfflineActions: There was an error opening the file - %s for reading offline actions", OFFLINE_ACTIONS_FILE);
+      return offlineActionsList;
+    }
+
+    DynamicJsonBuffer jb;
+    JsonArray& actionsArray = jb.parseArray(file);
+    file.close();
+
+    if(actionsArray.success()){
+      debugD("\nKeyStore :: retrieveOfflineActions: JSON Array parsed from the file - %s", OFFLINE_ACTIONS_FILE);
+      int actionsCount = actionsArray.size();
+      for(byte i=0 ; i < actionsCount; i++){
+        const byte offline = (actionsArray[i]["offline"]).as<byte>();
+        const char* deviceID = actionsArray[i]["deviceID"];
+        const char* makerID = actionsArray[i]["makerID"];
+        const char* actionID = actionsArray[i]["actionID"];
+        const char* queueID = actionsArray[i]["queueID"];
+        const byte multipair = (actionsArray[i]["multipair"]).as<byte>();
+        const char* alternateID = actionsArray[i]["alternateID"];
+        const double value = (actionsArray[i]["value"]).as<double>();
+        const unsigned long timestamp = (actionsArray[i]["timestamp"]).as<unsigned long>();
+        debugD("\nKeyStore :: retrieveOfflineActions: Action - %d Details: %d - %s - %s - %lu",i+1,offline,actionID,deviceID,timestamp);
+
+        struct OfflineActionMetadata actionItem;
+        actionItem.offline = offline;
+        actionItem.deviceID = new char[strlen(deviceID)+1];
+        strcpy(actionItem.deviceID,deviceID);
+        actionItem.makerID = new char[strlen(makerID)+1];
+        strcpy(actionItem.makerID,makerID);
+        actionItem.actionID = new char[strlen(actionID)+1];
+        strcpy(actionItem.actionID,actionID);
+        actionItem.queueID = new char[strlen(queueID)+1];
+        strcpy(actionItem.queueID,queueID);
+        actionItem.multipair = multipair;
+        actionItem.value = value;
+        actionItem.timestamp = timestamp;
+        if(alternateID != NULL){
+          actionItem.alternateID = new char[strlen(alternateID)+1];
+          strcpy(actionItem.alternateID,alternateID);
+        }
+        else {
+          actionItem.alternateID = NULL;
+        }
+
+        offlineActionsList.push_back(actionItem);
+      }
+
+      debugD("\nKeyStore :: retrieveOfflineActions: Number of Pending Payments retrieved into offlineActionsList: %d", offlineActionsList.size());
+      jb.clear();
+      //Make a check to remove offline actions file or not
+      if(removeOfflineActionsFile){
+        if(SPIFFS.remove(OFFLINE_ACTIONS_FILE)){
+          debugD("\nKeyStore :: retrieveOfflineActions: %s file removed successfully",OFFLINE_ACTIONS_FILE);
+        }
+        else {
+          debugE("\nKeyStore :: retrieveOfflineActions: Error during removing %s file",OFFLINE_ACTIONS_FILE);
+        }
+      }
+      return offlineActionsList;
+    }
+    else {
+      debugE("\nKeyStore :: retrieveOfflineActions: Error while parsing retrieved JSON Array from the file - %s", OFFLINE_ACTIONS_FILE);
+      jb.clear();
+      return offlineActionsList;
+    }
+  }
+  else {
+    debugW("\nKeyStore :: retrieveOfflineActions: File - %s does not exist to read action details",OFFLINE_ACTIONS_FILE);
+    return offlineActionsList;
+  }
+}
+
+bool KeyStore :: saveOfflineActions(std::vector <struct OfflineActionMetadata> aList){
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: saveOfflineActions: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  File file = SPIFFS.open(OFFLINE_ACTIONS_FILE, FILE_WRITE);
+  if(!file){
+    debugE("\nKeyStore :: saveOfflineActions: There was an error opening the file - %s for saving actions", OFFLINE_ACTIONS_FILE);
+    return false;
+  }
+
+  DynamicJsonBuffer jb;
+  JsonArray& actionsArray = jb.createArray();
+
+  debugD("\nKeyStore :: saveOfflineActions: Number of Actions given to save to the file - %s : %d", OFFLINE_ACTIONS_FILE,aList.size());
+  for (std::vector<struct OfflineActionMetadata>::iterator i = aList.begin() ; i != aList.end(); ++i){
+    JsonObject& obj = jb.createObject();
+    obj["offline"] = i->offline;
+    obj["deviceID"] = i->deviceID;
+    obj["makerID"] = i->makerID;
+    obj["actionID"] = i->actionID;
+    obj["queueID"] = i->queueID;
+    obj["multipair"] = i->multipair;
+    obj["alternateID"] = i->alternateID;
+    obj["value"] = i->value;
+    obj["timestamp"] = i->timestamp;
+    actionsArray.add(obj);
+    debugD("\nKeyStore :: saveOfflineActions: %d : %s : %s : %lu -- Added to actions array", i->offline, i->actionID, i->deviceID, i->timestamp);
+  }
+
+  debugD("\nKeyStore :: saveOfflineActions: Number of actions in actionsArray to be saved to file - %s : %d", OFFLINE_ACTIONS_FILE,actionsArray.size());
+  int nBytes = actionsArray.measureLength();
+  actionsArray.printTo(file);
+  debugD("\nKeyStore :: saveOfflineActions: Number of bytes written to file - %s: %d",OFFLINE_ACTIONS_FILE,nBytes);
+
+  jb.clear();
+  file.close();
+
+  return true;
 }
