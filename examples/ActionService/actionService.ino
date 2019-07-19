@@ -51,8 +51,13 @@ void loop() {
 
     //Trigger an action defined with the deviceID
     const char* actionID = "A42ABD19-3226-47AB-8045-8129DBDF117E";
-    debugI("\nactionService: Response from triggering action: %s", actService->triggerAction(actionID).c_str());
-
+    String* paymentResponse = actService->triggerAction(actionID);
+    if(paymentResponse != NULL){
+      debugI("\nactionService: Response from triggering action: %s",paymentResponse->c_str());
+    }
+    else {
+      debugI("\nactionService: No Response from triggering action, action saved as offline action");
+    }
   }
   else {
     LOG("\nactionService: ESP-32 board not connected to WiFi Network, try again");

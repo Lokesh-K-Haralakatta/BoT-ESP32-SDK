@@ -31,6 +31,7 @@ class ActionService {
     NTPClient *timeClient;
     unsigned long presentActionTriggerTimeInSeconds;
     std::vector <struct Action> actionsList;
+    std::vector <struct Action> localActionsList;
     bool isValidAction(const char* actionID);
     bool isValidActionFrequency(const struct Action*);
     void updateActionsLastTriggeredTime();

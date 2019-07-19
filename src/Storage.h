@@ -23,14 +23,15 @@ class KeyStore {
     static KeyStore* getKeyStoreInstance();
     void loadJSONConfiguration();
     void initializeEEPROM();
-    bool isJSONConfigLoaded();
     void retrieveAllKeys();
+    bool isJSONConfigLoaded();
     bool isPrivateKeyLoaded();
     bool isPublicKeyLoaded();
     bool isAPIKeyLoaded();
     bool isCACertLoaded();
     bool isQRCodeGeneratedandSaved();
     bool isDeviceMultipair();
+    bool offlineActionsExist();
     const char* getWiFiSSID();
     const char* getWiFiPasswd();
     const char* getMakerID();

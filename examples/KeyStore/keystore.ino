@@ -15,7 +15,7 @@ Webserver *server;
 std::vector <struct Action> actionsList;
 
 //Vector to hold offline action items
-std::vector <struct OfflineActionMetadata> offlineActionsList;
+std::vector <struct OfflineActionMetadata> olActionsList;
 
 //Initialize actions to save to file
 const char* actionIds[ACTIONS_COUNT] = {  "E6509B49-5048-4151-B965-BB7B2DBC7905",
@@ -60,7 +60,7 @@ void buildOfflineActionsList(){
   const char* queueID = store->generateUuid4();
   const char* altID = store->getAlternateDeviceID();
 
-  clearOfflineActionsList();
+  clearOlActionsList();
   for(int i=0; i<ACTIONS_COUNT; i++){
     struct OfflineActionMetadata item;
     item.actionID = new char[strlen(actionIds[i])+1];
@@ -85,14 +85,14 @@ void buildOfflineActionsList(){
     else {
       item.multipair = 0;
     }
-    offlineActionsList.push_back(item);
+    olActionsList.push_back(item);
   }
 }
 
-void clearOfflineActionsList(){
+void clearOlActionsList(){
   std::vector<struct OfflineActionMetadata>::iterator i;
-  while(!offlineActionsList.empty()){
-    i = offlineActionsList.begin();
+  while(!olActionsList.empty()){
+    i = olActionsList.begin();
     delete i->actionID;
     delete i->deviceID;
     delete i->queueID;
@@ -100,7 +100,7 @@ void clearOfflineActionsList(){
     if(i->alternateID != NULL){
       delete i->alternateID;
     }
-    offlineActionsList.erase(i);
+    olActionsList.erase(i);
   }
 }
 
@@ -175,7 +175,7 @@ void loop(){
       debugI("\n CA Certificate Contents: \n%s\n", store->getCACert());
     }
 
-    debugI("\nDeviceInformation: %s", (store->getDeviceInfo())->c_str());
+    debugI("\n DeviceInformation: %s", (store->getDeviceInfo())->c_str());
 
     //Build action items and add to actionsList
     buildActionsList();
@@ -212,20 +212,36 @@ void loop(){
       store->generateAndSaveQRCode();
     }
 
-    //Build offline action items and add to offlineActionsList
+    //Offline actions should not be present at this point
+    if(store->offlineActionsExist()){
+      debugE("\n Offline Actions are available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugI("\n Offline Actions are not available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+
+    //Build offline action items and add to olActionsList
     buildOfflineActionsList();
 
-    if(store->saveOfflineActions(offlineActionsList)){
-      debugI("\n %d offline actions saved to file - %s", offlineActionsList.size(),OFFLINE_ACTIONS_FILE);
+    if(store->saveOfflineActions(olActionsList)){
+      debugI("\n %d offline actions saved to file - %s", olActionsList.size(),OFFLINE_ACTIONS_FILE);
     }
     else {
       debugE("\n Failed in saving offline actions to file - %s", OFFLINE_ACTIONS_FILE);
     }
 
-    //Clear offline actions items from offlineActionsList
-    clearOfflineActionsList();
+    //Clear offline actions items from olActionsList
+    clearOlActionsList();
 
-    std::vector <struct OfflineActionMetadata> retOfflineActionsList = store->retrieveOfflineActions();
+    //Offline actions should be present at this point
+    if(store->offlineActionsExist()){
+      debugI("\n Offline Actions are available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugE("\n Offline Actions are not available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+
+    std::vector <struct OfflineActionMetadata> retOfflineActionsList = store->retrieveOfflineActions(true);
     if(retOfflineActionsList.empty()){
       debugI("\n No Offline Actions retrieved from the file - %s", OFFLINE_ACTIONS_FILE);
     }
@@ -234,6 +250,14 @@ void loop(){
       for (std::vector<struct OfflineActionMetadata>::iterator i = retOfflineActionsList.begin() ; i != retOfflineActionsList.end(); ++i){
         debugI("\n %d : %s : %s : %s : %s : %d : %lu", i->offline, i->makerID, i->deviceID, i->actionID, i->queueID, i->multipair, i->timestamp);
       }
+    }
+
+    //Offline actions should not be present at this point
+    if(store->offlineActionsExist()){
+      debugE("\n Offline Actions are available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugI("\n Offline Actions are not available in the file - %s", OFFLINE_ACTIONS_FILE);
     }
   }
   else {

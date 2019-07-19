@@ -361,7 +361,8 @@ bool KeyStore :: isCACertLoaded(){
 }
 
 bool KeyStore :: isDeviceMultipair(){
-  if(multipair != NULL && multipair->equalsIgnoreCase("true"))
+  if(multipair != NULL && multipair->equalsIgnoreCase("true") &&
+                                    getDeviceState() == DEVICE_MULTIPAIR)
     return true;
   else
     return false;
@@ -769,6 +770,38 @@ void KeyStore :: clearOfflineActionsList(){
   }
 }
 
+bool KeyStore :: offlineActionsExist(){
+  bool savedActions = false;
+  if(!SPIFFS.begin(true)){
+    debugE("\nKeyStore :: offlineActionsExist: An Error has occurred while mounting SPIFFS");
+    return false;
+  }
+
+  if(SPIFFS.exists(OFFLINE_ACTIONS_FILE)){
+    File file = SPIFFS.open(OFFLINE_ACTIONS_FILE, FILE_READ);
+    if(!file){
+      debugE("\nKeyStore :: offlineActionsExist: There was an error opening the file - %s for checking offline actions", OFFLINE_ACTIONS_FILE);
+      return false;
+    }
+    else {
+      if(file.available()){
+        debugD("\nKeyStore :: offlineActionsExist: Some Offline Actions available in the file - %s", OFFLINE_ACTIONS_FILE);
+        savedActions = true;
+      }
+      else {
+        debugD("\nKeyStore :: offlineActionsExist: No Offline Actions available in the file - %s", OFFLINE_ACTIONS_FILE);
+        savedActions = false;
+      }
+      file.close();
+      return savedActions;
+    }
+  }
+  else {
+    debugD("\nKeyStore :: offlineActionsExist: The file - %s is not available on SPIFFS", OFFLINE_ACTIONS_FILE);
+    return false;
+  }
+}
+
 std::vector <struct OfflineActionMetadata> KeyStore :: retrieveOfflineActions(bool removeOfflineActionsFile){
   //Clear previous offline actions present in offline actions list
   if(!offlineActionsList.empty()){
@@ -813,28 +846,33 @@ std::vector <struct OfflineActionMetadata> KeyStore :: retrieveOfflineActions(bo
         const unsigned long timestamp = (actionsArray[i]["timestamp"]).as<unsigned long>();
         debugD("\nKeyStore :: retrieveOfflineActions: Action - %d Details: %d - %s - %s - %lu",i+1,offline,actionID,deviceID,timestamp);
 
-        struct OfflineActionMetadata actionItem;
-        actionItem.offline = offline;
-        actionItem.deviceID = new char[strlen(deviceID)+1];
-        strcpy(actionItem.deviceID,deviceID);
-        actionItem.makerID = new char[strlen(makerID)+1];
-        strcpy(actionItem.makerID,makerID);
-        actionItem.actionID = new char[strlen(actionID)+1];
-        strcpy(actionItem.actionID,actionID);
-        actionItem.queueID = new char[strlen(queueID)+1];
-        strcpy(actionItem.queueID,queueID);
-        actionItem.multipair = multipair;
-        actionItem.value = value;
-        actionItem.timestamp = timestamp;
-        if(alternateID != NULL){
-          actionItem.alternateID = new char[strlen(alternateID)+1];
-          strcpy(actionItem.alternateID,alternateID);
+        if(offline == 1){
+          struct OfflineActionMetadata actionItem;
+          actionItem.offline = offline;
+          actionItem.deviceID = new char[strlen(deviceID)+1];
+          strcpy(actionItem.deviceID,deviceID);
+          actionItem.makerID = new char[strlen(makerID)+1];
+          strcpy(actionItem.makerID,makerID);
+          actionItem.actionID = new char[strlen(actionID)+1];
+          strcpy(actionItem.actionID,actionID);
+          actionItem.queueID = new char[strlen(queueID)+1];
+          strcpy(actionItem.queueID,queueID);
+          actionItem.multipair = multipair;
+          actionItem.value = value;
+          actionItem.timestamp = timestamp;
+          if(alternateID != NULL){
+            actionItem.alternateID = new char[strlen(alternateID)+1];
+            strcpy(actionItem.alternateID,alternateID);
+          }
+          else {
+            actionItem.alternateID = NULL;
+          }
+          offlineActionsList.push_back(actionItem);
+          debugD("\nKeyStore :: retrieveOfflineActions: %d - %s - %s - %lu - Added to offlineActionsList",actionItem.offline, actionItem.actionID, actionItem.deviceID,actionItem.timestamp);
         }
         else {
-          actionItem.alternateID = NULL;
+          debugW("\nKeyStore :: retrieveOfflineActions: %d - %s - %s - %lu - Ignored to be added to offlineActionsList",offline, actionID, deviceID,timestamp);
         }
-
-        offlineActionsList.push_back(actionItem);
       }
 
       debugD("\nKeyStore :: retrieveOfflineActions: Number of Pending Payments retrieved into offlineActionsList: %d", offlineActionsList.size());
@@ -879,18 +917,23 @@ bool KeyStore :: saveOfflineActions(std::vector <struct OfflineActionMetadata> a
 
   debugD("\nKeyStore :: saveOfflineActions: Number of Actions given to save to the file - %s : %d", OFFLINE_ACTIONS_FILE,aList.size());
   for (std::vector<struct OfflineActionMetadata>::iterator i = aList.begin() ; i != aList.end(); ++i){
-    JsonObject& obj = jb.createObject();
-    obj["offline"] = i->offline;
-    obj["deviceID"] = i->deviceID;
-    obj["makerID"] = i->makerID;
-    obj["actionID"] = i->actionID;
-    obj["queueID"] = i->queueID;
-    obj["multipair"] = i->multipair;
-    obj["alternateID"] = i->alternateID;
-    obj["value"] = i->value;
-    obj["timestamp"] = i->timestamp;
-    actionsArray.add(obj);
-    debugD("\nKeyStore :: saveOfflineActions: %d : %s : %s : %lu -- Added to actions array", i->offline, i->actionID, i->deviceID, i->timestamp);
+    if(i->offline == 1){
+      JsonObject& obj = jb.createObject();
+      obj["offline"] = i->offline;
+      obj["deviceID"] = i->deviceID;
+      obj["makerID"] = i->makerID;
+      obj["actionID"] = i->actionID;
+      obj["queueID"] = i->queueID;
+      obj["multipair"] = i->multipair;
+      obj["alternateID"] = i->alternateID;
+      obj["value"] = i->value;
+      obj["timestamp"] = i->timestamp;
+      actionsArray.add(obj);
+      debugD("\nKeyStore :: saveOfflineActions: %d : %s : %s : %lu -- Added to offline actions array", i->offline, i->actionID, i->deviceID, i->timestamp);
+    }
+    else {
+      debugW("\nKeyStore :: saveOfflineActions: %d : %s : %s : %lu -- Ignored to be added to offline actions array", i->offline, i->actionID, i->deviceID, i->timestamp);
+    }
   }
 
   debugD("\nKeyStore :: saveOfflineActions: Number of actions in actionsArray to be saved to file - %s : %d", OFFLINE_ACTIONS_FILE,actionsArray.size());
