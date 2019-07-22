@@ -57,6 +57,8 @@ class KeyStore {
     bool resetQRCodeStatus();
     std::vector <struct OfflineActionMetadata> retrieveOfflineActions(bool removeFile = false);
     bool saveOfflineActions(std::vector <struct OfflineActionMetadata> aList);
+    bool saveOfflineAction(const char* actionID, const unsigned long paymentTime);
+    bool clearOfflineActions();
   private:
     static KeyStore *store;
     String *wifiSSID;

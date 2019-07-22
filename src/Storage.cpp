@@ -946,3 +946,69 @@ bool KeyStore :: saveOfflineActions(std::vector <struct OfflineActionMetadata> a
 
   return true;
 }
+
+bool KeyStore :: saveOfflineAction(const char* actionID, const unsigned long paymentTime){
+   bool isActionSaved = false;
+
+  //Fill in action metadata for payment
+  const char* deviceID = getDeviceID();
+  const char* makerID = getMakerID();
+  const char* queueID = generateUuid4();
+  const char* altID = getAlternateDeviceID();
+
+  struct OfflineActionMetadata pendingPayment;
+  pendingPayment.offline = 1;
+  pendingPayment.deviceID = new char[strlen(deviceID)+1];
+  strcpy(pendingPayment.deviceID,deviceID);
+  pendingPayment.makerID = new char[strlen(makerID)+1];
+  strcpy(pendingPayment.makerID,makerID);
+  pendingPayment.actionID = new char[strlen(actionID)+1];
+  strcpy(pendingPayment.actionID,actionID);
+  pendingPayment.queueID = new char[strlen(queueID)+1];
+  strcpy(pendingPayment.queueID,queueID);
+  if(isDeviceMultipair()){
+    pendingPayment.multipair = 1;
+    pendingPayment.alternateID = new char[strlen(altID)+1];
+    strcpy(pendingPayment.alternateID,altID);
+  }
+  else {
+    pendingPayment.multipair = 0;
+    pendingPayment.alternateID = NULL;
+  }
+  pendingPayment.value = 0.0;
+  pendingPayment.timestamp = paymentTime;
+  debugD("\nKeyStore: saveOfflineAction: Payment details added to pendingPayment variable for paymentTime: %lu",pendingPayment.timestamp);
+
+  //Retrieve existing offline actions from SPIFFS
+  offlineActionsList = retrieveOfflineActions(true);
+
+  //Add pending payment item onto offlineActions List
+  offlineActionsList.push_back(pendingPayment);
+  debugD("\nKeyStore: saveOfflineAction: Pending payment added to offlineActionsList, OfflineActions Count: %d",offlineActionsList.size());
+
+  //Save offlineActions list items onto SPIFFS
+  if(saveOfflineActions(offlineActionsList)){
+    isActionSaved = true;
+    debugD("\nKeyStore: saveOfflineAction: Pending payment successfully saved to %s file",OFFLINE_ACTIONS_FILE);
+  }
+  else {
+    isActionSaved = false;
+    debugE("\nKeyStore: saveOfflineAction:: Saving pending payment to file - %s failed...",OFFLINE_ACTIONS_FILE);
+  }
+  return isActionSaved;
+}
+
+bool KeyStore :: clearOfflineActions() {
+  //Release memory for offline payments present in offlineActionsList
+  clearOfflineActionsList();
+
+  //Remove Offline Actions File from SPIFFS
+  if(SPIFFS.begin(true) && SPIFFS.remove(OFFLINE_ACTIONS_FILE)){
+    debugD("\nKeyStore :: clearOfflineActions: %s file removed successfully",OFFLINE_ACTIONS_FILE);
+    return true;
+  }
+  else {
+    debugE("\nKeyStore :: clearOfflineActions: Error during removing %s file",OFFLINE_ACTIONS_FILE);
+    return false;
+  }
+}
