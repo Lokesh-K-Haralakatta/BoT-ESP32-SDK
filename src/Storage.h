@@ -57,7 +57,7 @@ class KeyStore {
     bool resetQRCodeStatus();
     std::vector <struct OfflineActionMetadata> retrieveOfflineActions(bool removeFile = false);
     bool saveOfflineActions(std::vector <struct OfflineActionMetadata> aList);
-    bool saveOfflineAction(const char* actionID, const unsigned long paymentTime);
+    bool saveOfflineAction(const char* actionID, const char* value, const unsigned long paymentTime);
     bool clearOfflineActions();
   private:
     static KeyStore *store;

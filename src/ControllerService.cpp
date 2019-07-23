@@ -110,8 +110,8 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
       debugE("\nControllerService :: triggerAction: %s", body);
       request->send(400, "application/json", body);
     }
-    else if((store->getDeviceState() == DEVICE_MULTIPAIR) &&
-            (jsonObj.containsKey("alternativeID") == false)){
+    else if(store->isDeviceMultipair() &&
+            store->getAlternateDeviceID() == NULL){
       doc["message"] = "Missing parameter `AlternativeID`";
       doc.printTo(body);
       jsonBuffer.clear();
@@ -121,10 +121,9 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
     else {
       const char* actionID = (jsonObj.containsKey("actionID"))?jsonObj.get<const char*>("actionID"):NULL;
       const char* value = (jsonObj.containsKey("value"))?jsonObj.get<const char*>("value"):NULL;
-      const char* altID = (jsonObj.containsKey("alternativeID"))?jsonObj.get<const char*>("alternativeID"):NULL;
 
       ActionService* actionService = new ActionService();
-      String* response = actionService->triggerAction(actionID, value, altID);
+      String* response = actionService->triggerAction(actionID,value);
       delete actionService;
       debugD("\nControllerService :: triggerAction: Response: %s", response->c_str());
 

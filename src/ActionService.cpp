@@ -7,256 +7,174 @@
 #include "ActionService.h"
 #define HOST "www.google.com"
 
-//Vector to represent list of offline actions
-std::vector <struct OfflineActionMetadata> offlineActionsList;
-
-//Tasks handles
-TaskHandle_t offlineActionTask;
-TaskHandle_t paymentTask;
-
-//Flags to synchronize between OfflineTask and PaymentTask
-bool offlineTaskRunning = false;
-bool paymentTaskRunning = false;
-
-//String to hold post operation Response
-String* postResponse = NULL;
-
-//Variable to hold payment time in seconds
-unsigned long paymentTime = 0l;
-
-//Function to check Internet Connectivity Available or Not
-bool isInternetConnectivityAvailable(){
-  return Ping.ping(HOST);
-}
-
-//Function to count payments with offline set to 1
-int countLeftOverPayments(){
-  int leftOverPayments = 0;
-  for (std::vector<struct OfflineActionMetadata>::iterator i = offlineActionsList.begin() ; i != offlineActionsList.end(); ++i){
-    if(i->offline == 1)
-      leftOverPayments++;
-  }
-  return leftOverPayments;
-}
-
-//Task function to trigger offline saved payments
-void triggerOfflineActions( void * pvParameters ){
-  debugI("\nActionService: offlinePaymentTask: Offline Actions Task running on core: %d",xPortGetCoreID());
-  debugD("\nActionService: offlinePaymentTask: Available free heap at the beginning of triggerOfflineActions: %lu",ESP.getFreeHeap());
-
-  offlineTaskRunning = true;
-
-  while(paymentTaskRunning){
-    debugD("\nActionService: offlinePaymentTask: Payment task running, going to sleep for some time...");
-    delay(2000);
-  }
-
-  if(!paymentTaskRunning){
-    //Get references to Store and BoT Instances
-    KeyStore* store = KeyStore :: getKeyStoreInstance();
-    BoTService* bot = BoTService :: getBoTServiceInstance();
-
-    //Logic to read offline actions saved in FS goes here
-    offlineActionsList = store->retrieveOfflineActions();
-    int offlinePaymentsCount = offlineActionsList.size();
-
-  if(offlinePaymentsCount > 0){
-    debugI("\nActionService: offlinePaymentTask: Number of pending payments in list: %d",offlinePaymentsCount);
-    //For each of offline action in offlineActionsList,
-    //check internet connectivity and trigger pending payments
-    for (std::vector<struct OfflineActionMetadata>::iterator i = offlineActionsList.begin() ; i != offlineActionsList.end(); ++i){
-      if(isInternetConnectivityAvailable()){
-        if(i->offline == 1){
-          debugD("\nActionService: offlinePaymentTask: Triggerring pending payment with actionID - %s and timestamp - %lu", i->actionID,i->timestamp);
-          //Payment triggering logic goes here
-          DynamicJsonBuffer jsonBuffer;
-          JsonObject& doc = jsonBuffer.createObject();
-          JsonObject& botData = doc.createNestedObject("bot");
-          botData["deviceID"] = i->deviceID;
-          botData["actionID"] = i->actionID;
-          botData["queueID"] = i->queueID;
-
-          if (store->isDeviceMultipair()) {
-            botData["alternativeID"] = i->alternateID;
-          }
-
-          /*if (value != NULL && strlen(value)>0) {
-            botData["value"] = value;
-          }*/
-
-          char payload[200];
-          doc.printTo(payload);
-          jsonBuffer.clear();
-          debugD("\nActionService : offlinePaymentTask: Minified JSON payload to trigger pending payment: %s", payload);
-
-          //Trigger Action
-          String* offlineResponse = bot->post(ACTIONS_END_POINT,payload);
-
-          //Payment successful,
-          //Turnoff offline flag for the action
-          if(offlineResponse != NULL && offlineResponse->indexOf("OK") != -1){
-            i->offline = 0;
-            debugI("\nActionService: offlineActionTask: Pending Payment with actionID: %s for timestamp: %lu trigger successful",i->actionID,i->timestamp);
-          }
-          else {
-            debugE("\nActionService: offlineActionTask: Pending payment - %s failed with message - %s", i->actionID,offlineResponse->c_str());
-          }
-        }
-      }
-      else {
-        //No Internet connectivity, stop payments till next chance for the task to run
-        debugW("\nActionService: offlineActionTask: No Internet Connectivity available, stopping remaining offline payments");
-        break;
-      }
-      debugI("\nActionService: offlineActionTask: Still to process %d offline actions",countLeftOverPayments());
-     }
-    //There are chances of losing internet connectivity / failure of triggering any payments
-    //Check whether there are any left over pending payments in offlineActionsList
-    int leftOverPPs = countLeftOverPayments();
-    debugI("\nActionService: offlinePaymentTask: Number of left over pending payments in offlineActionsList: %d", leftOverPPs);
-    //Write back such left over pending payments into storage
-    if(leftOverPPs>0){
-      debugI("\nActionService: offlinePaymentTask: %d pending payments not cleared, hence saving back to file - %s", leftOverPPs,OFFLINE_ACTIONS_FILE);
-      if(store->saveOfflineActions(offlineActionsList)){
-        debugI("\nActionService: offlinePaymentTask: Left over %d Pending payments successfully saved to %s file",leftOverPPs, OFFLINE_ACTIONS_FILE);
-      }
-      else {
-        debugE("\nActionService: offlinePaymentTask: Saving %d left over pending payments to %s failed...",leftOverPPs,OFFLINE_ACTIONS_FILE);
-      }
-    }
-    else {
-      debugI("\nActionService: offlinePaymentTask: No left over Pending Payments, clearing off saved offline actions from SPIFFS");
-      if(store->clearOfflineActions()){
-        debugI("\nActionService: offlinePaymentTask: Cleared Offline Actions");
-      }
-      else {
-        debugE("\nActionService: offlinePaymentTask: Failed to clear Offline Actions");
-      }
-    }
-  }
-  else {
-    debugD("\nActionService: offlinePaymentTask: No Offline Tasks to be processed");
-  }
- }
- else {
-  debugD("\nActionService: paymentTask is active, skipping offlinePaymentsTask!!!");
- }
-
-  debugI("\nActionService: Terminating the triggerOfflineActions task");
-  debugD("\nActionService: Available free heap at the end of triggerOfflineActions: %lu",ESP.getFreeHeap());
-  //Turnoff offlineActionTask
-  offlineTaskRunning = false;
-  //Terminate the task
-  vTaskDelete(NULL);
-}
-
-void triggerPayment( void * pvParameters ){
-  debugI("\nActionService: Payment Task running on core: %d",xPortGetCoreID());
-  debugD("\nActionService: Available free heap at the beginning of triggerPaymentTask: %lu",ESP.getFreeHeap());
-
-  paymentTaskRunning = true;
-
-  while(offlineTaskRunning){
-    debugD("\nActionService: PaymentTask: Offline Payment task running, going to sleep for some time...");
-    delay(2000);
-  }
-
-  if(!offlineTaskRunning){
-    //Get references to Store and BoT Instances
-    KeyStore* store = KeyStore :: getKeyStoreInstance();
-    BoTService* bot = BoTService :: getBoTServiceInstance();
-
-    //Get details for the payment
-    const char* actionID = (char*)pvParameters;
-    const char* deviceID = store->getDeviceID();
-    const char* makerID = store->getMakerID();
-    const char* queueID = store->generateUuid4();
-    const char* altID = store->getAlternateDeviceID();
-
-    //Check for availability of internet connectivity
-    if(isInternetConnectivityAvailable()){
-      //Calculate payment trigger time
-      WiFiUDP paymentNtpUDP;
-      NTPClient* paymentTimeClient = new NTPClient(paymentNtpUDP);
-      paymentTimeClient->begin();
-      while(!paymentTimeClient->update()) {
-        paymentTimeClient->forceUpdate();
-      }
-      paymentTime = paymentTimeClient->getEpochTime();
-      delete paymentTimeClient;
-
-      debugD("\nActionService: PaymentTask: Connected to Internet, triggering the payment");
-      //Payment triggering logic goes here
-      DynamicJsonBuffer jsonBuffer;
-      JsonObject& doc = jsonBuffer.createObject();
-      JsonObject& botData = doc.createNestedObject("bot");
-      botData["deviceID"] = deviceID;
-      botData["actionID"] = actionID;
-      botData["queueID"] = queueID;
-
-      if (store->isDeviceMultipair()) {
-        botData["alternativeID"] = altID;
-      }
-
-      /*if (value != NULL && strlen(value)>0) {
-        botData["value"] = value;
-      }*/
-
-      char payload[200];
-      doc.printTo(payload);
-      jsonBuffer.clear();
-      debugD("\nActionService : paymentTask: Minified JSON payload to trigger payment: %s", payload);
-
-      //Trigger Action
-      postResponse = bot->post(ACTIONS_END_POINT,payload);
-
-      //Payment failed, add action as offlineAction
-      if(postResponse->indexOf("OK") != -1){
-        debugI("\nActionService: paymentTask: Payment with actionID: %s for timestamp: %lu trigger successful",actionID,paymentTime);
-      }
-      else {
-        debugW("\nActionService: paymentTask: Pending payment - %s failed with message - %s, adding as offlineAction", actionID,postResponse->c_str());
-        if(store->saveOfflineAction(actionID,paymentTime)){
-          debugI("\nActionService: PaymentTask: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,paymentTime);
-        }
-        else {
-          debugE("\nActionService: PaymentTask: Action - %s associated with timestamp - %lu failed to be saved as Offline Action",actionID);
-        }
-      }
-    }
-    else {
-      debugI("\nActionService: PaymentTask: Not Connected to Internet, saving the action onto storage");
-      if(store->saveOfflineAction(actionID,paymentTime)){
-        debugI("\nActionService: PaymentTask: Action - %s saved as Offline Action",actionID);
-      }
-      else {
-        debugE("\nActionService: PaymentTask: Action - %s failed to be saved as Offline Action",actionID);
-      }
-    }
-  }
-  else {
-    debugD("\nActionService: PaymentTask: offlinePaymentTask is active, skipping paymentsTask!!!");
-  }
-
-  debugI("\nActionService: PaymentTask: Terminating the triggerPayment task");
-  debugD("\nActionService: PaymentTask: Available free heap at the end of triggerPaymentTask: %lu",ESP.getFreeHeap());
-  //Turn of paymentTask flag
-  paymentTaskRunning = false;
-  //Terminate the task
-  vTaskDelete(NULL);
-}
-
 ActionService :: ActionService(){
   store = KeyStore :: getKeyStoreInstance();
   bot = BoTService :: getBoTServiceInstance();
   timeClient = new NTPClient(ntpUDP);
+  presentActionTriggerTimeInSeconds = 0l;
+  previousActionTriggerTimeInSeconds = 0l;
 }
 
 ActionService :: ~ActionService(){
   delete timeClient;
 }
 
-String* ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
+bool ActionService :: isInternetConnectivityAvailable(){
+  return Ping.ping(HOST);
+}
+
+int ActionService :: countLeftOverOfflineActions(){
+  int leftOverActions = 0;
+  for (std::vector<struct OfflineActionMetadata>::iterator i = offlineActionsList.begin() ; i != offlineActionsList.end(); ++i){
+    if(i->offline == 1)
+      leftOverActions++;
+  }
+  return leftOverActions;
+}
+
+String* ActionService :: postAction(const char* actionID, const char* qID, const double value){
+  //Action triggering logic goes here
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& doc = jsonBuffer.createObject();
+  JsonObject& botData = doc.createNestedObject("bot");
+  botData["deviceID"] = store->getDeviceID();
+  botData["actionID"] = actionID;
+  botData["queueID"] = qID;
+
+  if (store->isDeviceMultipair()) {
+    botData["alternativeID"] = store->getAlternateDeviceID();
+  }
+
+  if (value > 0.0) {
+    botData["value"] = value;
+  }
+
+  char payload[200];
+  doc.printTo(payload);
+  jsonBuffer.clear();
+  debugI("\nActionService : postAction: Minified JSON payload to trigger action: %s", payload);
+
+  return(bot->post(ACTIONS_END_POINT,payload));
+}
+
+void ActionService :: triggerOfflineActions(){
+  debugI("\nActionService: triggerOfflineActions: Processing pending offline actions");
+
+  offlineActionsList = store->retrieveOfflineActions();
+  int offlineActionsCount = offlineActionsList.size();
+
+  if(offlineActionsCount > 0){
+    debugI("\nActionService: triggerOfflineActions: Number of offline actions in list: %d",offlineActionsCount);
+    //For each of offline action in offlineActionsList,
+    //check internet connectivity and trigger pending actions
+    for (std::vector<struct OfflineActionMetadata>::iterator i = offlineActionsList.begin() ; i != offlineActionsList.end(); ++i){
+      if(isInternetConnectivityAvailable()){
+        if(i->offline == 1){
+          debugD("\nActionService: triggerOfflineActions: Triggerring pending action with actionID - %s and timestamp - %lu", i->actionID,i->timestamp);
+
+          //Trigger Offline Action
+          String* offlineResponse = postAction(i->actionID,i->queueID,i->value);
+
+          //Post successful,
+          //Turnoff offline flag for the action
+          if(offlineResponse != NULL && offlineResponse->indexOf("OK") != -1){
+            i->offline = 0;
+            debugI("\nActionService: triggerOfflineActions: Offline Action with actionID: %s for timestamp: %lu trigger successful",i->actionID,i->timestamp);
+          }
+          else {
+            debugE("\nActionService: triggerOfflineActions: Offline Action - %s failed with message - %s", i->actionID,offlineResponse->c_str());
+          }
+        }
+      }
+      else {
+        //No Internet connectivity, stop processing offline actions
+        debugW("\nActionService: triggerOfflineActions: No Internet Connectivity available, stopping remaining offline actions to be triggered");
+        break;
+      }
+      debugI("\nActionService: triggerOfflineActions: Still to process %d offline actions",countLeftOverOfflineActions());
+     }
+
+    //There are chances of losing internet connectivity / failure of triggering any action
+    //Check whether there are any left over pending offline actions in offlineActionsList
+    int leftOverOfflineActions = countLeftOverOfflineActions();
+    debugI("\nActionService: triggerOfflineActions: Number of left over offline actions in offlineActionsList: %d", leftOverOfflineActions);
+    //Write back such left over offline actions into storage
+    if(leftOverOfflineActions > 0){
+      debugI("\nActionService: triggerOfflineActions: %d offline actions not cleared, hence saving back to file - %s", leftOverOfflineActions,OFFLINE_ACTIONS_FILE);
+      if(store->saveOfflineActions(offlineActionsList)){
+        debugI("\nActionService: triggerOfflineActions: Left over %d Offline Actions successfully saved to %s file",leftOverOfflineActions, OFFLINE_ACTIONS_FILE);
+      }
+      else {
+        debugE("\nActionService: triggerOfflineActions: Saving %d left over offline actions to %s failed...",leftOverOfflineActions,OFFLINE_ACTIONS_FILE);
+      }
+    }
+    else {
+      debugI("\nActionService: triggerOfflineActions: No left over Offline Actions, clearing off saved offline actions from SPIFFS");
+      if(store->clearOfflineActions()){
+        debugI("\nActionService: triggerOfflineActions: Cleared Offline Actions");
+      }
+      else {
+        debugE("\nActionService: triggerOfflineActions: Failed to clear Offline Actions");
+      }
+    }
+  }
+  else {
+    debugD("\nActionService: triggerOfflineActions: No Offline Actions to be processed");
+  }
+}
+
+String* ActionService :: triggerOnlineAction(const char* actionID,const char* value){
+  String* postResponse = NULL;
+  debugI("\nActionService: triggerOnlineAction: Preparing to trigger action with actionID: %s",actionID);
+
+  //Check for availability of internet connectivity
+  if(isInternetConnectivityAvailable()){
+    //Update the latest time from network
+    while(!timeClient->update()) {
+      timeClient->forceUpdate();
+    }
+
+    previousActionTriggerTimeInSeconds = timeClient->getEpochTime();
+
+    debugD("\nActionService: triggerOnlineAction: Internet connectivity available, triggering the action with actionID: %s",actionID);
+
+    //Trigger Action
+    postResponse = postAction(actionID,store->generateUuid4(),String(value).toDouble());
+
+    //Check trigger action result
+    if(postResponse->indexOf("OK") != -1){
+      debugI("\nActionService: triggerOnlineAction: Action with actionID: %s for timestamp: %lu trigger successful",actionID,previousActionTriggerTimeInSeconds);
+      return postResponse;
+    }
+    else {
+      debugE("\nActionService: triggerOnlineAction: Action with actionID: %s failed with response: %s",actionID,postResponse->c_str());
+      //Trigger action failed, add as an offline action if there is no internet
+      if(!isInternetConnectivityAvailable()) {
+        debugW("\nActionService: triggerOnlineAction: adding failed action: %s to offline actions since there is no internet available",actionID);
+        if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
+          return NULL;
+          debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+        }
+        else {
+          debugE("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu failed to be saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+          return postResponse;
+        }
+      }
+    }
+  }
+  else {
+    debugI("\nActionService: triggerOnlineAction: Internet connectivity not avalable, saving the action onto storage");
+    if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
+      debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+    }
+    else {
+      debugE("\nActionService: triggerOnlineAction: Action - %s failed to be saved as Offline Action",actionID);
+    }
+    return NULL;
+  }
+}
+
+String* ActionService :: triggerAction(const char* actionID, const char* value){
   debugD("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
   debugD("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
@@ -266,66 +184,17 @@ String* ActionService :: triggerAction(const char* actionID, const char* value, 
     store->initializeEEPROM();
     store->loadJSONConfiguration();
 
-    // Main task runs on Core-1 and keeps track of doing it's work
-    debugI("\nActionService :: triggerAction: Main task running on core: %d",xPortGetCoreID());
-    debugD("\nActionService :: triggerAction: Available free heap at the beginning of triggerAction: %lu",ESP.getFreeHeap());
-
-    //Wait till previous task instances get removed
-    while(offlineTaskRunning || paymentTaskRunning){
-      debugD("\nActionService :: triggerAction: Waiting for previous tasks to be removed...");
-      delay(2000);
-    }
-    //create a task to get offline actions from file if any, with priority 1
-    //and executed on core 0 to trigger the payments
+    //Process offline actions if any
     if(isInternetConnectivityAvailable() && store->offlineActionsExist()){
       debugI("\nActionService :: triggerAction: Internet Connectivity Available and There are some offline actions need to be processed");
-      if(!offlineTaskRunning){
-        xTaskCreatePinnedToCore(
-          triggerOfflineActions,      /* Task function. */
-          "Offline Actions Task",     /* name of task. */
-          10000,                      /* Stack size of task */
-          NULL,                       /* parameter of the task */
-          1,                          /* priority of the task */
-          &offlineActionTask,         /* Task handle to keep track of created task */
-          0);                         /* pin task to core 1 */
-      }
-      else {
-        debugW("\nActionService :: triggerAction: offlinePaymentTask already exists.. not creating any new offlinePaymentTask");
-      }
+      triggerOfflineActions();
     }
     else {
       debugW("\nActionService :: triggerAction: No Internet Connectivity or There are no offline actions to handle");
     }
-    //Give some time for offline payment task
-    delay(2000);
 
-    //Reinitialize postResponse
-    postResponse = NULL;
-
-    //create a task to trigger payment, with priority 1 and executed on core 0
-    if(!paymentTaskRunning){
-      xTaskCreatePinnedToCore(
-        triggerPayment,  /* Task function. */
-        "Payment Task",  /* name of task. */
-        10000,           /* Stack size of task */
-        (void*)actionID,        /* parameter of the task */
-        1,               /* priority of the task */
-        &paymentTask,    /* Task handle to keep track of created task */
-        0);             /* pin task to core 0 */
-     }
-    else {
-      debugW("\nActionService :: triggerAction: paymentTask already exists.. not creating any new paymentTask");
-    }
-    //Give some time for payment task
-    delay(2000);
-
-    debugD("\nActionService :: triggerAction: Available free heap at the end of triggerAction: %lu",ESP.getFreeHeap());
-
-    //Wait till the task instances get removed
-    while(offlineTaskRunning || paymentTaskRunning){
-      debugD("\nActionService :: triggerAction: Waiting for payment tasks to be completed...");
-      delay(2000);
-    }
+    //Trigger the provided action
+    String* postResponse = triggerOnlineAction(actionID,value);
 
    /*
     const char* deviceID = store->getDeviceID();

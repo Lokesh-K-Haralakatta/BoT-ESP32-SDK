@@ -944,10 +944,14 @@ bool KeyStore :: saveOfflineActions(std::vector <struct OfflineActionMetadata> a
   jb.clear();
   file.close();
 
+  //Release memory for offline actions present in offlineActionsList
+  if(!offlineActionsList.empty())
+    clearOfflineActionsList();
+
   return true;
 }
 
-bool KeyStore :: saveOfflineAction(const char* actionID, const unsigned long paymentTime){
+bool KeyStore :: saveOfflineAction(const char* actionID, const char* value,const unsigned long paymentTime){
    bool isActionSaved = false;
 
   //Fill in action metadata for payment
@@ -975,7 +979,14 @@ bool KeyStore :: saveOfflineAction(const char* actionID, const unsigned long pay
     pendingPayment.multipair = 0;
     pendingPayment.alternateID = NULL;
   }
-  pendingPayment.value = 0.0;
+  if(value != NULL){
+    String* valueStr = new String(value);
+    pendingPayment.value = valueStr->toDouble();
+    delete valueStr;
+  }
+  else {
+    pendingPayment.value = 0.0;
+  }
   pendingPayment.timestamp = paymentTime;
   debugD("\nKeyStore: saveOfflineAction: Payment details added to pendingPayment variable for paymentTime: %lu",pendingPayment.timestamp);
 
@@ -995,12 +1006,18 @@ bool KeyStore :: saveOfflineAction(const char* actionID, const unsigned long pay
     isActionSaved = false;
     debugE("\nKeyStore: saveOfflineAction:: Saving pending payment to file - %s failed...",OFFLINE_ACTIONS_FILE);
   }
+
+  //Release memory for offline actions present in offlineActionsList
+  if(!offlineActionsList.empty())
+    clearOfflineActionsList();
+
   return isActionSaved;
 }
 
 bool KeyStore :: clearOfflineActions() {
-  //Release memory for offline payments present in offlineActionsList
-  clearOfflineActionsList();
+  //Release memory for offline actions present in offlineActionsList
+  if(!offlineActionsList.empty())
+    clearOfflineActionsList();
 
   //Remove Offline Actions File from SPIFFS
   if(SPIFFS.begin(true) && SPIFFS.remove(OFFLINE_ACTIONS_FILE)){
