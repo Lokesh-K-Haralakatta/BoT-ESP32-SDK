@@ -381,7 +381,6 @@ String* BoTService :: post(const char* endPoint, const char* payload){
       body->concat(botJWT->c_str());
       body->concat("\"}");
 
-      delete botJWT;
       debugD("\nBoTService :: post: body contents after encoding: %s", body->c_str());
 
       httpClient->addHeader("makerID", store->getMakerID());
@@ -390,13 +389,21 @@ String* BoTService :: post(const char* endPoint, const char* payload){
       httpClient->addHeader("Connection","keep-alive");
       httpClient->addHeader("Content-Length",String(body->length()));
 
+      //Set HTTP Call timeout as 2 mins
+      httpClient->setTimeout(2*60*1000);
+      debugD("\nBoTService :: post: HTTPClient timesout set to 2 mins");
+
       int httpCode = httpClient->POST(body->c_str());
-      delete body;
+      debugD("\nBoTService :: post: HTTPCode from post call: %d",httpCode);
 
       String* payload = new String(httpClient->getString());
+      debugD("\nBoTService :: post: payload returned from post call: %s", payload->c_str());
+
       httpClient->end();
 
       //Deallocate memory allocated for objects
+      delete body;
+      delete botJWT;
       freeObjects();
 
       if(httpCode >= 0) {
