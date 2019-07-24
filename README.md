@@ -2,7 +2,17 @@
 
 This read me contains the detailed steps to work with **FINN - Banking of Things Service** on ESP-32 Dev Kit Module using BoT-ESP32-SDK library.
 
-### Getting Started instructions for ESP-32 Dev Kit Module
+## Supported Features
+   | Sl. No        | SDK Feature                                | Status    | Remarks |
+   | :-----------: |:-------------------------------------------| :---------| :-------|
+   |        1      | Pairing through Bluetooth Low Energy (BLE) | Supported | Supported in both modes - Webserver as well as in SDK Module |
+   |        2      | Pairing through QR Code                    | Supported | Supported only in Webserver mode through end point /qrcode to get generated QRCode for device to be paired |
+   |        3      | Secured HTTP with BoT Service              | Supported | SDK has got an option of enable / disable https at runtime
+   |        4      | Remote Debug                               | Supported | Enable to access the ESP-32 board through telnet client. This can be disabled for production |
+   |        5      | Logging                                    | Supported | There are 4 different log levels supported for SDK - BoT_INFO, BoT_WARN, BoT_DEBUG and BoT_ERROR |
+   |        6      | Offline Actions                            | Supported | Enables saving the actions when there is no internet connectivity available and processing with following request |
+   
+## Getting Started instructions for ESP-32 Dev Kit Module
 - **Setting up of ESP-32 Dev Module**
   - Hardware Requirements
     - [ESP-32 Devkit Board](https://www.espressif.com/en/products/hardware/esp32-devkitc/overview)
