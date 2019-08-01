@@ -22,7 +22,7 @@ class ActionService {
   public:
     ActionService();
     ~ActionService();
-    String* triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
+    String* triggerAction(const char* actionID, const char* value = NULL);
     String* getActions();
   private:
     KeyStore *store;
@@ -30,11 +30,19 @@ class ActionService {
     WiFiUDP ntpUDP;
     NTPClient *timeClient;
     unsigned long presentActionTriggerTimeInSeconds;
+    unsigned long previousActionTriggerTimeInSeconds;
     std::vector <struct Action> actionsList;
+    std::vector <struct Action> localActionsList;
+    std::vector <struct OfflineActionMetadata> offlineActionsList;
     bool isValidAction(const char* actionID);
     bool isValidActionFrequency(const struct Action*);
     void updateActionsLastTriggeredTime();
     bool updateTriggeredTimeForAction(const char* actionID);
     void clearActionsList();
+    bool isInternetConnectivityAvailable();
+    int countLeftOverOfflineActions();
+    void triggerOfflineActions();
+    String* triggerOnlineAction(const char* actionID,const char* value = NULL);
+    String* postAction(const char* actionID, const char* qID, const double value);
 };
 #endif

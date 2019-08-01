@@ -17,8 +17,10 @@ SDKWrapper :: SDKWrapper(){
 bool SDKWrapper :: isDevicePaired(){
   //Check pairing status for the device
   String* psResponse = pairService->getPairingStatus();
-
-  if((psResponse->indexOf("true")) != -1)
+  debugI("\nSDKWrapper :: isDevicePaired: Pairing Status Response: %s",psResponse->c_str());
+  debugI("\nSDKWrapper :: isDevicePaired: Device State -> %s",store->getDeviceStatusMsg());
+  
+  if((psResponse->indexOf("true") != -1) || store->getDeviceState() >= DEVICE_PAIRED )
     return true;
   else
     return false;
@@ -120,8 +122,9 @@ bool SDKWrapper :: triggerAction(const char* actionID, const char* value, const 
       return false;
     }
     else {
-      if((store->getDeviceState() == DEVICE_MULTIPAIR) && altID == NULL){
-        if((altID = store->getAlternateDeviceID()) == NULL){
+      if(store->isDeviceMultipair()){
+        altID = (altID == NULL)?store->getAlternateDeviceID():altID;
+        if(altID == NULL){
           debugW("\nSDKWrapper :: triggerAction : Missing alternateID");
           return false;
         }
@@ -130,19 +133,25 @@ bool SDKWrapper :: triggerAction(const char* actionID, const char* value, const 
         }
       }
 
-      String* response = actionService->triggerAction(actionID,value,altID);
-      debugD("\nSDKWrapper :: triggerAction: Response: %s", response->c_str());
-      if(response->indexOf("OK") != -1) {
-        debugI("\nSDKWrapper :: triggerAction: Action triggered successful");
-        return true;
-      }
-      else if(response->indexOf("Action not found") != -1){
-        debugW("\nSDKWrapper :: triggerAction: Action not triggered as its not found");
-        return false;
+      String* response = actionService->triggerAction(actionID,value);
+      if(response != NULL){
+        debugD("\nSDKWrapper :: triggerAction: Response: %s", response->c_str());
+        if(response->indexOf("OK") != -1) {
+          debugI("\nSDKWrapper :: triggerAction: Action triggered successful");
+          return true;
+        }
+        else if(response->indexOf("Action not found") != -1){
+          debugW("\nSDKWrapper :: triggerAction: Action not triggered as its not found");
+          return false;
+        }
+        else {
+          debugE("\nSDKWrapper :: triggerAction: Action triggerring failed, check parameters and try again");
+          return false;
+        }
       }
       else {
-        debugE("\nSDKWrapper :: triggerAction: Action triggerring failed, check parameters and try again");
-        return false;
+        debugW("\nSDKWrapper :: triggerAction: Action not triggered as there is no Internet Available but saved as Offline Action");
+        return true;
       }
     }
   }

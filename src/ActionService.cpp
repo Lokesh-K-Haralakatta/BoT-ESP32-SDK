@@ -5,19 +5,176 @@
 */
 
 #include "ActionService.h"
+#define HOST "www.google.com"
 
 ActionService :: ActionService(){
   store = KeyStore :: getKeyStoreInstance();
   bot = BoTService :: getBoTServiceInstance();
   timeClient = new NTPClient(ntpUDP);
+  presentActionTriggerTimeInSeconds = 0l;
+  previousActionTriggerTimeInSeconds = 0l;
 }
 
 ActionService :: ~ActionService(){
   delete timeClient;
 }
 
-String* ActionService :: triggerAction(const char* actionID, const char* value, const char* altID){
-  String* response = NULL;
+bool ActionService :: isInternetConnectivityAvailable(){
+  return Ping.ping(HOST);
+}
+
+int ActionService :: countLeftOverOfflineActions(){
+  int leftOverActions = 0;
+  for (std::vector<struct OfflineActionMetadata>::iterator i = offlineActionsList.begin() ; i != offlineActionsList.end(); ++i){
+    if(i->offline == 1)
+      leftOverActions++;
+  }
+  return leftOverActions;
+}
+
+String* ActionService :: postAction(const char* actionID, const char* qID, const double value){
+  //Action triggering logic goes here
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& doc = jsonBuffer.createObject();
+  JsonObject& botData = doc.createNestedObject("bot");
+  botData["deviceID"] = store->getDeviceID();
+  botData["actionID"] = actionID;
+  botData["queueID"] = qID;
+
+  if (store->isDeviceMultipair()) {
+    botData["alternativeID"] = store->getAlternateDeviceID();
+  }
+
+  if (value > 0.0) {
+    botData["value"] = value;
+  }
+
+  char payload[200];
+  doc.printTo(payload);
+  jsonBuffer.clear();
+  debugI("\nActionService : postAction: Minified JSON payload to trigger action: %s", payload);
+
+  return(bot->post(ACTIONS_END_POINT,payload));
+}
+
+void ActionService :: triggerOfflineActions(){
+  debugI("\nActionService: triggerOfflineActions: Processing pending offline actions");
+
+  offlineActionsList = store->retrieveOfflineActions();
+  int offlineActionsCount = offlineActionsList.size();
+
+  if(offlineActionsCount > 0){
+    debugI("\nActionService: triggerOfflineActions: Number of offline actions in list: %d",offlineActionsCount);
+    //For each of offline action in offlineActionsList,
+    //check internet connectivity and trigger pending actions
+    for (std::vector<struct OfflineActionMetadata>::iterator i = offlineActionsList.begin() ; i != offlineActionsList.end(); ++i){
+      if(isInternetConnectivityAvailable()){
+        if(i->offline == 1){
+          debugD("\nActionService: triggerOfflineActions: Triggerring pending action with actionID - %s and timestamp - %lu", i->actionID,i->timestamp);
+
+          //Trigger Offline Action
+          String* offlineResponse = postAction(i->actionID,i->queueID,i->value);
+
+          //Post successful,
+          //Turnoff offline flag for the action
+          if(offlineResponse != NULL && offlineResponse->indexOf("OK") != -1){
+            i->offline = 0;
+            debugI("\nActionService: triggerOfflineActions: Offline Action with actionID: %s for timestamp: %lu trigger successful",i->actionID,i->timestamp);
+          }
+          else {
+            debugE("\nActionService: triggerOfflineActions: Offline Action - %s failed with message - %s", i->actionID,offlineResponse->c_str());
+          }
+        }
+      }
+      else {
+        //No Internet connectivity, stop processing offline actions
+        debugW("\nActionService: triggerOfflineActions: No Internet Connectivity available, stopping remaining offline actions to be triggered");
+        break;
+      }
+      debugI("\nActionService: triggerOfflineActions: Still to process %d offline actions",countLeftOverOfflineActions());
+     }
+
+    //There are chances of losing internet connectivity / failure of triggering any action
+    //Check whether there are any left over pending offline actions in offlineActionsList
+    int leftOverOfflineActions = countLeftOverOfflineActions();
+    debugI("\nActionService: triggerOfflineActions: Number of left over offline actions in offlineActionsList: %d", leftOverOfflineActions);
+    //Write back such left over offline actions into storage
+    if(leftOverOfflineActions > 0){
+      debugI("\nActionService: triggerOfflineActions: %d offline actions not cleared, hence saving back to file - %s", leftOverOfflineActions,OFFLINE_ACTIONS_FILE);
+      if(store->saveOfflineActions(offlineActionsList)){
+        debugI("\nActionService: triggerOfflineActions: Left over %d Offline Actions successfully saved to %s file",leftOverOfflineActions, OFFLINE_ACTIONS_FILE);
+      }
+      else {
+        debugE("\nActionService: triggerOfflineActions: Saving %d left over offline actions to %s failed...",leftOverOfflineActions,OFFLINE_ACTIONS_FILE);
+      }
+    }
+    else {
+      debugI("\nActionService: triggerOfflineActions: No left over Offline Actions, clearing off saved offline actions from SPIFFS");
+      if(store->clearOfflineActions()){
+        debugI("\nActionService: triggerOfflineActions: Cleared Offline Actions");
+      }
+      else {
+        debugE("\nActionService: triggerOfflineActions: Failed to clear Offline Actions");
+      }
+    }
+  }
+  else {
+    debugD("\nActionService: triggerOfflineActions: No Offline Actions to be processed");
+  }
+}
+
+String* ActionService :: triggerOnlineAction(const char* actionID,const char* value){
+  String* postResponse = NULL;
+  debugI("\nActionService: triggerOnlineAction: Preparing to trigger action with actionID: %s",actionID);
+
+  //Check for availability of internet connectivity
+  if(isInternetConnectivityAvailable()){
+    //Update the latest time from network
+    while(!timeClient->update()) {
+      timeClient->forceUpdate();
+    }
+
+    previousActionTriggerTimeInSeconds = timeClient->getEpochTime();
+
+    debugD("\nActionService: triggerOnlineAction: Internet connectivity available, triggering the action with actionID: %s",actionID);
+
+    //Trigger Action
+    postResponse = postAction(actionID,store->generateUuid4(),String(value).toDouble());
+
+    //Check trigger action result
+    if(postResponse->indexOf("OK") != -1){
+      debugI("\nActionService: triggerOnlineAction: Action with actionID: %s for timestamp: %lu trigger successful",actionID,previousActionTriggerTimeInSeconds);
+      return postResponse;
+    }
+    else {
+      debugE("\nActionService: triggerOnlineAction: Action with actionID: %s failed with response: %s",actionID,postResponse->c_str());
+      //Trigger action failed, add as an offline action if there is no internet
+      if(!isInternetConnectivityAvailable()) {
+        debugW("\nActionService: triggerOnlineAction: adding failed action: %s to offline actions since there is no internet available",actionID);
+        if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
+          return NULL;
+          debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+        }
+        else {
+          debugE("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu failed to be saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+          return postResponse;
+        }
+      }
+    }
+  }
+  else {
+    debugI("\nActionService: triggerOnlineAction: Internet connectivity not avalable, saving the action onto storage");
+    if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
+      debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+    }
+    else {
+      debugE("\nActionService: triggerOnlineAction: Action - %s failed to be saved as Offline Action",actionID);
+    }
+    return NULL;
+  }
+}
+
+String* ActionService :: triggerAction(const char* actionID, const char* value){
   debugD("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
   debugD("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
@@ -27,6 +184,19 @@ String* ActionService :: triggerAction(const char* actionID, const char* value, 
     store->initializeEEPROM();
     store->loadJSONConfiguration();
 
+    //Process offline actions if any
+    if(isInternetConnectivityAvailable() && store->offlineActionsExist()){
+      debugI("\nActionService :: triggerAction: Internet Connectivity Available and There are some offline actions need to be processed");
+      triggerOfflineActions();
+    }
+    else {
+      debugW("\nActionService :: triggerAction: No Internet Connectivity or There are no offline actions to handle");
+    }
+
+    //Trigger the provided action
+    String* postResponse = triggerOnlineAction(actionID,value);
+
+   /*
     const char* deviceID = store->getDeviceID();
     debugD("\nActionService :: triggerAction: Provided deviceID : %s", deviceID);
     const char* queueID = store->generateUuid4();
@@ -53,10 +223,10 @@ String* ActionService :: triggerAction(const char* actionID, const char* value, 
     jsonBuffer.clear();
 
     //Trigger Action
-    response = bot->post(ACTIONS_END_POINT,payload);
-
+    postResponse = bot->post(ACTIONS_END_POINT,payload);
+  */
     //Update the trigger time for the actionID if its success
-    if(response->indexOf("OK") != -1){
+    if((postResponse != NULL) && (postResponse->indexOf("OK") != -1)){
       debugI("\nActionService :: triggerAction: Action %s successful ",actionID);
       /* if(updateTriggeredTimeForAction(actionID)){
         debugD("\nActionService :: triggerAction: Action trigger time - %lu updated to %s",presentActionTriggerTimeInSeconds,actionID);
@@ -65,8 +235,11 @@ String* ActionService :: triggerAction(const char* actionID, const char* value, 
         debugW("\nActionService :: triggerAction: Action trigger time - %lu failed to update to %s",presentActionTriggerTimeInSeconds,actionID);
       } */
     }
+    else if(postResponse == NULL){
+      debugW("\nActionService :: triggerAction: No Internet Connectivity, payment saved as offline action to storage");
+    }
     else {
-      debugE("\nActionService :: triggerAction: Failed with response - %s",response->c_str());
+      debugE("\nActionService :: triggerAction: Failed with response - %s",postResponse->c_str());
     }
 
     //Save the actions present in actionsList to ACTIONS_FILE for reference
@@ -83,7 +256,7 @@ String* ActionService :: triggerAction(const char* actionID, const char* value, 
     response = "{\"code\": \"404\", \"message\": \"Invalid Action\"}";
   } */
 
-  return response;
+  return postResponse;
 }
 
 bool ActionService :: updateTriggeredTimeForAction(const char* actionID){
@@ -175,20 +348,16 @@ String* ActionService :: getActions(){
       debugE("\nActionService :: getActions: JSON Actions array parsed failed!");
       debugW("\nActionService :: getActions: use locally stored actions, if available");
       jsonBuffer.clear();
-      if(!actionsList.empty()){
-        clearActionsList();
-      }
-      actionsList = store->retrieveActions();
+      localActionsList = store->retrieveActions();
+      debugW("\nActionService :: getActions: Local actions count: %d", localActionsList.size());
       return NULL;
     }
   }
   else {
     debugE("\nActionService :: getActions: Could not retrieve actions from server");
     debugW("\nActionService :: getActions: use locally stored actions, if available");
-    if(!actionsList.empty()){
-      clearActionsList();
-    }
-    actionsList = store->retrieveActions();
+    localActionsList = store->retrieveActions();
+    debugW("\nActionService :: getActions: Local actions count: %d", localActionsList.size());
     return NULL;
   }
 }
