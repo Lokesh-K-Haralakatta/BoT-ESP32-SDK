@@ -389,10 +389,6 @@ String* BoTService :: post(const char* endPoint, const char* payload){
       httpClient->addHeader("Connection","keep-alive");
       httpClient->addHeader("Content-Length",String(body->length()));
 
-      //Set HTTP Call timeout as 2 mins
-      httpClient->setTimeout(2*60*1000);
-      debugD("\nBoTService :: post: HTTPClient timesout set to 2 mins");
-
       int httpCode = httpClient->POST(body->c_str());
       debugD("\nBoTService :: post: HTTPCode from post call: %d",httpCode);
 

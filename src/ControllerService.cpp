@@ -6,15 +6,28 @@
 */
 
 #include "ControllerService.h"
+TaskHandle_t pTask;
+void actionTriggerTask( void * );
+
+ActionService* ControllerService :: actionService;
 
 ControllerService :: ControllerService(){
   store = KeyStore :: getKeyStoreInstance();
 }
 
+ActionService* ControllerService :: getActionServiceObject(){
+  if(actionService == NULL){
+      actionService = new ActionService();
+      debugI("\nControllerService :: getActionServiceObject: Instantiated ActionService Instance");
+  }
+
+  return actionService;
+}
+
 void ControllerService :: getActions(AsyncWebServerRequest *request){
-  ActionService* actionService = new ActionService();
+  ActionService* actionService = ControllerService :: getActionServiceObject();
   String* response = actionService->getActions();
-  delete actionService;
+  //delete actionService;
 
   if(response == NULL){
     DynamicJsonBuffer jsonBuffer;
@@ -122,32 +135,56 @@ void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVari
       const char* actionID = (jsonObj.containsKey("actionID"))?jsonObj.get<const char*>("actionID"):NULL;
       const char* value = (jsonObj.containsKey("value"))?jsonObj.get<const char*>("value"):NULL;
 
-      ActionService* actionService = new ActionService();
-      String* response = actionService->triggerAction(actionID,value);
-      delete actionService;
-      debugD("\nControllerService :: triggerAction: Response: %s", response->c_str());
+      doc["message"] = "Submitting request to trigger action";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      request->send(200, "application/json", body);
 
-      if(response->indexOf("OK") != -1) {
-        doc["message"] = "Action triggered successful";
-        doc.printTo(body);
-        jsonBuffer.clear();
-        debugD("\nControllerService :: triggerAction: %s", body);
-        request->send(200, "application/json", body);
-      }
-      else if(response->indexOf("Action not found") != -1){
-        doc["message"] = "Action not triggered as its not found";
-        doc.printTo(body);
-        jsonBuffer.clear();
-        debugE("\nControllerService :: triggerAction: %s", body);
-        request->send(404, "application/json", body);
-      }
-      else {
-        doc["message"] = "Action triggerring failed, check parameters and try again";
-        doc.printTo(body);
-        jsonBuffer.clear();
-        debugE("\nControllerService :: triggerAction: %s", body);
-        request->send(503, "application/json", body);
-      }
+      debugI("\nControllerService :: triggerAction: Calling actionTriggerTask...");
+      debugI("Main Task running on core: %d",xPortGetCoreID());
+      xTaskCreatePinnedToCore(
+                      actionTriggerTask,   /* Task function. */
+                      "Action Task",     /* name of task. */
+                      10000,       /* Stack size of task */
+                      (void*)actionID,        /* parameter of the task */
+                      1,           /* priority of the task */
+                      &pTask,      /* Task handle to keep track of created task */
+                      0);          /* pin task to core 1 */
+      delay(500);
+
     }
   }
+}
+
+void actionTriggerTask( void * pvParameters ){
+  const char* actionID = (char*)pvParameters;
+  debugI("actionTriggerTask running on core: %d",xPortGetCoreID());
+  debugI("actionTriggerTask: actionID: %s",actionID);
+
+  ActionService* actionService = ControllerService :: getActionServiceObject();
+  String* response = actionService->triggerAction(actionID);
+
+  debugD("\nactionTriggerTask:: Response: %s", response->c_str());
+
+  if(response == NULL){
+    debugI("\nactionTriggerTask:: Action saved as Offline Action");
+  }
+  else if(response->indexOf("OK") != -1){
+    debugI("\nactionTriggerTask:: Action triggered successful");
+  }
+  else if(response->indexOf("Action not found") != -1)
+    debugE("\nactionTriggerTask:: Action not triggered as its not found");
+  else
+    debugE("\nactionTriggerTask:: Action triggerring failed, check parameters and try again");
+
+  //Dump actions triggered stats
+  int offActionsTriggerCount = actionService->getOfflineActionsTriggerCount();
+  int actionsTriggerCount = actionService->getActionsTriggerCount();
+  debugI("\nactionTriggerTask:: Number of offline actions left over: %d",actionService->getOfflineActionsCount());
+  debugI("\nactionTriggerTask:: Number of offline actions triggered: %d",offActionsTriggerCount);
+  debugI("\nactionTriggerTask:: Number of actions triggered: %d",actionsTriggerCount);
+  debugI("\nactionTriggerTask:: Number of total actions triggered since from board start: %d",actionsTriggerCount+offActionsTriggerCount);
+
+  //Delete the task without returning
+  vTaskDelete(pTask);
 }
