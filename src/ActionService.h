@@ -24,6 +24,9 @@ class ActionService {
     ~ActionService();
     String* triggerAction(const char* actionID, const char* value = NULL);
     String* getActions();
+    int getOfflineActionsCount();
+    int getOfflineActionsTriggerCount();
+    int getActionsTriggerCount();
   private:
     KeyStore *store;
     BoTService *bot;
@@ -41,6 +44,8 @@ class ActionService {
     void clearActionsList();
     bool isInternetConnectivityAvailable();
     int countLeftOverOfflineActions();
+    int totalActionsTrigger;
+    int totalOfflineActionsTrigger;
     void triggerOfflineActions();
     String* triggerOnlineAction(const char* actionID,const char* value = NULL);
     String* postAction(const char* actionID, const char* qID, const double value);

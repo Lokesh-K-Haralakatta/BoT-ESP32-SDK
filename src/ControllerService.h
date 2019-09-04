@@ -15,11 +15,13 @@
 class ControllerService {
   public:
           ControllerService();
+          static ActionService* getActionServiceObject();
           void getActions(AsyncWebServerRequest *request);
           void pairDevice(AsyncWebServerRequest *request);
           void getQRCode(AsyncWebServerRequest *request);
           void triggerAction(AsyncWebServerRequest *request, JsonVariant &json);
   private:
     KeyStore* store;
+    static ActionService* actionService;
 };
 #endif

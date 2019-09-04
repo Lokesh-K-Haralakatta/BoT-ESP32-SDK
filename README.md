@@ -28,6 +28,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download Zip [ESPAsyncWebServer Library](https://github.com/me-no-dev/ESPAsyncWebServer) and include in Arduino IDE
   - Download Zip [ArduinoJson Version 5.13.0](https://github.com/bblanchon/ArduinoJson/releases/tag/v5.13.0) and include in Arduino IDE
   - Download Zip [NTP Client](https://github.com/taranais/NTPClient/releases) and include in Arduino IDE
+  - Download Zip [ESP32Ping](https://github.com/marian-craciunescu/ESP32Ping) and include in Arduino IDE
   - Install [RemoteDebug](https://www.arduinolibraries.info/libraries/remote-debug) either through Arduino IDE Libraries or by downloading latest ZIP and including in Arduino IDE
 
 - **Setting up of BoT-ESP32-SDK Library on Arduino IDE**
@@ -220,8 +221,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
            if(server->isServerAvailable()){
              //Retrieve defined actions for given makerID
              httpClient->begin((server->getBoardIP()).toString(),3001,"/actions");
-             //Set HTTP Call timeout as 2 mins
-             httpClient->setTimeout(2*60*1000);
+             //Set HTTP Call timeout as 1 min
+             httpClient->setTimeout(1*60*1000);
 
              int httpCode = httpClient->GET();
              String payload = httpClient->getString();
@@ -245,8 +246,8 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         .......
         if(server->isServerAvailable()){
           httpClient->begin((server->getBoardIP()).toString(),port,"/pairing");
-          //Set HTTP Call timeout as 2 mins
-          httpClient->setTimeout(2*60*1000);
+          //Set HTTP Call timeout as 1 min
+          httpClient->setTimeout(1*60*1000);
 
           httpCode = httpClient->GET();
           payload = httpClient->getString();
@@ -298,10 +299,10 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
             httpClient->addHeader("Content-Type", "application/json");
             httpClient->addHeader("Content-Length",String(body.length()));
 
-            //Set HTTP Call timeout as 2 mins
-            httpClient->setTimeout(2*60*1000);
+            //Set HTTP Call timeout as 1 min
+            httpClient->setTimeout(1*60*1000);
 
-            //Call HTTP Post to trigger action
+            //Call HTTP Post to submit action
             int httpCode = httpClient->POST(body);
 
             //Get response body contents
@@ -309,11 +310,10 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
 
             //Check for successful triggerring of given action
             if(httpCode == 200){
-               triggerCount++;
-               debugI("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
+               debugI("\nsdkSample: Action submitted to server...");
             }
             else {
-               debugE("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+               debugE("\nsdkSample: Action submission failed with httpCode - %d and message: %s", httpCode, payload.c_str());
             }
 
             //End http

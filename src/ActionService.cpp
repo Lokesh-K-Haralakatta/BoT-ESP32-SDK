@@ -13,6 +13,8 @@ ActionService :: ActionService(){
   timeClient = new NTPClient(ntpUDP);
   presentActionTriggerTimeInSeconds = 0l;
   previousActionTriggerTimeInSeconds = 0l;
+  totalActionsTrigger = 0;
+  totalOfflineActionsTrigger = 0;
 }
 
 ActionService :: ~ActionService(){
@@ -57,11 +59,23 @@ String* ActionService :: postAction(const char* actionID, const char* qID, const
   return(bot->post(ACTIONS_END_POINT,payload));
 }
 
+int ActionService :: getOfflineActionsCount(){
+  offlineActionsList = store->retrieveOfflineActions();
+  return offlineActionsList.size();
+}
+
+int ActionService :: getOfflineActionsTriggerCount(){
+  return totalOfflineActionsTrigger;
+}
+
+int ActionService :: getActionsTriggerCount(){
+  return totalActionsTrigger;
+}
+
 void ActionService :: triggerOfflineActions(){
   debugI("\nActionService: triggerOfflineActions: Processing pending offline actions");
 
-  offlineActionsList = store->retrieveOfflineActions();
-  int offlineActionsCount = offlineActionsList.size();
+  int offlineActionsCount = getOfflineActionsCount();
 
   if(offlineActionsCount > 0){
     debugI("\nActionService: triggerOfflineActions: Number of offline actions in list: %d",offlineActionsCount);
@@ -79,6 +93,7 @@ void ActionService :: triggerOfflineActions(){
           //Turnoff offline flag for the action
           if(offlineResponse != NULL && offlineResponse->indexOf("OK") != -1){
             i->offline = 0;
+            totalOfflineActionsTrigger++;
             debugI("\nActionService: triggerOfflineActions: Offline Action with actionID: %s for timestamp: %lu trigger successful",i->actionID,i->timestamp);
           }
           else {
@@ -143,6 +158,7 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
 
     //Check trigger action result
     if(postResponse->indexOf("OK") != -1){
+      totalActionsTrigger++;
       debugI("\nActionService: triggerOnlineAction: Action with actionID: %s for timestamp: %lu trigger successful",actionID,previousActionTriggerTimeInSeconds);
       return postResponse;
     }
@@ -152,8 +168,8 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
       if(!isInternetConnectivityAvailable()) {
         debugW("\nActionService: triggerOnlineAction: adding failed action: %s to offline actions since there is no internet available",actionID);
         if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
-          return NULL;
           debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
+          return NULL;
         }
         else {
           debugE("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu failed to be saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
@@ -163,7 +179,7 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
     }
   }
   else {
-    debugI("\nActionService: triggerOnlineAction: Internet connectivity not avalable, saving the action onto storage");
+    debugI("\nActionService: triggerOnlineAction: Internet connectivity not available, saving the action onto storage");
     if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
       debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
     }
@@ -174,7 +190,15 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
   }
 }
 
-String* ActionService :: triggerAction(const char* actionID, const char* value){
+String* ActionService :: triggerAction(const char* aID, const char* aVal){
+  char* actionID = new char[strlen(aID)+1];
+  strcpy(actionID,aID);
+  char* value = NULL;
+  if(aVal != NULL) {
+    value = new char[strlen(aVal)+1];
+    strcpy(value,aVal);
+  }
+
   debugD("\nActionService :: triggerAction: Initializing NTPClient to capture action trigger time");
   timeClient->begin();
   debugD("\nActionService :: triggerAction: Checking actionID - %s valid or not", actionID);
@@ -255,6 +279,10 @@ String* ActionService :: triggerAction(const char* actionID, const char* value){
     debugE("\nActionService :: triggerAction: %s is invalid actionID", actionID);
     response = "{\"code\": \"404\", \"message\": \"Invalid Action\"}";
   } */
+
+  //Delete memory for action Data
+  delete actionID;
+  if(value != NULL) delete value;
 
   return postResponse;
 }

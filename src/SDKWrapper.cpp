@@ -19,7 +19,7 @@ bool SDKWrapper :: isDevicePaired(){
   String* psResponse = pairService->getPairingStatus();
   debugI("\nSDKWrapper :: isDevicePaired: Pairing Status Response: %s",psResponse->c_str());
   debugI("\nSDKWrapper :: isDevicePaired: Device State -> %s",store->getDeviceStatusMsg());
-  
+
   if((psResponse->indexOf("true") != -1) || store->getDeviceState() >= DEVICE_PAIRED )
     return true;
   else
@@ -133,26 +133,37 @@ bool SDKWrapper :: triggerAction(const char* actionID, const char* value, const 
         }
       }
 
+      bool triggerResult = false;
       String* response = actionService->triggerAction(actionID,value);
       if(response != NULL){
         debugD("\nSDKWrapper :: triggerAction: Response: %s", response->c_str());
         if(response->indexOf("OK") != -1) {
           debugI("\nSDKWrapper :: triggerAction: Action triggered successful");
-          return true;
+          triggerResult = true;
         }
         else if(response->indexOf("Action not found") != -1){
           debugW("\nSDKWrapper :: triggerAction: Action not triggered as its not found");
-          return false;
+          triggerResult = false;
         }
         else {
           debugE("\nSDKWrapper :: triggerAction: Action triggerring failed, check parameters and try again");
-          return false;
+          triggerResult = false;
         }
       }
       else {
         debugW("\nSDKWrapper :: triggerAction: Action not triggered as there is no Internet Available but saved as Offline Action");
-        return true;
+        triggerResult = true;
       }
+
+      //Dump actions triggered stats
+      int offActionsTriggerCount = actionService->getOfflineActionsTriggerCount();
+      int actionsTriggerCount = actionService->getActionsTriggerCount();
+      debugI("\nSDKWrapper :: triggerAction: Number of offline actions left over: %d",actionService->getOfflineActionsCount());
+      debugI("\nSDKWrapper :: triggerAction: Number of offline actions triggered: %d",offActionsTriggerCount);
+      debugI("\nSDKWrapper :: triggerAction: Number of actions triggered: %d",actionsTriggerCount);
+      debugI("\nSDKWrapper :: triggerAction: Number of total actions triggered since from board start: %d",actionsTriggerCount+offActionsTriggerCount);
+
+      return triggerResult;
     }
   }
 }

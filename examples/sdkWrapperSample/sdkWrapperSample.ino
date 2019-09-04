@@ -51,9 +51,6 @@
   //Variable to hold given deviceID value
   const char* deviceID = NULL;
 
-  //Variable to keep track of action triggered
-  int triggerCount = 0;
-
   void setup()
   {
     //Get KeyStore Instance
@@ -134,8 +131,7 @@
        //Trigger the action added with the paired device
        debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
       if(sdk->triggerAction(actionIDMinutely.c_str())){
-        triggerCount++;
-        debugI("\nsdkWrapperSample :: Triggering action successful for %d times",triggerCount);
+        debugI("\nsdkWrapperSample :: Triggering action successful...");
       }
       else {
         debugE("\nsdkWrapperSample :: Triggering action failed!");

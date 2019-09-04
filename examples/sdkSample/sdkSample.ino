@@ -73,8 +73,8 @@ const int port = 3001;
 //Variable to hold given deviceID value
 const char* deviceID = NULL;
 
-//Variable to keep track of action triggered
-int triggerCount = 0;
+//Variable to keep track of actions submitted
+int submitCount = 0;
 
 void setup()
 {
@@ -123,12 +123,12 @@ void loop()
   //Check for Webserver availability to trigger the action
   if(server->isServerAvailable()){
     int dState = store->getDeviceState();
-    debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
+    debugI("\nsdkSample :: Device State -> %s",store->getDeviceStatusMsg());
     //Check for the device state, should be active to trigger the action
     if(dState >= DEVICE_ACTIVE){
       //Trying to trigger an action with frequency as "minutely"
       debugI("\nsdkSample: Device State is ACTIVE and triggering the minutely action - %s", actionIDMinutely.c_str());
-      triggerAnAction(actionIDMinutely.c_str());
+      submitAnAction(actionIDMinutely.c_str());
 
       /*
       //Trying to trigger an action with frequency as "hourly"
@@ -183,8 +183,8 @@ void loop()
       httpClient = new HTTPClient();
       httpClient->begin((server->getBoardIP()).toString(),port,"/pairing");
 
-      //Set HTTP Call timeout as 2 mins
-      httpClient->setTimeout(2*60*1000);
+      //Set HTTP Call timeout as 1 min
+      httpClient->setTimeout(1*60*1000);
 
       //Call GET on httpClient to pair the device
       int httpCode = httpClient->GET();
@@ -215,8 +215,8 @@ void loop()
       Debug.handle();
     #endif
 
-    //Introduce delay of 1 min
-    delay(1*60*1000);
+    //Introduce delay of 2 mins
+    delay(2*60*1000);
 
   }
   else {
@@ -240,8 +240,8 @@ void loop()
   }
 }
 
-void triggerAnAction(const char* actionID){
-  //Instantiate HTTP Client to send HTTP Request to trigger the action
+void submitAnAction(const char* actionID){
+  //Instantiate HTTP Client to send HTTP Request to submit the action
   httpClient = new HTTPClient();
   httpClient->begin((server->getBoardIP()).toString(),port,"/actions");
 
@@ -258,22 +258,22 @@ void triggerAnAction(const char* actionID){
   httpClient->addHeader("Content-Type", "application/json");
   httpClient->addHeader("Content-Length",String(body.length()));
 
-  //Set HTTP Call timeout as 2 mins
-  httpClient->setTimeout(2*60*1000);
+  //Set HTTP Call timeout as 1 min
+  httpClient->setTimeout(1*60*1000);
 
-  //Call HTTP Post to trigger action
+  //Call HTTP Post to submit action
   int httpCode = httpClient->POST(body);
 
   //Get response body contents
   String payload = httpClient->getString();
 
-  //Check for successful triggerring of given action
+  //Check for successful submitting of given action to be triggered
   if(httpCode == 200){
-    triggerCount++;
-    debugI("\nsdkSample: Action triggered, actionTriggerCount = %d", triggerCount);
+    submitCount++;
+    debugI("\nsdkSample: Action Submitted, actionSubmitCount = %d", submitCount);
   }
   else {
-    debugE("\nsdkSample: Action triggerring failed with httpCode - %d and message: %s", httpCode, payload.c_str());
+    debugE("\nsdkSample: Action submission failed with httpCode - %d and message: %s", httpCode, payload.c_str());
   }
 
   //End http
