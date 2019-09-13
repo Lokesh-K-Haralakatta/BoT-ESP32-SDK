@@ -361,8 +361,7 @@ bool KeyStore :: isCACertLoaded(){
 }
 
 bool KeyStore :: isDeviceMultipair(){
-  if(multipair != NULL && multipair->equalsIgnoreCase("true") &&
-                                    getDeviceState() == DEVICE_MULTIPAIR)
+  if(multipair != NULL && multipair->equalsIgnoreCase("true"))
     return true;
   else
     return false;
