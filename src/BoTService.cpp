@@ -256,16 +256,20 @@ String* BoTService :: get(const char* endPoint){
           }
         }
         else {
-          debugE("\nBoTService :: get: HTTP GET with endpoint %s failed with status code: %d", endPoint,httpCode);
-          botResponse = new String("HTTP GET failed with error message: ");
-          botResponse->concat(httpClient->errorToString(httpCode));
+          char* errMsg = new char[100];
+          sprintf(errMsg,"HTTP GET with endpoint %s failed with status code: %d",endPoint,httpCode);
+          botResponse = new String(errMsg);
+          debugE("\nBoTService :: get: %s", botResponse->c_str());
+          delete errMsg;
           return botResponse;
         }
       }
       else {
-        debugE("\nBoTService :: get: HTTP GET with endPoint %s failed with status code: %d", endPoint,httpCode);
-        botResponse = new String(httpClient->errorToString(httpCode));
-        return botResponse;
+        char* errMsg = new char[100];
+        sprintf(errMsg,"HTTP GET with endpoint %s failed with status code: %d",endPoint,httpCode);
+        botResponse = new String(errMsg);
+        debugE("\nBoTService :: get: %s", botResponse->c_str());
+        delete errMsg;return botResponse;
       }
     }
     else {
@@ -418,16 +422,19 @@ String* BoTService :: post(const char* endPoint, const char* payload){
           }
         }
         else {
-          debugE("\nBoTService :: post: HTTP POST with endpoint %s failed with status code %d", endPoint,httpCode);
-          botResponse = new String("HTTP POST failed with error message: ");
-          botResponse->concat(httpClient->errorToString(httpCode));
-          return botResponse;
+          char* errMsg = new char[100];
+          sprintf(errMsg,"HTTP POST with endpoint %s failed with status code: %d",endPoint,httpCode);
+          botResponse = new String(errMsg);
+          debugE("\nBoTService :: post: %s", botResponse->c_str());
+          delete errMsg;return botResponse;
         }
       }
       else {
-        debugE("\nBoTService :: post: HTTP POST with endPoint %s failed with status code %d", endPoint, httpCode);
-        botResponse = new String(httpClient->errorToString(httpCode));
-        return botResponse;
+        char* errMsg = new char[100];
+        sprintf(errMsg,"HTTP POST with endpoint %s failed with status code: %d",endPoint,httpCode);
+        botResponse = new String(errMsg);
+        debugE("\nBoTService :: post: %s", botResponse->c_str());
+        delete errMsg;return botResponse;
       }
     }
     else {

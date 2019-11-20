@@ -37,8 +37,8 @@
   #include <SDKWrapper.h>
 
   //Custom WiFi Credentials
-  #define WIFI_SSID "PJioWiFi"
-  #define WIFI_PASSWD "qwertyuiop"
+  #define WIFI_SSID "FINN"
+  #define WIFI_PASSWD "Id4S7719G99XG1R"
 
   //Declare service variables
   KeyStore *store = NULL;

@@ -143,7 +143,7 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
   debugI("\nActionService: triggerOnlineAction: Preparing to trigger action with actionID: %s",actionID);
 
   //Check for availability of internet connectivity
-  if(isInternetConnectivityAvailable()){
+  //if(isInternetConnectivityAvailable()){
     //Update the latest time from network
     while(!timeClient->update()) {
       timeClient->forceUpdate();
@@ -165,7 +165,7 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
     else {
       debugE("\nActionService: triggerOnlineAction: Action with actionID: %s failed with response: %s",actionID,postResponse->c_str());
       //Trigger action failed, add as an offline action if there is no internet
-      if(!isInternetConnectivityAvailable()) {
+      /*if(!isInternetConnectivityAvailable()) {
         debugW("\nActionService: triggerOnlineAction: adding failed action: %s to offline actions since there is no internet available",actionID);
         if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
           debugI("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
@@ -175,9 +175,9 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
           debugE("\nActionService: triggerOnlineAction: Action - %s associated with timestamp - %lu failed to be saved as Offline Action",actionID,previousActionTriggerTimeInSeconds);
           return postResponse;
         }
-      }
+      }*/
     }
-  }
+  /*}
   else {
     debugI("\nActionService: triggerOnlineAction: Internet connectivity not available, saving the action onto storage");
     if(store->saveOfflineAction(actionID,value,previousActionTriggerTimeInSeconds)){
@@ -187,7 +187,8 @@ String* ActionService :: triggerOnlineAction(const char* actionID,const char* va
       debugE("\nActionService: triggerOnlineAction: Action - %s failed to be saved as Offline Action",actionID);
     }
     return NULL;
-  }
+  }*/
+  return postResponse;
 }
 
 String* ActionService :: triggerAction(const char* aID, const char* aVal){
@@ -209,13 +210,13 @@ String* ActionService :: triggerAction(const char* aID, const char* aVal){
     store->loadJSONConfiguration();
 
     //Process offline actions if any
-    if(isInternetConnectivityAvailable() && store->offlineActionsExist()){
+    /*if(isInternetConnectivityAvailable() && store->offlineActionsExist()){
       debugI("\nActionService :: triggerAction: Internet Connectivity Available and There are some offline actions need to be processed");
       triggerOfflineActions();
     }
     else {
       debugW("\nActionService :: triggerAction: No Internet Connectivity or There are no offline actions to handle");
-    }
+    }*/
 
     //Trigger the provided action
     String* postResponse = triggerOnlineAction(actionID,value);

@@ -6,9 +6,6 @@
 */
 
 #include "ControllerService.h"
-TaskHandle_t pTask;
-void actionTriggerTask( void * );
-
 ActionService* ControllerService :: actionService;
 
 ControllerService :: ControllerService(){
@@ -44,6 +41,101 @@ void ControllerService :: getActions(AsyncWebServerRequest *request){
     debugD("\nControllerService :: getActions: %s", responseString);
     request->send(200, "application/json", responseString);
   }
+}
+
+void ControllerService :: postAction(AsyncWebServerRequest *request){
+    debugI("\nControllerService :: postAction: Request received to trigger an action");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& doc = jsonBuffer.createObject();
+    char body[100];
+
+    int paramsCount = request->params();
+    if(paramsCount == 0){
+      debugE("\nControllerService :: postAction: Need actionID as query parameter to trigger an action");
+      doc["message"] = "Need actionID as query parameter to trigger an action";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      request->send(400,"application/json", body);
+    }
+    else if(store->getDeviceState() < DEVICE_ACTIVE){
+      doc["message"] = "Device not activated";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      debugE("\nControllerService :: postAction: %s", body);
+      request->send(400, "application/json", body);
+    }
+    else {
+      AsyncWebParameter* p = request->getParam(0);
+      if(strcmp(p->name().c_str(), "actionID") != 0){
+        debugE("\nControllerService :: postAction: Query Parameter should be `actionID`");
+        doc["message"] = "Query Parameter should be `actionID`";
+        doc.printTo(body);
+        jsonBuffer.clear();
+        request->send(400,"application/json", body);
+      }
+      else if(store->isDeviceMultipair() &&
+        store->getAlternateDeviceID() == NULL){
+        doc["message"] = "Missing parameter `AlternativeID`";
+        doc.printTo(body);
+        jsonBuffer.clear();
+        debugE("\nControllerService :: postAction: %s", body);
+        request->send(400, "application/json", body);
+      }
+      else {
+        const char* actionID = p->value().c_str();
+        if(actionID != NULL && strlen(actionID) > 0){
+          debugI("\nControllerService :: postAction: Given actionID: %s",actionID);
+          const int responseCode = triggerAction(actionID);
+          switch(responseCode) {
+            case 200 : debugI("\nControllerService :: postAction: Action triggered successful");
+                       doc["message"] = "Action triggered successful";
+                       break;
+            case 201 : debugI("\nControllerService :: postAction: Action saved as Offline Action");
+                       doc["message"] = "Action saved as Offline Action";
+                       break;
+            default  : debugE("\nControllerService :: postAction: Check parameters and try again");
+                       doc["message"] = "Check parameters and try again";
+                       break;
+          }
+          doc.printTo(body);
+          jsonBuffer.clear();
+          request->send(responseCode, "application/json", body);
+        }
+        else {
+          debugE("\nControllerService :: postAction: actionID cannot be NULL");
+          doc["message"] = "actionID cannot be NULL";
+          doc.printTo(body);
+          jsonBuffer.clear();
+          request->send(400,"application/json", body);
+        }
+      }
+    }
+}
+
+int ControllerService :: triggerAction(const char* actionID){
+  ActionService* actionService = ControllerService :: getActionServiceObject();
+  String* response = actionService->triggerAction(actionID);
+  debugI("\nControllerService :: triggerAction: triggerAction Response: %s", response->c_str());
+  int responseCode = 400;
+  if(response == NULL){
+    responseCode = 201;
+  }
+  else if(response->indexOf("OK") != -1){
+    responseCode = 200;
+  }
+  else {
+    responseCode = 404;
+  }
+
+  //Dump actions triggered stats
+  int offActionsTriggerCount = actionService->getOfflineActionsTriggerCount();
+  int actionsTriggerCount = actionService->getActionsTriggerCount();
+  debugI("\nControllerService :: postAction: Number of offline actions left over: %d",actionService->getOfflineActionsCount());
+  debugI("\nControllerService :: postAction: Number of offline actions triggered: %d",offActionsTriggerCount);
+  debugI("\nControllerService :: postAction: Number of actions triggered: %d",actionsTriggerCount);
+  debugI("\nControllerService :: postAction: Number of total actions triggered since from board start: %d",actionsTriggerCount+offActionsTriggerCount);
+
+  return responseCode;
 }
 
 void ControllerService :: getQRCode(AsyncWebServerRequest *request){
@@ -98,93 +190,4 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
       request->send(503, "application/json", body);
     }
   }
-}
-
-void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVariant &json){
-  store->initializeEEPROM();
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& doc = jsonBuffer.createObject();
-  char body[100];
-
-  if(store->getDeviceState() < DEVICE_ACTIVE){
-    doc["message"] = "Device not activated";
-    doc.printTo(body);
-    jsonBuffer.clear();
-    debugE("\nControllerService :: triggerAction: %s", body);
-    request->send(403, "application/json", body);
-  }
-  else {
-    JsonObject& jsonObj = json.as<JsonObject>();
-
-    if(jsonObj.containsKey("actionID") == false){
-      doc["message"] = "Missing parameter `actionID`";
-      doc.printTo(body);
-      jsonBuffer.clear();
-      debugE("\nControllerService :: triggerAction: %s", body);
-      request->send(400, "application/json", body);
-    }
-    else if(store->isDeviceMultipair() &&
-            store->getAlternateDeviceID() == NULL){
-      doc["message"] = "Missing parameter `AlternativeID`";
-      doc.printTo(body);
-      jsonBuffer.clear();
-      debugE("\nControllerService :: triggerAction: %s", body);
-      request->send(400, "application/json", body);
-    }
-    else {
-      const char* actionID = (jsonObj.containsKey("actionID"))?jsonObj.get<const char*>("actionID"):NULL;
-      const char* value = (jsonObj.containsKey("value"))?jsonObj.get<const char*>("value"):NULL;
-
-      doc["message"] = "Submitting request to trigger action";
-      doc.printTo(body);
-      jsonBuffer.clear();
-      request->send(200, "application/json", body);
-
-      debugI("\nControllerService :: triggerAction: Calling actionTriggerTask...");
-      debugI("Main Task running on core: %d",xPortGetCoreID());
-      xTaskCreatePinnedToCore(
-                      actionTriggerTask,   /* Task function. */
-                      "Action Task",     /* name of task. */
-                      10000,       /* Stack size of task */
-                      (void*)actionID,        /* parameter of the task */
-                      1,           /* priority of the task */
-                      &pTask,      /* Task handle to keep track of created task */
-                      0);          /* pin task to core 1 */
-      delay(500);
-
-    }
-  }
-}
-
-void actionTriggerTask( void * pvParameters ){
-  const char* actionID = (char*)pvParameters;
-  debugI("actionTriggerTask running on core: %d",xPortGetCoreID());
-  debugI("actionTriggerTask: actionID: %s",actionID);
-
-  ActionService* actionService = ControllerService :: getActionServiceObject();
-  String* response = actionService->triggerAction(actionID);
-
-  debugD("\nactionTriggerTask:: Response: %s", response->c_str());
-
-  if(response == NULL){
-    debugI("\nactionTriggerTask:: Action saved as Offline Action");
-  }
-  else if(response->indexOf("OK") != -1){
-    debugI("\nactionTriggerTask:: Action triggered successful");
-  }
-  else if(response->indexOf("Action not found") != -1)
-    debugE("\nactionTriggerTask:: Action not triggered as its not found");
-  else
-    debugE("\nactionTriggerTask:: Action triggerring failed, check parameters and try again");
-
-  //Dump actions triggered stats
-  int offActionsTriggerCount = actionService->getOfflineActionsTriggerCount();
-  int actionsTriggerCount = actionService->getActionsTriggerCount();
-  debugI("\nactionTriggerTask:: Number of offline actions left over: %d",actionService->getOfflineActionsCount());
-  debugI("\nactionTriggerTask:: Number of offline actions triggered: %d",offActionsTriggerCount);
-  debugI("\nactionTriggerTask:: Number of actions triggered: %d",actionsTriggerCount);
-  debugI("\nactionTriggerTask:: Number of total actions triggered since from board start: %d",actionsTriggerCount+offActionsTriggerCount);
-
-  //Delete the task without returning
-  vTaskDelete(pTask);
 }
