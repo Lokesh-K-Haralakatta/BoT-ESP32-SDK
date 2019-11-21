@@ -20,7 +20,7 @@ bool SDKWrapper :: isDevicePaired(){
   debugI("\nSDKWrapper :: isDevicePaired: Pairing Status Response: %s",psResponse->c_str());
   debugI("\nSDKWrapper :: isDevicePaired: Device State -> %s",store->getDeviceStatusMsg());
 
-  if((psResponse->indexOf("true") != -1) || store->getDeviceState() >= DEVICE_PAIRED )
+  if(psResponse->indexOf("true") != -1)
     return true;
   else
     return false;

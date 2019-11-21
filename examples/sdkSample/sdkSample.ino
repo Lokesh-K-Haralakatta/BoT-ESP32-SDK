@@ -27,7 +27,7 @@
   3. Starts the Async Webserver on port 3001 on ESP32 board
   4. Sketch has code to trigger actions with various frequencies like minutely, hourly, daily, monthly,half-yearly, yearly and always
   5. Define the actions in maker portal, add service in companion app, update the actionIDs properly before executing the sketch
-  6. Remove the comments for required action to be triggered based on the action frequency
+  6. Update required action to be triggered based on the action frequency in the URI formation statement
   7. Webserver provides the endpoints /qrcode, /actions, /pairing and /action/actionID for direct interaction
 */
 
@@ -39,12 +39,10 @@
 #define WIFI_SSID "FINN"
 #define WIFI_PASSWD "Id4S7719G99XG1R"
 
-void submitAnAction(void * pvParameters);
-
 //Declare service variables
-KeyStore *store = NULL;
+KeyStore *store = KeyStore::getKeyStoreInstance();;
 Webserver *server = NULL;
-AsyncClient *client_tcp = NULL;
+AsyncClient *client_tcp = new AsyncClient;;
 TaskHandle_t tTask;
 TaskHandle_t pTask;
 
@@ -78,44 +76,77 @@ const int port = 3001;
 //Variable to hold given deviceID value
 const char* deviceID = NULL;
 
-//Variable to keep track of actions submitted
-int submitCount = 0;
-
+//Function to request for actions from the Server using the end point /actions
 void getActionsFromServer(void *arg)
 {
   AsyncClient *client = reinterpret_cast<AsyncClient *>(arg);
   // We now create a URI for the request
-  size_t nBytes = client->write("GET /actions HTTP/1.1\r\n http://10.26.16.126:3001/ \r\n Connection: close\r\n\r\n");
+  String requestString = String("GET /actions HTTP/1.1\r\n http://") + client->remoteIP().toString() + ":3001/ \r\n Connection: reuse\r\n\r\n";
+  const char* serverReqStr = requestString.c_str();
+  debugD("\nsdkSample: getActionsFromServer: Server Request: %s",serverReqStr);
+  // Send request to get actions from server
+  size_t nBytes = client->write(serverReqStr);
   debugD("\nsdkSample: getActionsFromServer: Amount of bytes written to Server: %d",nBytes);
 }
 
-void triggerAction(void *arg){
-  AsyncClient *client = reinterpret_cast<AsyncClient *>(arg);
+//Function to request to trigger action to the Server using the end point /action
+void triggerAction(void *arg1){
+  AsyncClient *client = reinterpret_cast<AsyncClient *>(arg1);
   // We now create a URI for the request
-  size_t nBytes = client->write("GET /action?actionID=E6509B49-5048-4151-B965-BB7B2DBC7905 HTTP/1.1\r\n http://10.26.16.126:3001/ \r\n Connection: reuse\r\n\r\n");
+  // Update the required actionId in the URI formation below
+  String requestString = String("GET /action?actionID=") + actionIDMinutely.c_str() + " HTTP/1.1\r\n http://" + client->remoteIP().toString() + ":3001/ \r\n Connection: reuse\r\n\r\n";
+  const char* serverReqStr = requestString.c_str();
+  debugD("\nsdkSample: triggerAction: Server Request: %s",serverReqStr);
+
+  //Send action trigger request to server
+  //size_t nBytes = client->write("GET /action?actionID=E6509B49-5048-4151-B965-BB7B2DBC7905 HTTP/1.1\r\n http://10.26.16.126:3001/ \r\n Connection: reuse\r\n\r\n");
+  size_t nBytes = client->write(serverReqStr);
   debugD("\nsdkSample: triggerAction: Amount of bytes written to Server: %d",nBytes);
+
 }
 
+//Function to request for pairing from the Server using the end point /pairing
+void devicePair(void *arg){
+  AsyncClient *client = reinterpret_cast<AsyncClient *>(arg);
+  // We now create a URI for the request
+  String requestString = String("GET /pairing HTTP/1.1\r\n http://") + client->remoteIP().toString() + ":3001/ \r\n Connection: reuse\r\n\r\n";
+  const char* serverReqStr = requestString.c_str();
+  debugD("\nsdkSample: devicePair: Server Request: %s",serverReqStr);
+  // Send pairing request to server
+  size_t nBytes = client->write(serverReqStr);
+  debugD("\nsdkSample: devicePair: Amount of bytes written to Server: %d",nBytes);
+}
+
+//Async function to handle data received from server
 void handleData(void *arg, AsyncClient *client, void *data, size_t len)
 {
   debugD("\nsdkSample: handleData: Data received from %s \n", client->remoteIP().toString().c_str());
   Serial.write((uint8_t *)data, len);
 }
 
+//Async function to notify on client connected to server
 void onConnect(void *arg, AsyncClient *client)
 {
   debugI("\nsdkSample: onConnect: Async TCP Client Connected to Webserver at port: %d", port);
+  int dState = store->getDeviceState();
+  debugI("\nsdkSample :: Device State -> %s",store->getDeviceStatusMsg());
+  //Check for the device state, should be active to trigger the action
+  if(dState >= DEVICE_ACTIVE){
+    triggerAction(client);
+  }
+  else {
+    devicePair(client);
+  }
 }
 
+//Async function to notify on client disconnected from server
 void onDisconnect(void *arg, AsyncClient *client){
   debugI("\nsdkSample: onDisconnect: Async TCP Client Disconnected from Webserver");
 }
 
+//Setu function for the board
 void setup()
 {
-  //Get KeyStore Instance
-  store = KeyStore::getKeyStoreInstance();
-
   //Load the given configuration details from the SPIFFS
   store->loadJSONConfiguration();
 
@@ -148,92 +179,38 @@ void setup()
     //Enable board to connect to WiFi Network
     server->connectWiFi();
 
+    //Attach async callback functions for the client
+    client_tcp->onData(handleData, client_tcp);
+    client_tcp->onConnect(onConnect, client_tcp);
+    client_tcp->onDisconnect(onDisconnect, client_tcp);
+
   }
   else {
     LOG("\nsdkSample: MakerID can not be NULL!");
   }
 }
 
+//Loop function for the board
 void loop()
 {
   debugI("\nAvalable free heap at the beginning of loop: %lu",ESP.getFreeHeap());
   //Check for Webserver availability to trigger the action
   if(server->isServerAvailable()){
-    int dState = store->getDeviceState();
-    debugI("\nsdkSample :: Device State -> %s",store->getDeviceStatusMsg());
-    //Check for the device state, should be active to trigger the action
-    if(dState >= DEVICE_ACTIVE){
-      /*
-      //Trying to trigger an action with frequency as "minutely"
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the minutely action - %s", actionIDMinutely.c_str());
-      submitAnAction(actionIDMinutely.c_str());
-      */
+    debugI("\nWebserver is Accessible using the URL: http://%s:%d/actions for accessing the rest endpoints - /qrcode /actions /pairing /action", (server->getBoardIP().toString()).c_str(),port);
+    //Connect to server and perform operation based on device state
+    client_tcp->connect((server->getBoardIP().toString()).c_str(), port);
 
-      /*
-      //Trying to trigger an action with frequency as "hourly"
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the hourly action - %s", actionIDHourly.c_str());
-      triggerAnAction(actionIDHourly.c_str());
-      */
-
-      /*
-      //Trying to trigger an action with frequency as "daily"
-
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the daily action - %s", actionIDDaily.c_str());
-      triggerAnAction(actionIDDaily.c_str());
-      */
-
-      /*
-      //Trying to trigger an action with frequency as "weekly"
-
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the weekly action - %s", actionIDWeekly.c_str());
-      triggerAnAction(actionIDWeekly.c_str());
-      */
-
-      /*
-      //Trying to trigger an action with frequency as "monthly"
-
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the monthly action - %s", actionIDMonthly.c_str());
-      triggerAnAction(actionIDMonthly.c_str());
-      */
-
-      /*
-      //Trying to trigger an action with frequency as "half-yearly"
-
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the half-yearly action - %s", actionIDHYearly.c_str());
-      triggerAnAction(actionIDHYearly.c_str());
-      */
-
-      /*
-      //Trying to trigger an action with frequency as "yearly"
-
-      debugI("\nsdkSample: Device State is ACTIVE and triggering the yearly action - %s", actionIDYearly.c_str());
-      triggerAnAction(actionIDYearly.c_str());
-      */
-
-      //Create a task to trigger an action with frequency as "always"
-      xTaskCreate(submitAnAction,"Action Task",10000,(void*)actionIDAlways.c_str(),1,&tTask);
-
-      debugI("\nsdkSample: Device State is ACTIVE and Webserver is Accessible using the URL: http://%s:%d/actions for accessing the rest endpoints - /qrcode /actions /pairing /action", (server->getBoardIP().toString()).c_str(),port);
-    }
-    else {
-      debugI("\nsdkSample: Device State is not active to trigger the action, Try pairing the device again:");
-
-      //Create a task to pair the device
-      //xTaskCreate(pairDevice,"Pairing Task",10000,(void*)NULL,1,&pTask);
-
-    }
-
-    //Put delay to reclaim the released memory
-    delay(1000);
     debugI("\nAvalable free heap at the end of loop: %lu",ESP.getFreeHeap());
 
     #ifndef DEBUG_DISABLED
-      Debug.handle();
+     Debug.handle();
     #endif
 
     //Introduce delay of 2 mins
     delay(2*60*1000);
 
+    //Close the client
+    client_tcp->close(true);
   }
   else {
     if(server->isWiFiConnected()){
@@ -254,19 +231,4 @@ void loop()
     ////Introduce delay of 2 secs
     delay(2000);
   }
-}
-
-void submitAnAction(void * pvParameters){
-  client_tcp = new AsyncClient;
-  client_tcp->onData(handleData, client_tcp);
-  client_tcp->onConnect(onConnect, client_tcp);
-  client_tcp->onDisconnect(onDisconnect, client_tcp);
-
-  client_tcp->connect((server->getBoardIP().toString()).c_str(), port);
-  triggerAction(client_tcp);
-  client_tcp->close(true);
-  delete client_tcp;
-
-  //Delete the task without returning
-  vTaskDelete(tTask);
 }
