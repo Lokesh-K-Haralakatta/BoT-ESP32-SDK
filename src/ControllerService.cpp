@@ -115,15 +115,17 @@ void ControllerService :: postAction(AsyncWebServerRequest *request){
 int ControllerService :: triggerAction(const char* actionID){
   ActionService* actionService = ControllerService :: getActionServiceObject();
   String* response = actionService->triggerAction(actionID);
-  debugI("\nControllerService :: triggerAction: triggerAction Response: %s", response->c_str());
   int responseCode = 400;
   if(response == NULL){
+    debugI("\nControllerService :: triggerAction: Action saved as offline action");
     responseCode = 201;
   }
   else if(response->indexOf("OK") != -1){
+    debugI("\nControllerService :: triggerAction: triggerAction Response: %s", response->c_str());
     responseCode = 200;
   }
   else {
+    debugI("\nControllerService :: triggerAction: triggerAction Response: %s", response->c_str());
     responseCode = 404;
   }
 

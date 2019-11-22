@@ -418,8 +418,13 @@ String* BoTService :: post(const char* endPoint, const char* payload){
             delete payload;
             botResponse = decodePayload(encodedPayload);
             delete encodedPayload;
-            return(botResponse);
+            if(botResponse != NULL){
+             debugD("\nBoTService :: post: Decoded post response: %s",botResponse->c_str());
+           }
+           else {
+             debugD("\nBoTService :: post: Post response is NULL");
           }
+          return(botResponse);
         }
         else {
           char* errMsg = new char[100];
@@ -450,6 +455,12 @@ String* BoTService :: post(const char* endPoint, const char* payload){
     botResponse = new  String("Board Not Connected to WiFi...");
     return botResponse;
   }
+ }
+ else {
+   LOG("\nBoTService :: post: Board Not Connected to WiFi...");
+   botResponse = new String("Board Not Connected to WiFi...");
+   return botResponse;
+ }
 }
 
 void BoTService :: freeObjects(){

@@ -40,9 +40,9 @@
 #define WIFI_PASSWD "Id4S7719G99XG1R"
 
 //Declare service variables
-KeyStore *store = KeyStore::getKeyStoreInstance();;
+KeyStore *store = KeyStore::getKeyStoreInstance();
 Webserver *server = NULL;
-AsyncClient *client_tcp = new AsyncClient;;
+AsyncClient *client_tcp = new AsyncClient;
 TaskHandle_t tTask;
 TaskHandle_t pTask;
 
