@@ -119,6 +119,7 @@ void Webserver :: startServer(){
         root["actionsEndPoint"] = "/actions";
         root["pairingEndPoint"] = "/pairing";
         root["qrCodeEndPoint"] = "/qrcode";
+        root["actionEndPoint"] = "/action/actionID?";
         response->setLength();
         request->send(response);
       });
@@ -126,6 +127,11 @@ void Webserver :: startServer(){
       server->on("/actions", HTTP_GET, [](AsyncWebServerRequest *request){
          ControllerService cs;
          cs.getActions(request);
+      });
+
+      server->on("/action", HTTP_GET, [](AsyncWebServerRequest *request){
+         ControllerService cs;
+         cs.postAction(request);
       });
 
       server->on("/pairing", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -137,12 +143,6 @@ void Webserver :: startServer(){
          ControllerService cs;
          cs.getQRCode(request);
       });
-
-      AsyncCallbackJsonWebHandler* actionHandler = new AsyncCallbackJsonWebHandler("/actions", [](AsyncWebServerRequest *request, JsonVariant &json) {
-        ControllerService cs;
-        cs.triggerAction(request,json);
-      });
-      server->addHandler(actionHandler);
 
       server->begin();
       serverStatus = STARTED;
