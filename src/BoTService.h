@@ -11,15 +11,12 @@
 #include "base64url.h"
 #include "Storage.h"
 
-//#define HOST "api.bankingofthings.io"
 #define HOST "iot.bankingofthings.io"
-#define URI "/bot_iot"
+#define URI ""
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
 #define SSL_FINGERPRINT_SHA256 "56:78:5D:C2:85:74:44:05:DC:A2:DC:37:C8:66:0E:E5:91:DF:C7:3A:7D:EF:24:C4:F3:41:62:50:AC:83:E0:B9"
 #define SSL_FINGERPRINT_SHA1 "76:E6:B6:DF:6D:3B:4D:2D:48:D1:B6:32:AD:D6:8E:80:53:3F:5F:88"
-//#define SSL_FINGERPRINT_SHA256 "85:76:3F:1D:FF:FD:E3:79:1E:52:CE:50:77:6B:7B:50:A1:5A:E0:F0:6A:80:48:19:EC:A9:7A:B2:2C:E3:49:B5"
-//#define SSL_FINGERPRINT_SHA1 "3E:A2:2B:BF:FB:38:A6:76:9A:30:D6:95:1B:F0:A9:BB:9A:84:7D:D6"
 
 class BoTService {
   public:
