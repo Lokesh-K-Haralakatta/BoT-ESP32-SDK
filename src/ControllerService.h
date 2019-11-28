@@ -11,6 +11,7 @@
 #include "Storage.h"
 #include "PairingService.h"
 #include "ActionService.h"
+#include "ActivationService.h"
 #include "ConfigurationService.h"
 class ControllerService {
   public:
@@ -18,6 +19,7 @@ class ControllerService {
           static ActionService* getActionServiceObject();
           void getActions(AsyncWebServerRequest *request);
           void pairDevice(AsyncWebServerRequest *request);
+          void activateDevice(AsyncWebServerRequest *request);
           void getQRCode(AsyncWebServerRequest *request);
           void postAction(AsyncWebServerRequest *request);
   private:
