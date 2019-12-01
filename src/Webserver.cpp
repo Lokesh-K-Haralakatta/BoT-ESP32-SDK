@@ -120,7 +120,7 @@ void Webserver :: startServer(){
         root["pairingEndPoint"] = "/pairing";
         root["activateEndPoint"] = "/activate";
         root["qrCodeEndPoint"] = "/qrcode";
-        root["actionEndPoint"] = "/action/actionID?";
+        root["actionEndPoint"] = "/action?actionID=`actionID-value`";
         response->setLength();
         request->send(response);
       });

@@ -35,14 +35,13 @@
 //Include required header files
 #include <Arduino.h>
 #include <AsyncTCP.h>
-#include <Arduino.h>
 #include <WiFi.h>
 
 //Custom WiFi Credentials
 #define WIFI_SSID "FINN"
 #define WIFI_PASSWD "Id4S7719G99XG1R"
 
-//Declare service variables
+//Declare client instance variable
 AsyncClient *client_tcp = new AsyncClient;
 
 //Action ID with frequency as "always"
@@ -80,7 +79,7 @@ const int port = 3001;
 //Led Pin number to blink
 int ledPin = 2;
 
-//Flag to indicate connection status
+//Flag to synchorize between request and response
 bool responseReceived = false;
 
 //Function to perform blink
