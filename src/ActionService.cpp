@@ -6,7 +6,15 @@
 
 #include "ActionService.h"
 #define REMOTE_HOST "www.google.com"
+ActionService* ActionService :: instance = NULL;
 
+ActionService* ActionService :: getActionServiceInstance(){
+  if(instance == NULL){
+    instance = new ActionService();
+    debugI("\nActionService : getActionServiceObject: ActionService instance created...");
+  }
+  return instance;
+}
 ActionService :: ActionService(){
   store = KeyStore :: getKeyStoreInstance();
   bot = BoTService :: getBoTServiceInstance();
@@ -22,8 +30,15 @@ ActionService :: ~ActionService(){
 }
 
 bool ActionService :: isInternetConnectivityAvailable(){
-  //return Ping.ping(REMOTE_HOST);
-  return true;
+  Webserver* webServerInstance = Webserver::getWebserverInstance(false);
+  if(webServerInstance->isServerAvailable()){
+    debugI("\nActionService : isInternetConnectivityAvailable: Webserver is available, returning true...");
+    return true;
+  }
+  else {
+   debugI("\nActionService : isInternetConnectivityAvailable: Webserver is not available, using ESP32Ping...");
+   return Ping.ping(REMOTE_HOST);
+ }
 }
 
 int ActionService :: countLeftOverOfflineActions(){

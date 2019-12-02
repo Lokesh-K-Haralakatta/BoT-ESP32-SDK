@@ -6,25 +6,14 @@
 */
 
 #include "ControllerService.h"
-ActionService* ControllerService :: actionService;
 
 ControllerService :: ControllerService(){
   store = KeyStore :: getKeyStoreInstance();
-}
-
-ActionService* ControllerService :: getActionServiceObject(){
-  if(actionService == NULL){
-      actionService = new ActionService();
-      debugI("\nControllerService :: getActionServiceObject: Instantiated ActionService Instance");
-  }
-
-  return actionService;
+  actionService = ActionService :: getActionServiceInstance();
 }
 
 void ControllerService :: getActions(AsyncWebServerRequest *request){
-  ActionService* actionService = ControllerService :: getActionServiceObject();
   String* response = actionService->getActions();
-  //delete actionService;
 
   if(response == NULL){
     DynamicJsonBuffer jsonBuffer;
@@ -113,7 +102,6 @@ void ControllerService :: postAction(AsyncWebServerRequest *request){
 }
 
 int ControllerService :: triggerAction(const char* actionID){
-  ActionService* actionService = ControllerService :: getActionServiceObject();
   String* response = actionService->triggerAction(actionID);
   int responseCode = 400;
   if(response == NULL){

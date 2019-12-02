@@ -10,6 +10,18 @@
   RemoteDebug Debug;
 #endif
 
+Webserver* Webserver :: webServer;
+
+Webserver* Webserver :: getWebserverInstance(bool loadConfig, const char *ssid,
+                          const char *passwd, const int logLevel){
+  if(webServer == NULL){
+    webServer = new Webserver(loadConfig, ssid, passwd, logLevel);
+    LOG("\nWebserver :: getWebserverInstance: Instantiated AsyncWebServer Instance...");
+  }
+
+  return webServer;
+}
+
 Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd, const int logLevel){
   ledPin = 2;
   port = 3001;

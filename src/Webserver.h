@@ -15,10 +15,12 @@
 #define STARTED 1
 #define NOT_STARTED 0
 
+class ConfigurationService;
 class Webserver
 {
   public:
-    Webserver(bool loadConfig, const char *ssid = NULL, const char *passwd = NULL, const int logLevel = BoT_INFO);
+    static Webserver* getWebserverInstance(bool loadConfig, const char *ssid = NULL,
+                          const char *passwd = NULL, const int logLevel = BoT_INFO);
     bool isWiFiConnected();
     bool isServerAvailable();
     void blinkLED();
@@ -35,8 +37,11 @@ class Webserver
     KeyStore *store;
     AsyncWebServer *server;
     ConfigurationService *config;
+    static Webserver *webServer;
     BluetoothService *ble;
     bool isDevicePaired();
+    Webserver(bool loadConfig, const char *ssid = NULL, const char *passwd = NULL,
+                                                   const int logLevel = BoT_INFO);
 };
 
 #endif
