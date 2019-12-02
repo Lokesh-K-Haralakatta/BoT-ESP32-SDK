@@ -10,7 +10,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
    |        3      | Secured HTTP with BoT Service              | Supported | SDK has got an option of enable / disable https at runtime
    |        4      | Remote Debug                               | Supported | Enable to access the ESP-32 board through telnet client. This can be disabled for production |
    |        5      | Logging                                    | Supported | There are 4 different log levels supported for SDK - BoT_INFO, BoT_WARN, BoT_DEBUG and BoT_ERROR |
-   |        6      | Offline Actions                            | Supported | Enables saving the actions when there is no internet connectivity available and processing with following request |
+   |        6      | Offline Actions                            | Supported | Enables saving the actions when there is no internet connectivity available and processing with following request. Supported only in SDK Module as Library |
    
 ## Getting Started instructions for ESP-32 Dev Kit Module
 - **Setting up of ESP-32 Dev Module**
