@@ -37,8 +37,8 @@
   #include <SDKWrapper.h>
 
   //Custom WiFi Credentials
-  #define WIFI_SSID "LJioWiFi"
-  #define WIFI_PASSWD "adgjmptw"
+  #define WIFI_SSID "FINN"
+  #define WIFI_PASSWD "xxxxxxxxxxxxxxx"
 
   //Declare service variables
   KeyStore *store = NULL;
@@ -50,12 +50,6 @@
 
   //Variable to hold given deviceID value
   const char* deviceID = NULL;
-
-  //Variable to keep track of action triggered
-  int triggerCount = 0;
-
-  //Flag to check existence of the action
-  bool actionFound = false;
 
   void setup()
   {
@@ -83,12 +77,12 @@
       //store->setHTTPS(true);
 
       //Instantiate Webserver by using WiFi credentials from configuration
-      //server = new Webserver(loadConfig);
+      //server = Webserver::getWebserverInstance(loadConfig);
 
       //Instantiate Webserver by using the custom WiFi credentials
       loadConfig = false;
       int logLevel = BoT_INFO;
-      server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+      server = Webserver::getWebserverInstance(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
       //Enable board to connect to WiFi Network
       server->connectWiFi();
@@ -103,7 +97,6 @@
          if(server->isWiFiConnected()){
            String* actions = sdk->getActions();
            //If actions are present, they are in JSON String
-           //Parse them to check given action is there or not
            if(actions != NULL){
              DynamicJsonBuffer jsonBuffer;
              JsonArray& actionsArray = jsonBuffer.parseArray(*actions);
@@ -111,20 +104,11 @@
                  int actionsCount = actionsArray.size();
                  debugI("\nsdkWrapperSample :: JSON Actions array parsed successfully");
                  debugI("\nsdkWrapperSample :: Number of actions returned: %d", actionsCount);
-                 //Check whether given action is present in returned actions list
-                 for(byte i=0 ; i < actionsCount; i++){
-                    const char* actionID = actionsArray[i]["actionID"];
-                    const char* frequency = actionsArray[i]["frequency"];
-                    if(actionIDMinutely.equals(actionID)){
-                      debugI("\nsdkWrapperSample :: Action Found in actionsArray");
-                      debugI("\nsdkWrapperSample :: Action ID: %s", actionID);
-                      debugI("\nsdkWrapperSample :: Action Frequency: %s", frequency);
-                      actionFound = true;
-                      break;
-                    }
-                  }
-              }
-              jsonBuffer.clear();
+             }
+             jsonBuffer.clear();
+            }
+            else {
+              debugE("\nsdkWrapperSample :: Failed in retrieveing actions from server");
             }
           }
         }
@@ -144,20 +128,14 @@
      debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
      //Check for the device state, should be active to trigger the action
      if(dState >= DEVICE_ACTIVE){
-       //Trigger the action if it's defined with the maker portal
-       if(actionFound){
-         debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
-         if(sdk->triggerAction(actionIDMinutely.c_str())){
-           triggerCount++;
-           debugI("\nsdkWrapperSample :: Triggering action successful for %d times",triggerCount);
-         }
-         else {
-           debugE("\nsdkWrapperSample :: Triggering action failed!");
-         }
-       }
-       else {
-         debugW("\nsdkWrapperSample :: Action - %s not found in maker portal", actionIDMinutely.c_str());
-       }
+       //Trigger the action added with the paired device
+       debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
+      if(sdk->triggerAction(actionIDMinutely.c_str())){
+        debugI("\nsdkWrapperSample :: Triggering action successful...");
+      }
+      else {
+        debugE("\nsdkWrapperSample :: Triggering action failed!");
+      }
      }
      else {
        debugI("\nsdkWrapperSample: Device State is not active to trigger the action, Try pairing the device again:");

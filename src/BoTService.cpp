@@ -228,16 +228,13 @@ String* BoTService :: get(const char* endPoint){
       int httpCode = httpClient->GET();
       debugD("\nBoTService :: get: httpCode from httpClient->GET(): %d",httpCode);
 
-      if(httpCode < 0)
-        botResponse = new String(httpClient->errorToString(httpCode));
-
       String* payload = new String(httpClient->getString());
       httpClient->end();
 
       //Deallocate memory allocated for objects
       freeObjects();
 
-      if(httpCode > 0) {
+      if(httpCode >= 0) {
 
         debugI("\nBoTService :: get: HTTP GET with endPoint %s, return code: %d", endPoint, httpCode);
 
@@ -259,15 +256,20 @@ String* BoTService :: get(const char* endPoint){
           }
         }
         else {
-          debugE("\nBoTService :: get: HTTP GET with endpoint %s failed", endPoint);
-          botResponse = new String("HTTP GET failed");
+          char* errMsg = new char[100];
+          sprintf(errMsg,"HTTP GET with endpoint %s failed with status code: %d",endPoint,httpCode);
+          botResponse = new String(errMsg);
+          debugE("\nBoTService :: get: %s", botResponse->c_str());
+          delete errMsg;
           return botResponse;
         }
       }
       else {
-        debugE("\nBoTService :: get: HTTP GET with endPoint %s failed", endPoint);
-        botResponse = new String("HTTP GET failed");
-        return botResponse;
+        char* errMsg = new char[100];
+        sprintf(errMsg,"HTTP GET with endpoint %s failed with status code: %d",endPoint,httpCode);
+        botResponse = new String(errMsg);
+        debugE("\nBoTService :: get: %s", botResponse->c_str());
+        delete errMsg;return botResponse;
       }
     }
     else {
@@ -383,7 +385,6 @@ String* BoTService :: post(const char* endPoint, const char* payload){
       body->concat(botJWT->c_str());
       body->concat("\"}");
 
-      delete botJWT;
       debugD("\nBoTService :: post: body contents after encoding: %s", body->c_str());
 
       httpClient->addHeader("makerID", store->getMakerID());
@@ -393,18 +394,19 @@ String* BoTService :: post(const char* endPoint, const char* payload){
       httpClient->addHeader("Content-Length",String(body->length()));
 
       int httpCode = httpClient->POST(body->c_str());
-      delete body;
-      String errorMSG;
-      if(httpCode < 0)
-        botResponse = new String(httpClient->errorToString(httpCode));
+      debugD("\nBoTService :: post: HTTPCode from post call: %d",httpCode);
 
       String* payload = new String(httpClient->getString());
+      debugD("\nBoTService :: post: payload returned from post call: %s", payload->c_str());
+
       httpClient->end();
 
       //Deallocate memory allocated for objects
+      delete body;
+      delete botJWT;
       freeObjects();
 
-      if(httpCode > 0) {
+      if(httpCode >= 0) {
 
         debugI("\nBoTService :: post: HTTP POST with endPoint %s, return code: %d", endPoint, httpCode);
 
@@ -416,19 +418,28 @@ String* BoTService :: post(const char* endPoint, const char* payload){
             delete payload;
             botResponse = decodePayload(encodedPayload);
             delete encodedPayload;
-            return(botResponse);
+            if(botResponse != NULL){
+             debugD("\nBoTService :: post: Decoded post response: %s",botResponse->c_str());
+           }
+           else {
+             debugD("\nBoTService :: post: Post response is NULL");
           }
+          return(botResponse);
         }
         else {
-          debugE("\nBoTService :: post: HTTP POST with endpoint %s failed", endPoint);
-          botResponse = new String("HTTP POST failed");
-          return botResponse;
+          char* errMsg = new char[100];
+          sprintf(errMsg,"HTTP POST with endpoint %s failed with status code: %d",endPoint,httpCode);
+          botResponse = new String(errMsg);
+          debugE("\nBoTService :: post: %s", botResponse->c_str());
+          delete errMsg;return botResponse;
         }
       }
       else {
-        debugE("\nBoTService :: post: HTTP POST with endPoint %s failed", endPoint);
-        botResponse = new String("HTTP POST failed");
-        return botResponse;
+        char* errMsg = new char[100];
+        sprintf(errMsg,"HTTP POST with endpoint %s failed with status code: %d",endPoint,httpCode);
+        botResponse = new String(errMsg);
+        debugE("\nBoTService :: post: %s", botResponse->c_str());
+        delete errMsg;return botResponse;
       }
     }
     else {
@@ -444,16 +455,24 @@ String* BoTService :: post(const char* endPoint, const char* payload){
     botResponse = new  String("Board Not Connected to WiFi...");
     return botResponse;
   }
+ }
+ else {
+   LOG("\nBoTService :: post: Board Not Connected to WiFi...");
+   botResponse = new String("Board Not Connected to WiFi...");
+   return botResponse;
+ }
 }
 
 void BoTService :: freeObjects(){
   if(httpClient != NULL) {
+     debugD("\nBoTService :: freeObjects : Releasing HTTPClient Instance...");
      httpClient->end();
      delete httpClient;
      httpClient = NULL;
    }
 
   if(wifiClient != NULL) {
+    debugD("\nBoTService :: freeObjects : Releasing WiFiClientSecure Instace...");
     wifiClient->stop();
     delete wifiClient;
     wifiClient = NULL;

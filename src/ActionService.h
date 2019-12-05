@@ -8,6 +8,7 @@
 #define ActionService_h
 #include "BoTESP32SDK.h"
 #include "BoTService.h"
+#include "Webserver.h"
 #include "Storage.h"
 #define ACTIONS_END_POINT "/actions"
 #define MINUTE_IN_SECONDS 60
@@ -20,21 +21,36 @@
 
 class ActionService {
   public:
-    ActionService();
     ~ActionService();
-    String* triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
+    static ActionService* getActionServiceInstance();
+    String* triggerAction(const char* actionID, const char* value = NULL);
     String* getActions();
+    int getOfflineActionsCount();
+    int getOfflineActionsTriggerCount();
+    int getActionsTriggerCount();
   private:
     KeyStore *store;
     BoTService *bot;
     WiFiUDP ntpUDP;
     NTPClient *timeClient;
     unsigned long presentActionTriggerTimeInSeconds;
+    unsigned long previousActionTriggerTimeInSeconds;
     std::vector <struct Action> actionsList;
+    std::vector <struct Action> localActionsList;
+    std::vector <struct OfflineActionMetadata> offlineActionsList;
     bool isValidAction(const char* actionID);
     bool isValidActionFrequency(const struct Action*);
     void updateActionsLastTriggeredTime();
     bool updateTriggeredTimeForAction(const char* actionID);
     void clearActionsList();
+    bool isInternetConnectivityAvailable();
+    int countLeftOverOfflineActions();
+    int totalActionsTrigger;
+    int totalOfflineActionsTrigger;
+    void triggerOfflineActions();
+    String* triggerOnlineAction(const char* actionID,const char* value = NULL);
+    String* postAction(const char* actionID, const char* qID, const double value);
+    ActionService();
+    static ActionService* instance;
 };
 #endif

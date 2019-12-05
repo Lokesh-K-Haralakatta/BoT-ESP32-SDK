@@ -7,9 +7,102 @@
 
 #include <Storage.h>
 #include <Webserver.h>
+#define ACTIONS_COUNT 7
 
 KeyStore* store;
 Webserver *server;
+//Vector to hold action items
+std::vector <struct Action> actionsList;
+
+//Vector to hold offline action items
+std::vector <struct OfflineActionMetadata> olActionsList;
+
+//Initialize actions to save to file
+const char* actionIds[ACTIONS_COUNT] = {  "E6509B49-5048-4151-B965-BB7B2DBC7905",
+                                          "E6509B49-5048-4151-B965-BB7B2DBC7906",
+                                          "E6509B49-5048-4151-B965-BB7B2DBC7907",
+                                          "E6509B49-5048-4151-B965-BB7B2DBC7908",
+                                          "C257DB70-AE57-4409-B94E-678CB1567FA6",
+                                          "D93F99E1-011B-4609-B04E-AEDBA98A7C5F",
+                                          "0097430C-FA78-4087-9B78-3AC7FEEF2245" };
+
+const char* frequencies[ACTIONS_COUNT] = { "minuetly", "hourly", "daily", "weekly", "monthly", "half-yearly", "yearly" };
+
+const unsigned long lastTrigTime[ACTIONS_COUNT] = { 1557225825,1557225886,1557225936,1557225987,1557226000,1557226100, 1557226200 };
+
+void buildActionsList(){
+  clearActionsList();
+  for(int i=0; i<ACTIONS_COUNT; i++){
+    struct Action item;
+    item.actionID = new char[strlen(actionIds[i])+1];
+    strcpy(item.actionID,actionIds[i]);
+    item.actionFrequency = new char[strlen(frequencies[i])+1];
+    strcpy(item.actionFrequency,frequencies[i]);
+    item.triggeredTime = lastTrigTime[i];
+
+    actionsList.push_back(item);
+  }
+}
+
+void clearActionsList(){
+  std::vector<struct Action>::iterator i;
+  while(!actionsList.empty()){
+    i = actionsList.begin();
+    delete i->actionID;
+    delete i->actionFrequency;
+    actionsList.erase(i);
+  }
+}
+
+void buildOfflineActionsList(){
+  const char* deviceID = store->getDeviceID();
+  const char* makerID = store->getMakerID();
+  const char* queueID = store->generateUuid4();
+  const char* altID = store->getAlternateDeviceID();
+
+  clearOlActionsList();
+  for(int i=0; i<ACTIONS_COUNT; i++){
+    struct OfflineActionMetadata item;
+    item.actionID = new char[strlen(actionIds[i])+1];
+    strcpy(item.actionID,actionIds[i]);
+    item.deviceID = new char[strlen(deviceID)+1];
+    strcpy(item.deviceID,deviceID);
+    item.makerID = new char[strlen(makerID)+1];
+    strcpy(item.makerID,makerID);
+    item.queueID = new char[strlen(queueID)+1];
+    strcpy(item.queueID,queueID);
+    if(altID != NULL){
+      item.alternateID = new char[strlen(altID)+1];
+      strcpy(item.alternateID,altID);
+    }
+    item.offline = 1;
+    item.value = 0.0;
+    item.timestamp = millis();
+
+    if(store->isDeviceMultipair()){
+      item.multipair = 1;
+    }
+    else {
+      item.multipair = 0;
+    }
+    olActionsList.push_back(item);
+  }
+}
+
+void clearOlActionsList(){
+  std::vector<struct OfflineActionMetadata>::iterator i;
+  while(!olActionsList.empty()){
+    i = olActionsList.begin();
+    delete i->actionID;
+    delete i->deviceID;
+    delete i->queueID;
+    delete i->makerID;
+    if(i->alternateID != NULL){
+      delete i->alternateID;
+    }
+    olActionsList.erase(i);
+  }
+}
 
 void setup(){
   store = KeyStore :: getKeyStoreInstance();
@@ -36,6 +129,7 @@ void setup(){
 }
 
 void loop(){
+  debugI("\nkeyStore: Available free heap at the beginning of loop: %lu",ESP.getFreeHeap());
   //Proceed further if board connects to WiFi Network
   if(server->isWiFiConnected()){
     if(store->isJSONConfigLoaded()){
@@ -81,97 +175,10 @@ void loop(){
       debugI("\n CA Certificate Contents: \n%s\n", store->getCACert());
     }
 
-    debugI("\nDeviceInformation: %s", (store->getDeviceInfo())->c_str());
+    debugI("\n DeviceInformation: %s", (store->getDeviceInfo())->c_str());
 
-    //Initialize actions to save to file
-    const char* id1 = "E6509B49-5048-4151-B965-BB7B2DBC7905";
-    const char* freq1 = "minuetly";
-    const unsigned long ltt1 = 1557225825;
-
-    const char* id2 = "E6509B49-5048-4151-B965-BB7B2DBC7906";
-    const char* freq2 = "hourly";
-    const unsigned long ltt2 = 1557225886;
-
-    const char* id3 = "E6509B49-5048-4151-B965-BB7B2DBC7907";
-    const char* freq3 = "daily";
-    const unsigned long ltt3 = 1557225936;
-
-    const char* id4 = "E6509B49-5048-4151-B965-BB7B2DBC7908";
-    const char* freq4 = "weekly";
-    const unsigned long ltt4 = 1557225987;
-
-    const char* id5 = "C257DB70-AE57-4409-B94E-678CB1567FA6";
-    const char* freq5 = "monthly";
-    const unsigned long ltt5 = 1557226000;
-
-    const char* id6 = "D93F99E1-011B-4609-B04E-AEDBA98A7C5F";
-    const char* freq6 = "half-yearly";
-    const unsigned long ltt6 = 1557226100;
-
-    const char* id7 = "0097430C-FA78-4087-9B78-3AC7FEEF2245";
-    const char* freq7 = "yearly";
-    const unsigned long ltt7 = 1557226100;
-
-    std::vector <struct Action> actionsList;
-
-    struct Action item1;
-    item1.actionID = new char[strlen(id1)+1];
-    item1.actionFrequency = new char[strlen(freq1)+1];
-
-    strcpy(item1.actionID,id1);
-    strcpy(item1.actionFrequency,freq1);
-    item1.triggeredTime = ltt1;
-    actionsList.push_back(item1);
-
-    struct Action item2;
-    item2.actionID = new char[strlen(id2)+1];
-    item2.actionFrequency = new char[strlen(freq2)+1];
-
-    strcpy(item2.actionID,id2);
-    strcpy(item2.actionFrequency,freq2);
-    item2.triggeredTime = ltt2;
-    actionsList.push_back(item2);
-
-    struct Action item3;
-    item3.actionID = new char[strlen(id3)+1];
-    item3.actionFrequency = new char[strlen(freq3)+1];
-
-    strcpy(item3.actionID,id3);
-    strcpy(item3.actionFrequency,freq3);
-    item3.triggeredTime = ltt3;
-    actionsList.push_back(item3);
-
-    struct Action item4;
-    item4.actionID = new char[strlen(id4)+1];
-    item4.actionFrequency = new char[strlen(freq4)+1];
-    strcpy(item4.actionID,id4);
-    strcpy(item4.actionFrequency,freq4);
-    item4.triggeredTime = ltt4;
-    actionsList.push_back(item4);
-
-    struct Action item5;
-    item5.actionID = new char[strlen(id5)+1];
-    item5.actionFrequency = new char[strlen(freq5)+1];
-    strcpy(item5.actionID,id5);
-    strcpy(item5.actionFrequency,freq5);
-    item5.triggeredTime = ltt5;
-    actionsList.push_back(item5);
-
-    struct Action item6;
-    item6.actionID = new char[strlen(id6)+1];
-    item6.actionFrequency = new char[strlen(freq6)+1];
-    strcpy(item6.actionID,id6);
-    strcpy(item6.actionFrequency,freq6);
-    item6.triggeredTime = ltt6;
-    actionsList.push_back(item6);
-
-    struct Action item7;
-    item7.actionID = new char[strlen(id7)+1];
-    item7.actionFrequency = new char[strlen(freq7)+1];
-    strcpy(item7.actionID,id7);
-    strcpy(item7.actionFrequency,freq7);
-    item7.triggeredTime = ltt7;
-    actionsList.push_back(item7);
+    //Build action items and add to actionsList
+    buildActionsList();
 
     if(store->saveActions(actionsList)){
       debugI("\n %d actions saved to file - %s", actionsList.size(),ACTIONS_FILE);
@@ -180,13 +187,16 @@ void loop(){
       debugI("\n Failed in saving actions to file - %s", ACTIONS_FILE);
     }
 
-    actionsList = store->retrieveActions();
-    if(actionsList.empty()){
+    //Clear actions items from actionsList
+    clearActionsList();
+
+    std::vector <struct Action> retActionsList = store->retrieveActions();
+    if(retActionsList.empty()){
       debugI("\n No Actions retrieved from the file - %s", ACTIONS_FILE);
     }
     else {
-      debugI("\n Actions retrieved from the file - %s : %d", ACTIONS_FILE,actionsList.size());
-      for (std::vector<struct Action>::iterator i = actionsList.begin() ; i != actionsList.end(); ++i){
+      debugI("\n Actions retrieved from the file - %s : %d", ACTIONS_FILE,retActionsList.size());
+      for (std::vector<struct Action>::iterator i = retActionsList.begin() ; i != retActionsList.end(); ++i){
         debugI("\n %s : %s : %lu", i->actionID, i->actionFrequency, i->triggeredTime);
       }
     }
@@ -201,12 +211,63 @@ void loop(){
       debugI("\n QR Code is not generated and saved to SPIFFS, now generating and saving to SPIFFS");
       store->generateAndSaveQRCode();
     }
+
+    //Offline actions should not be present at this point
+    if(store->offlineActionsExist()){
+      debugE("\n Offline Actions are available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugI("\n Offline Actions are not available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+
+    //Build offline action items and add to olActionsList
+    buildOfflineActionsList();
+
+    if(store->saveOfflineActions(olActionsList)){
+      debugI("\n %d offline actions saved to file - %s", olActionsList.size(),OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugE("\n Failed in saving offline actions to file - %s", OFFLINE_ACTIONS_FILE);
+    }
+
+    //Clear offline actions items from olActionsList
+    clearOlActionsList();
+
+    //Offline actions should be present at this point
+    if(store->offlineActionsExist()){
+      debugI("\n Offline Actions are available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugE("\n Offline Actions are not available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+
+    std::vector <struct OfflineActionMetadata> retOfflineActionsList = store->retrieveOfflineActions(true);
+    if(retOfflineActionsList.empty()){
+      debugI("\n No Offline Actions retrieved from the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugI("\n Offline Actions retrieved from the file - %s : %d", OFFLINE_ACTIONS_FILE,retOfflineActionsList.size());
+      for (std::vector<struct OfflineActionMetadata>::iterator i = retOfflineActionsList.begin() ; i != retOfflineActionsList.end(); ++i){
+        debugI("\n %d : %s : %s : %s : %s : %d : %lu", i->offline, i->makerID, i->deviceID, i->actionID, i->queueID, i->multipair, i->timestamp);
+      }
+    }
+
+    //Offline actions should not be present at this point
+    if(store->offlineActionsExist()){
+      debugE("\n Offline Actions are available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
+    else {
+      debugI("\n Offline Actions are not available in the file - %s", OFFLINE_ACTIONS_FILE);
+    }
   }
   else {
     LOG("\nkeyStore: ESP-32 board not connected to WiFi Network, try again");
     //Enable board to connect to WiFi Network
     server->connectWiFi();
   }
+
+  debugI("\nkeyStore: Available free heap at the end of loop: %lu",ESP.getFreeHeap());
+
   #ifndef DEBUG_DISABLED
     Debug.handle();
   #endif

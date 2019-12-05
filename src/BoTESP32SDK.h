@@ -26,6 +26,7 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
+#include <ESP32Ping.h>
 #define EEPROM_SIZE 1
 #define DEVICE_NEW  0
 #define DEVICE_PAIRED 1
@@ -53,6 +54,18 @@ struct Action{
   char* actionID;
   char* actionFrequency;
   unsigned long triggeredTime;
+};
+
+struct OfflineActionMetadata{
+  byte offline;
+  char* deviceID;
+  char* makerID;
+  char* actionID;
+  char* queueID;
+  byte multipair;
+  char* alternateID;
+  double value;
+  unsigned long timestamp;
 };
 
 #endif

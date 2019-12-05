@@ -19,8 +19,10 @@ void ConfigurationService :: initialize(){
   store->retrieveAllKeys();
   store->generateAndSaveQRCode();
   //Check device pair type and assign state accordingly
-  if(store->isDeviceMultipair())
+  if(store->isDeviceMultipair()){
     store->setDeviceState(DEVICE_MULTIPAIR);
+    debugD("\nConfigurationService :: initialize: Device is Multipair Enabled");
+  }
   else
     store->setDeviceState(DEVICE_NEW);
   debugD("\nConfigurationService :: initialize: Device State: %d",store->getDeviceState());

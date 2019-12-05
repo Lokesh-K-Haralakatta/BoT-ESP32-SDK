@@ -11,15 +11,21 @@
 #include "Storage.h"
 #include "PairingService.h"
 #include "ActionService.h"
+#include "ActivationService.h"
 #include "ConfigurationService.h"
+
+class ActionService;
 class ControllerService {
   public:
           ControllerService();
           void getActions(AsyncWebServerRequest *request);
           void pairDevice(AsyncWebServerRequest *request);
+          void activateDevice(AsyncWebServerRequest *request);
           void getQRCode(AsyncWebServerRequest *request);
-          void triggerAction(AsyncWebServerRequest *request, JsonVariant &json);
+          void postAction(AsyncWebServerRequest *request);
   private:
     KeyStore* store;
+    ActionService* actionService;
+    int triggerAction(const char* actionID);
 };
 #endif

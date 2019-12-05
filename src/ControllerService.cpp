@@ -9,12 +9,11 @@
 
 ControllerService :: ControllerService(){
   store = KeyStore :: getKeyStoreInstance();
+  actionService = ActionService :: getActionServiceInstance();
 }
 
 void ControllerService :: getActions(AsyncWebServerRequest *request){
-  ActionService* actionService = new ActionService();
   String* response = actionService->getActions();
-  delete actionService;
 
   if(response == NULL){
     DynamicJsonBuffer jsonBuffer;
@@ -31,6 +30,102 @@ void ControllerService :: getActions(AsyncWebServerRequest *request){
     debugD("\nControllerService :: getActions: %s", responseString);
     request->send(200, "application/json", responseString);
   }
+}
+
+void ControllerService :: postAction(AsyncWebServerRequest *request){
+    debugI("\nControllerService :: postAction: Request received to trigger an action");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& doc = jsonBuffer.createObject();
+    char body[100];
+
+    int paramsCount = request->params();
+    if(paramsCount == 0){
+      debugE("\nControllerService :: postAction: Need actionID as query parameter to trigger an action");
+      doc["message"] = "Need actionID as query parameter to trigger an action";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      request->send(400,"application/json", body);
+    }
+    else if(store->getDeviceState() < DEVICE_ACTIVE){
+      doc["message"] = "Device not activated";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      debugE("\nControllerService :: postAction: %s", body);
+      request->send(400, "application/json", body);
+    }
+    else {
+      AsyncWebParameter* p = request->getParam(0);
+      if(strcmp(p->name().c_str(), "actionID") != 0){
+        debugE("\nControllerService :: postAction: Query Parameter should be `actionID`");
+        doc["message"] = "Query Parameter should be `actionID`";
+        doc.printTo(body);
+        jsonBuffer.clear();
+        request->send(400,"application/json", body);
+      }
+      else if(store->isDeviceMultipair() &&
+        store->getAlternateDeviceID() == NULL){
+        doc["message"] = "Missing parameter `AlternativeID`";
+        doc.printTo(body);
+        jsonBuffer.clear();
+        debugE("\nControllerService :: postAction: %s", body);
+        request->send(400, "application/json", body);
+      }
+      else {
+        const char* actionID = p->value().c_str();
+        if(actionID != NULL && strlen(actionID) > 0){
+          debugI("\nControllerService :: postAction: Given actionID: %s",actionID);
+          const int responseCode = triggerAction(actionID);
+          switch(responseCode) {
+            case 200 : debugI("\nControllerService :: postAction: Action triggered successful");
+                       doc["message"] = "Action triggered successful";
+                       break;
+            case 201 : debugI("\nControllerService :: postAction: Action saved as Offline Action");
+                       doc["message"] = "Action saved as Offline Action";
+                       break;
+            default  : debugE("\nControllerService :: postAction: Check parameters and try again");
+                       doc["message"] = "Check parameters and try again";
+                       break;
+          }
+          doc.printTo(body);
+          jsonBuffer.clear();
+          request->send(responseCode, "application/json", body);
+        }
+        else {
+          debugE("\nControllerService :: postAction: actionID cannot be NULL");
+          doc["message"] = "actionID cannot be NULL";
+          doc.printTo(body);
+          jsonBuffer.clear();
+          request->send(400,"application/json", body);
+        }
+      }
+    }
+}
+
+int ControllerService :: triggerAction(const char* actionID){
+  String* response = actionService->triggerAction(actionID);
+  int responseCode = 400;
+  if(response == NULL){
+    debugI("\nControllerService :: triggerAction: Action saved as offline action");
+    responseCode = 201;
+  }
+  else if(response->indexOf("OK") != -1){
+    debugI("\nControllerService :: triggerAction: triggerAction Response: %s", response->c_str());
+    responseCode = 200;
+  }
+  else {
+    debugI("\nControllerService :: triggerAction: triggerAction Response: %s", response->c_str());
+    responseCode = 404;
+  }
+
+  //Dump actions triggered stats
+  int offActionsTriggerCount = actionService->getOfflineActionsTriggerCount();
+  int actionsTriggerCount = actionService->getActionsTriggerCount();
+  debugI("\nControllerService :: postAction: Number of offline actions left over: %d",actionService->getOfflineActionsCount());
+  debugI("\nControllerService :: postAction: Number of offline actions triggered: %d",offActionsTriggerCount);
+  debugI("\nControllerService :: postAction: Number of actions triggered: %d",actionsTriggerCount);
+  debugI("\nControllerService :: postAction: Number of total actions triggered since from board start: %d",actionsTriggerCount+offActionsTriggerCount);
+
+  return responseCode;
 }
 
 void ControllerService :: getQRCode(AsyncWebServerRequest *request){
@@ -61,7 +156,7 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
     doc.printTo(body);
     jsonBuffer.clear();
     debugW("\nControllerService :: pairDevice: %s", body);
-    request->send(403, "application/json", body);
+    request->send(400, "application/json", body);
   }
   else {
     PairingService* pairService = new PairingService();
@@ -87,68 +182,39 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
   }
 }
 
-void ControllerService :: triggerAction(AsyncWebServerRequest *request, JsonVariant &json){
+void ControllerService :: activateDevice(AsyncWebServerRequest *request){
   store->initializeEEPROM();
   DynamicJsonBuffer jsonBuffer;
   JsonObject& doc = jsonBuffer.createObject();
   char body[100];
 
-  if(store->getDeviceState() < DEVICE_ACTIVE){
-    doc["message"] = "Device not activated";
+  if(store->getDeviceState() > DEVICE_PAIRED){
+    doc["message"] = "Device is already activated";
     doc.printTo(body);
     jsonBuffer.clear();
-    debugE("\nControllerService :: triggerAction: %s", body);
-    request->send(403, "application/json", body);
+    debugW("\nControllerService :: activateDevice: %s", body);
+    request->send(400, "application/json", body);
   }
   else {
-    JsonObject& jsonObj = json.as<JsonObject>();
+    ActivationService* activateService = new ActivationService();
+    activateService->activateDevice();
+    delete activateService;
 
-    if(jsonObj.containsKey("actionID") == false){
-      doc["message"] = "Missing parameter `actionID`";
+    int deviceState = store->getDeviceState();
+    debugD("\nControllerService :: activateDevice: Device state after return from activateService->activateDevice : %d",deviceState);
+    if( deviceState > DEVICE_PAIRED){
+      doc["message"] = "Device activation successful";
       doc.printTo(body);
       jsonBuffer.clear();
-      debugE("\nControllerService :: triggerAction: %s", body);
-      request->send(400, "application/json", body);
-    }
-    else if((store->getDeviceState() == DEVICE_MULTIPAIR) &&
-            (jsonObj.containsKey("alternativeID") == false)){
-      doc["message"] = "Missing parameter `AlternativeID`";
-      doc.printTo(body);
-      jsonBuffer.clear();
-      debugE("\nControllerService :: triggerAction: %s", body);
-      request->send(400, "application/json", body);
+      debugD("\nControllerService :: activateDevice: %s", body);
+      request->send(200, "application/json", body);
     }
     else {
-      const char* actionID = (jsonObj.containsKey("actionID"))?jsonObj.get<const char*>("actionID"):NULL;
-      const char* value = (jsonObj.containsKey("value"))?jsonObj.get<const char*>("value"):NULL;
-      const char* altID = (jsonObj.containsKey("alternativeID"))?jsonObj.get<const char*>("alternativeID"):NULL;
-
-      ActionService* actionService = new ActionService();
-      String* response = actionService->triggerAction(actionID, value, altID);
-      delete actionService;
-      debugD("\nControllerService :: triggerAction: Response: %s", response->c_str());
-
-      if(response->indexOf("OK") != -1) {
-        doc["message"] = "Action triggered successful";
-        doc.printTo(body);
-        jsonBuffer.clear();
-        debugD("\nControllerService :: triggerAction: %s", body);
-        request->send(200, "application/json", body);
-      }
-      else if(response->indexOf("Action not found") != -1){
-        doc["message"] = "Action not triggered as its not found";
-        doc.printTo(body);
-        jsonBuffer.clear();
-        debugE("\nControllerService :: triggerAction: %s", body);
-        request->send(404, "application/json", body);
-      }
-      else {
-        doc["message"] = "Action triggerring failed, check parameters and try again";
-        doc.printTo(body);
-        jsonBuffer.clear();
-        debugE("\nControllerService :: triggerAction: %s", body);
-        request->send(503, "application/json", body);
-      }
+      doc["message"] = "Unable to activate device";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      debugE("\nControllerService :: activateDevice: %s", body);
+      request->send(503, "application/json", body);
     }
   }
 }
