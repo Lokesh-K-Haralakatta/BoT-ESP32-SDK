@@ -176,7 +176,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
         #define WIFI_SSID "LJioWiFi"
         #define WIFI_PASSWD "adgjmptw"
         ...
-        Webserver *server = new Webserver(false,WIFI_SSID, WIFI_PASSWD);
+        Webserver *server = Webserver::getWebserverInstance(false,WIFI_SSID, WIFI_PASSWD);
         ...
 
       ```
@@ -184,7 +184,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
       ```
         #include <Webserver.h>
         ...
-        Webserver *server = new Webserver(true);
+        Webserver *server = Webserver::getWebserverInstance(true);
         ...
 
       ```
