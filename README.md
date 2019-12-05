@@ -1,3 +1,5 @@
+![readme-header](readme-header.png)
+
 # BoT-ESP32-SDK
 
 This read me contains the detailed steps to work with **FINN - Banking of Things Service** on ESP-32 Dev Kit Module using BoT-ESP32-SDK library.
@@ -344,3 +346,20 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Flash the data directory contents onto board from `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` Option
   - Change the partition scheme from Default to No OTA (Large APP) using `Arduino IDE -> Tools` menu
   - Make sure all the required dependent libraries for ESP-32 SDK are installed through Arduino IDE
+
+## Contributing
+Any improvement to the FINN SDK are very much welcome! Our software is open-source and we believe your input can help create a lively community and the best version of FINN. We’ve already implemented much of the feedback given to us by community members and will continue to do so. Join them by contributing to the SDK or by contributing to the documentation.
+
+# Community
+
+## Slack
+Slack is our main feedback channel for the SDK and documentation. Join our [Slack channel](https://ing-bankingofthings.slack.com/join/shared_invite/enQtNDEyODg3MDE1NDg4LWJhNGFiOTFhZmVlNGQwMTM4ZjQzNmZmZDk5ZGZiNjNlZTVjZjNmYjE0Y2MxZjU5MWQxNmY5MTgzYzAxNmFiNGU) and be part of the FINN community.<br/>
+
+## Meetups
+We also organize meetups, e.g. demo or hands-on workshops. Keep an eye on our meetup group for any events coming up soon. Here you will be able to see the FINN software in action and meet the team.<br/>
+[Meetup/Amsterdam-ING-Banking-of-Things](meetup.com/Amsterdam-ING-Banking-of-Things/).
+ 
+# About FINN
+After winning the ING Innovation Bootcamp in 2017, FINN is now part of the ING Accelerator Program. Our aim is to become the new Internet of Things (IoT) payment standard that enables service-led business models. FINN offers safe, autonomous transactions for smart devices.
+We believe our software offers tremendous business opportunities. However, at heart, we are enthusiasts. Every member of our team has a passion for innovation. That’s why we love working on FINN.
+[makethingsfinn.com](makethingsfinn.com)
