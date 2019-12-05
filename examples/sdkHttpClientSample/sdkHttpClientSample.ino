@@ -39,7 +39,7 @@
 
 //Custom WiFi Credentials
 #define WIFI_SSID "FINN"
-#define WIFI_PASSWD "Id4S7719G99XG1R"
+#define WIFI_PASSWD "xxxxxxxxxxxxxxxx"
 
 //Action ID with frequency as "always"
 String actionIDAlways = String("E6509B49-5048-4151-B965-BB7B2DBC7905");

@@ -30,7 +30,7 @@
 
 //Custom WiFi Credentials
 #define WIFI_SSID "FINN"
-#define WIFI_PASSWD "Id4S7719G99XG1R"
+#define WIFI_PASSWD "xxxxxxxxxxxxxx"
 
 Webserver *server;
 KeyStore* store = KeyStore::getKeyStoreInstance();
