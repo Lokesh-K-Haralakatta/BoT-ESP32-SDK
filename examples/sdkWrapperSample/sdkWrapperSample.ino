@@ -38,7 +38,7 @@
 
   //Custom WiFi Credentials
   #define WIFI_SSID "FINN"
-  #define WIFI_PASSWD "Id4S7719G99XG1R"
+  #define WIFI_PASSWD "xxxxxxxxxxxxxxx"
 
   //Declare service variables
   KeyStore *store = NULL;
@@ -77,12 +77,12 @@
       //store->setHTTPS(true);
 
       //Instantiate Webserver by using WiFi credentials from configuration
-      //server = new Webserver(loadConfig);
+      //server = Webserver::getWebserverInstance(loadConfig);
 
       //Instantiate Webserver by using the custom WiFi credentials
       loadConfig = false;
       int logLevel = BoT_INFO;
-      server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+      server = Webserver::getWebserverInstance(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
       //Enable board to connect to WiFi Network
       server->connectWiFi();

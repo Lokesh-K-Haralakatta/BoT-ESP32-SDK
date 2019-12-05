@@ -10,7 +10,7 @@
 SDKWrapper :: SDKWrapper(){
   store = KeyStore :: getKeyStoreInstance();
   pairService = new PairingService();
-  actionService = new ActionService();
+  actionService = ActionService :: getActionServiceInstance();
   configService = new ConfigurationService();
 }
 

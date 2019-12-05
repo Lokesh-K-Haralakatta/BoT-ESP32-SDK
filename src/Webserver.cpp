@@ -10,6 +10,18 @@
   RemoteDebug Debug;
 #endif
 
+Webserver* Webserver :: webServer;
+
+Webserver* Webserver :: getWebserverInstance(bool loadConfig, const char *ssid,
+                          const char *passwd, const int logLevel){
+  if(webServer == NULL){
+    webServer = new Webserver(loadConfig, ssid, passwd, logLevel);
+    LOG("\nWebserver :: getWebserverInstance: Instantiated AsyncWebServer Instance...");
+  }
+
+  return webServer;
+}
+
 Webserver :: Webserver(bool loadConfig, const char *ssid, const char *passwd, const int logLevel){
   ledPin = 2;
   port = 3001;
@@ -118,8 +130,9 @@ void Webserver :: startServer(){
         JsonObject& root = response->getRoot();
         root["actionsEndPoint"] = "/actions";
         root["pairingEndPoint"] = "/pairing";
+        root["activateEndPoint"] = "/activate";
         root["qrCodeEndPoint"] = "/qrcode";
-        root["actionEndPoint"] = "/action/actionID?";
+        root["actionEndPoint"] = "/action?actionID=`actionID-value`";
         response->setLength();
         request->send(response);
       });
@@ -137,6 +150,11 @@ void Webserver :: startServer(){
       server->on("/pairing", HTTP_GET, [](AsyncWebServerRequest *request){
          ControllerService cs;
          cs.pairDevice(request);
+      });
+
+      server->on("/activate", HTTP_GET, [](AsyncWebServerRequest *request){
+         ControllerService cs;
+         cs.activateDevice(request);
       });
 
       server->on("/qrcode", HTTP_GET, [](AsyncWebServerRequest *request){

@@ -10,7 +10,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
    |        3      | Secured HTTP with BoT Service              | Supported | SDK has got an option of enable / disable https at runtime
    |        4      | Remote Debug                               | Supported | Enable to access the ESP-32 board through telnet client. This can be disabled for production |
    |        5      | Logging                                    | Supported | There are 4 different log levels supported for SDK - BoT_INFO, BoT_WARN, BoT_DEBUG and BoT_ERROR |
-   |        6      | Offline Actions                            | Supported | Enables saving the actions when there is no internet connectivity available and processing with following request |
+   |        6      | Offline Actions                            | Supported | Enables saving the actions when there is no internet connectivity available and processing with following request. Supported only in SDK Module as Library |
    
 ## Getting Started instructions for ESP-32 Dev Kit Module
 - **Setting up of ESP-32 Dev Module**
@@ -35,18 +35,20 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download ZIP from repository and install through Arduino IDE
   - The required configuration file and keys are available in the path `Arduino/libraries/BoT-ESP32-SDK/data` directory
   - Update the required configuration in `configuration.json` file and replace the key-pair files by retaining the same file names
-  - Webserver endpoints usage sample sketch - `sdkSample.ino` is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/sdkSample` directory
   - SDKWrapper methods usage sample sketch - `sdkWrapperSample.ino` is available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/sdkWrapperSample` directory
+  - To use ESPAsyncWebserver Endpoints, start the webserver on board by flashing the sketch - `startAsyncServer.ino` available in the path `Arduino/libraries/BoT-ESP32-SDK/examples/AsyncWebServer` directory
+  - The Webserver endpoints can be consumed remotely by client written in any of the programming language
+  - To consume Webserver endpoints on ESP32 board, 
+    - Use the sketch - `sdkAsyncTCPClientSample.ino` available in the path `Arduino/libraries/BoT-ESP32- SDK/examples/sdkAsyncTCPClientSample` directory implemented using AsyncTCPClient library
+    - Use the sketch - `sdkHttpClientSample.ino` available in the path `Arduino/libraries/BoT-ESP32- SDK/examples/sdkHttpClientSample` directory implemented using HttpClient library
   - Make sure the line `#define DEBUG_DISABLED true` is commented in the file `BoTESP32SDK.h` to have Remote Redug feature enabled
 
-- **Steps to execute sdkSample as it's purpose is to trigger the given action for every 1 minute**
-  - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/sdkSample` into Arduino IDE Sketches directory
-  - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into sdkSample sketch data directory
+- **Steps to execute startAsyncServer.ino as it's purpose is to start Async Webserver on ESP32 Board**
+  - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/AsyncWebServer` into Arduino IDE Sketches directory
+  - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into startAsyncServer sketch data directory
   - Update the configuration details and key-pair details in the files present in data directory
   - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
-  - Sketch has code to trigger actions with various frequencies like minutely, hourly, daily, monthly,half-yearly, yearly and always
-  - Remove the comments for required action to be triggered based on the action frequency
-  - Define the actions in [Maker Portal](https://maker.bankingofthings.io/login), update the actionIDs properly before executing the sketch
+  - Define the actions in [Maker Portal](https://maker.bankingofthings.io/login)
   - Compile and Upload sketch to ESP32 board using Arduino IDE
   - Upload data directory contents using `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` option onto ESP-32 board
   - Wait for couple of seconds, the sketch should start running and connect to specified WiFi Network present in Sketch / Configuration
@@ -56,7 +58,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - The QR Code can be accessed using the webserver's end point `/qrcode` running on ESP-32 board
   - Add the required service(s) in the [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) while pairing the device to enable action(s) to be triggered from the device
   - Open Serial Monitor Window in Arduino IDE to observe the sketch flow or SDK also supports RemoteDebug feature use `telnet ipAddr`
-  - Once device is paired, observe the action getting triggered for every 1 minute
+  - FInally, the sketch displays the Websrever URL and available end points to be consumed by any client application
   
 - **Steps to execute sdkWrapperSample as it's purpose is to directly call SDKWrapper methods to getActions and triggerAction for every 1 minute without using Async Webserver end points**
   - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/sdkWrapperSample` into Arduino IDE Sketches directory

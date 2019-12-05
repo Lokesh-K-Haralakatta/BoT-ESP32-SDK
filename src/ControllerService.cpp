@@ -6,25 +6,14 @@
 */
 
 #include "ControllerService.h"
-ActionService* ControllerService :: actionService;
 
 ControllerService :: ControllerService(){
   store = KeyStore :: getKeyStoreInstance();
-}
-
-ActionService* ControllerService :: getActionServiceObject(){
-  if(actionService == NULL){
-      actionService = new ActionService();
-      debugI("\nControllerService :: getActionServiceObject: Instantiated ActionService Instance");
-  }
-
-  return actionService;
+  actionService = ActionService :: getActionServiceInstance();
 }
 
 void ControllerService :: getActions(AsyncWebServerRequest *request){
-  ActionService* actionService = ControllerService :: getActionServiceObject();
   String* response = actionService->getActions();
-  //delete actionService;
 
   if(response == NULL){
     DynamicJsonBuffer jsonBuffer;
@@ -113,7 +102,6 @@ void ControllerService :: postAction(AsyncWebServerRequest *request){
 }
 
 int ControllerService :: triggerAction(const char* actionID){
-  ActionService* actionService = ControllerService :: getActionServiceObject();
   String* response = actionService->triggerAction(actionID);
   int responseCode = 400;
   if(response == NULL){
@@ -168,7 +156,7 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
     doc.printTo(body);
     jsonBuffer.clear();
     debugW("\nControllerService :: pairDevice: %s", body);
-    request->send(403, "application/json", body);
+    request->send(400, "application/json", body);
   }
   else {
     PairingService* pairService = new PairingService();
@@ -189,6 +177,43 @@ void ControllerService :: pairDevice(AsyncWebServerRequest *request){
       doc.printTo(body);
       jsonBuffer.clear();
       debugE("\nControllerService :: pairDevice: %s", body);
+      request->send(503, "application/json", body);
+    }
+  }
+}
+
+void ControllerService :: activateDevice(AsyncWebServerRequest *request){
+  store->initializeEEPROM();
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& doc = jsonBuffer.createObject();
+  char body[100];
+
+  if(store->getDeviceState() > DEVICE_PAIRED){
+    doc["message"] = "Device is already activated";
+    doc.printTo(body);
+    jsonBuffer.clear();
+    debugW("\nControllerService :: activateDevice: %s", body);
+    request->send(400, "application/json", body);
+  }
+  else {
+    ActivationService* activateService = new ActivationService();
+    activateService->activateDevice();
+    delete activateService;
+
+    int deviceState = store->getDeviceState();
+    debugD("\nControllerService :: activateDevice: Device state after return from activateService->activateDevice : %d",deviceState);
+    if( deviceState > DEVICE_PAIRED){
+      doc["message"] = "Device activation successful";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      debugD("\nControllerService :: activateDevice: %s", body);
+      request->send(200, "application/json", body);
+    }
+    else {
+      doc["message"] = "Unable to activate device";
+      doc.printTo(body);
+      jsonBuffer.clear();
+      debugE("\nControllerService :: activateDevice: %s", body);
       request->send(503, "application/json", body);
     }
   }
