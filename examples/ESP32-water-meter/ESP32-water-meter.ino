@@ -38,8 +38,8 @@
 #include <FlowMeter.h>
 
 //Custom WiFi Credentials
-#define WIFI_SSID "LJioWiFi"
-#define WIFI_PASSWD "adgjmptw"
+#define WIFI_SSID "FINN"
+#define WIFI_PASSWD "XXXXXXXXXXXXX"
 
 //Declare service variables
 KeyStore *store = NULL;
@@ -55,6 +55,10 @@ const char* deviceID = NULL;
 //Tasks handles
 TaskHandle_t nTask;
 TaskHandle_t pTask;
+
+//Function Prototypes for the tasks
+void notificationTask( void * pvParameters );
+void paymentTask( void * pvParameters );
 
 // let's provide our own sensor properties, including calibration points for error correction
 FlowSensorProperties flowSensor = {60.0f, 4.5f, {1.2, 1.1, 1.05, 1, 1, 1, 1, 0.95, 0.9, 0.8}};
@@ -120,7 +124,7 @@ void setup()
     //Instantiate Webserver by using the custom WiFi credentials
     loadConfig = false;
     int logLevel = BoT_INFO;
-    server = new Webserver(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+    server = Webserver::getWebserverInstance(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
     //Enable board to connect to WiFi Network
     server->connectWiFi();
