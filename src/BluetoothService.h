@@ -40,15 +40,53 @@ class BluetoothService {
 
 class BoTServerCallbacks: public BLEServerCallbacks {
   friend class BluetoothService;
-  void onConnect(BLEServer* pServer) {
+  void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) {
     debugI("\nBoTServerCallbacks :: onConnect: BLE Client Connected...");
     BluetoothService :: setClientConnected(true);
+    //pServer->getAdvertising()->start();
+    //debugI("\nBoTServerCallbacks :: onConnect: Started advertising again...");
+    pServer->updateConnParams(param->connect.remote_bda, 10*1000, 30*1000, 1*1000, 30*1000);
+    debugI("\nBoTServerCallbacks :: onConnect: Updated connection parameters...");
   };
 
   void onDisconnect(BLEServer* pServer) {
     debugI("\nBoTServerCallbacks :: onDisconnect: BLE Client Disconnected...");
     BluetoothService :: setClientConnected(false);
+    //pServer->getAdvertising()->start();
+    //debugI("\nBoTServerCallbacks :: onDisconnect: Started advertising again...");
   }
+};
+
+class ConfigureCharacteristicsCallbacks: public BLECharacteristicCallbacks {
+    friend class BluetoothService;
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      /*DynamicJsonBuffer jsonBuffer;
+      JsonObject& root = jsonBuffer.parseObject(pCharacteristic->getValue().c_str());
+      String* SSID = new String(root.get<const char*>("SSID"));
+      String* PASSWD = new String(root.get<const char*>("PWD"));
+      debugI("\nConfigureCharacteristicsCallbacks :: onWrite: SSID: %s", SSID->c_str());
+      debugI("\nConfigureCharacteristicsCallbacks :: onWrite: PASSWD: %s", PASSWD->c_str());
+      //Reset ESP32 Board to connect to given WiFi Credentials
+      WiFi.disconnect();
+      while(WiFi.begin(SSID->c_str(), PASSWD->c_str()) != WL_CONNECTED) {
+        debugI("\nConfigureCharacteristicsCallbacks :: onWrite: Waiting to connect to WiFi SSID: %s", SSID->c_str());
+        delay(1000);
+      }
+      debugI("\nConfigureCharacteristicsCallbacks :: onWrite: Board connected to SSID: %s", SSID->c_str());
+      //Release meory used
+      delete SSID;
+      delete PASSWD;
+      jsonBuffer.clear();
+
+      BluetoothService :: setClientConnected(false);
+      */
+
+      std::string value = pCharacteristic->getValue();
+      if (value.length() > 0) {
+        for (int i = 0; i < value.length(); i++)
+          debugI("%d", value[i]);
+      }
+    }
 };
 
 #endif

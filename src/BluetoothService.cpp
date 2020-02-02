@@ -7,6 +7,14 @@ Released into the repository BoT-ESP32-SDK.
 #include "BluetoothService.h"
 
 bool BluetoothService :: clientConnected = false;
+/*BluetoothService* BluetoothService::botBLEService = NULL;
+
+BluetoothService* BluetoothService:: getBluetoothServiceInstance(){
+  if(botBLEService == NULL){
+    botBLEService = new BluetoothService();
+  }
+  return botBLEService;
+}*/
 
 BluetoothService :: BluetoothService(){
   deviceName = NULL;
@@ -44,6 +52,7 @@ void BluetoothService :: initializeBLE(const char* dName){
   debugD("\nBluetoothService :: initializeBLE: DeviceName set to %s", deviceName);
 
   BLEDevice::init(deviceName);
+  BLEDevice::setPower(ESP_PWR_LVL_P7);
   debugD("\nBluetoothService :: initializeBLE: BLEDevice::init done");
 
   bleServer = BLEDevice::createServer();
@@ -76,6 +85,7 @@ void BluetoothService :: initializeBLE(const char* dName){
   bleConfigureCharacteristic = bleService->createCharacteristic(CONFIGURE_CHARACTERISTIC_UUID,
                                                                                 BLECharacteristic::PROPERTY_READ |
                                                                                 BLECharacteristic::PROPERTY_WRITE);
+  bleConfigureCharacteristic->setCallbacks(new ConfigureCharacteristicsCallbacks());
   bleConfigureCharacteristic->setValue("{}");
   debugD("\nBluetoothService :: initializeBLE: Setting Configuration Characteristic is done");
 
