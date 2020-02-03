@@ -25,10 +25,11 @@ class BluetoothService {
           void deInitializeBLE();
           bool isBLEClientConnected();
           static void setClientConnected(bool status);
+          static void updateWiFiConfig(const char* ssid, const char* passwd);
   private:
           char *deviceName;
           static bool clientConnected;
-          KeyStore *store;
+          static KeyStore *store;
           BLEServer *bleServer;
           BLEService *bleService;
           BLECharacteristic *bleDeviceCharacteristic;
@@ -45,13 +46,13 @@ class BoTServerCallbacks: public BLEServerCallbacks {
     BluetoothService :: setClientConnected(true);
     //pServer->getAdvertising()->start();
     //debugI("\nBoTServerCallbacks :: onConnect: Started advertising again...");
-    pServer->updateConnParams(param->connect.remote_bda, 10*1000, 30*1000, 1*1000, 30*1000);
-    debugI("\nBoTServerCallbacks :: onConnect: Updated connection parameters...");
+    //pServer->updateConnParams(param->connect.remote_bda, 10*1000, 30*1000, 1*1000, 30*1000);
+    //debugI("\nBoTServerCallbacks :: onConnect: Updated connection parameters...");
   };
 
   void onDisconnect(BLEServer* pServer) {
     debugI("\nBoTServerCallbacks :: onDisconnect: BLE Client Disconnected...");
-    BluetoothService :: setClientConnected(false);
+    //BluetoothService :: setClientConnected(false);
     //pServer->getAdvertising()->start();
     //debugI("\nBoTServerCallbacks :: onDisconnect: Started advertising again...");
   }
@@ -60,32 +61,38 @@ class BoTServerCallbacks: public BLEServerCallbacks {
 class ConfigureCharacteristicsCallbacks: public BLECharacteristicCallbacks {
     friend class BluetoothService;
     void onWrite(BLECharacteristic *pCharacteristic) {
-      /*DynamicJsonBuffer jsonBuffer;
-      JsonObject& root = jsonBuffer.parseObject(pCharacteristic->getValue().c_str());
-      String* SSID = new String(root.get<const char*>("SSID"));
-      String* PASSWD = new String(root.get<const char*>("PWD"));
-      debugI("\nConfigureCharacteristicsCallbacks :: onWrite: SSID: %s", SSID->c_str());
-      debugI("\nConfigureCharacteristicsCallbacks :: onWrite: PASSWD: %s", PASSWD->c_str());
-      //Reset ESP32 Board to connect to given WiFi Credentials
-      WiFi.disconnect();
-      while(WiFi.begin(SSID->c_str(), PASSWD->c_str()) != WL_CONNECTED) {
-        debugI("\nConfigureCharacteristicsCallbacks :: onWrite: Waiting to connect to WiFi SSID: %s", SSID->c_str());
-        delay(1000);
+      String* receivedString = new String(pCharacteristic->getValue().c_str());
+      debugD("\n\nConfigureCharacteristicsCallbacks :: onWrite: Received value: %s", receivedString->c_str());
+      //Check whether it's due to skipping the wiFi Config on application
+      if(receivedString->indexOf("Skip") != -1){
+        debugD("\nConfigureCharacteristicsCallbacks :: onWrite: WiFi Config on FINN Application is skipped ...");
       }
-      debugI("\nConfigureCharacteristicsCallbacks :: onWrite: Board connected to SSID: %s", SSID->c_str());
-      //Release meory used
-      delete SSID;
-      delete PASSWD;
-      jsonBuffer.clear();
-
+      else {
+        debugD("\nConfigureCharacteristicsCallbacks :: onWrite: WiFi config details provided on FINN Application...");
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& root = jsonBuffer.parseObject(receivedString->c_str());
+        String* SSID = new String(root.get<const char*>("SSID"));
+        String* PASSWD = new String(root.get<const char*>("PWD"));
+        debugI("\nConfigureCharacteristicsCallbacks :: onWrite: SSID: %s", SSID->c_str());
+        //debugD("\nConfigureCharacteristicsCallbacks :: onWrite: PASSWD: %s", PASSWD->c_str());
+        //Reset ESP32 Board to connect to given WiFi Credentials
+        WiFi.disconnect();
+        WiFi.begin(SSID->c_str(), PASSWD->c_str());
+        while(WiFi.waitForConnectResult() != WL_CONNECTED) {
+          debugE("\nConfigureCharacteristicsCallbacks :: onWrite: Connecting to SSID: %s failed! Rebooting...", SSID->c_str());
+          delay(5000);
+          ESP.restart();
+        }
+        //Update the provided WiFi config details onto SPIFFS
+        debugI("\nConfigureCharacteristicsCallbacks :: onWrite: Board connected to SSID: %s", SSID->c_str());
+        BluetoothService :: updateWiFiConfig(SSID->c_str(),PASSWD->c_str());
+        //Release memory used
+        delete receivedString;
+        delete SSID;
+        delete PASSWD;
+        jsonBuffer.clear();
+      }
       BluetoothService :: setClientConnected(false);
-      */
-
-      std::string value = pCharacteristic->getValue();
-      if (value.length() > 0) {
-        for (int i = 0; i < value.length(); i++)
-          debugI("%d", value[i]);
-      }
     }
 };
 

@@ -51,6 +51,12 @@
   //Variable to hold given deviceID value
   const char* deviceID = NULL;
 
+  // Varibale store last time action was triggered
+  unsigned long previousMillis = 0;
+
+  // Action trigger interval in millis
+  const long interval = 1*60*1000;
+
   void setup()
   {
     //Get KeyStore Instance
@@ -73,16 +79,10 @@
       //Variable to flag whether to load WiFi credentials from given configuration or not
       bool loadConfig = true;
 
-      //Override HTTPS
-      //store->setHTTPS(true);
-
-      //Instantiate Webserver by using WiFi credentials from configuration
-      //server = Webserver::getWebserverInstance(loadConfig);
+      server = Webserver::getWebserverInstance(loadConfig);
 
       //Instantiate Webserver by using the custom WiFi credentials
-      loadConfig = false;
-      int logLevel = BoT_INFO;
-      server = Webserver::getWebserverInstance(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
+      //server = Webserver::getWebserverInstance(loadConfig,WIFI_SSID, WIFI_PASSWD,logLevel);
 
       //Enable board to connect to WiFi Network
       server->connectWiFi();
@@ -122,41 +122,42 @@
   }
 
  void loop(){
-   debugI("\nAvalable free heap at the beginning of loop: %lu",ESP.getFreeHeap());
-   if(server->isWiFiConnected()){
-     int dState = store->getDeviceState();
-     debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
-     //Check for the device state, should be active to trigger the action
-     if(dState >= DEVICE_ACTIVE){
-       //Trigger the action added with the paired device
-       debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
-      if(sdk->triggerAction(actionIDMinutely.c_str())){
-        debugI("\nsdkWrapperSample :: Triggering action successful...");
-      }
-      else {
-        debugE("\nsdkWrapperSample :: Triggering action failed!");
-      }
+   unsigned long currentMillis = millis();
+   unsigned long elapsedMillis = currentMillis - previousMillis;
+
+   if( elapsedMillis >= interval) {
+     // save the action trigger time
+     previousMillis = currentMillis;
+     debugI("\nElapsed Millis since last action trigger: %ld", elapsedMillis);
+     debugI("\nAvalable free heap before action trigger: %lu",ESP.getFreeHeap());
+     if(server->isWiFiConnected()){
+       int dState = store->getDeviceState();
+       debugI("\nsdkWrapperSample :: Device State -> %s",store->getDeviceStatusMsg());
+       //Check for the device state, should be active to trigger the action
+       if(dState >= DEVICE_ACTIVE){
+         //Trigger the action added with the paired device
+         debugI("\nsdkWrapperSample :: Triggering action - %s", actionIDMinutely.c_str());
+         if(sdk->triggerAction(actionIDMinutely.c_str())){
+           debugI("\nsdkWrapperSample :: Triggering action successful...");
+         }
+         else {
+           debugE("\nsdkWrapperSample :: Triggering action failed!");
+         }
+         debugI("\nAvalable free heap after action trigger: %lu",ESP.getFreeHeap());
+       }
+       else {
+         debugI("\nsdkWrapperSample: Device State is not active to trigger the action, Try pairing the device again:");
+         sdk->pairAndActivateDevice();
+       }
      }
      else {
-       debugI("\nsdkWrapperSample: Device State is not active to trigger the action, Try pairing the device again:");
-       sdk->pairAndActivateDevice();
+       debugW("\nsdkWrapperSample :: Board not connected to WiFi, try connecting again!");
+       //Enable board to connect to WiFi Network
+       server->connectWiFi();
      }
    }
-   else {
-     debugW("\nsdkWrapperSample :: Board not connected to WiFi, try connecting again!");
-     //Enable board to connect to WiFi Network
-     server->connectWiFi();
-   }
-
-   //Put delay to reclaim the released memory
-   delay(1000);
-   debugI("\nAvalable free heap at the end of loop: %lu",ESP.getFreeHeap());
 
    #ifndef DEBUG_DISABLED
      Debug.handle();
    #endif
-
-   //Introduce delay of 1 min
-   delay(1*60*1000);
-
  }

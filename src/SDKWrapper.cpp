@@ -77,17 +77,13 @@ bool SDKWrapper :: pairAndActivateDevice(){
       debugI("\nSDKWrapper :: pairAndActivateDevice: BLE Client connected to BLE Server...");
   }while(!bleClientConnected);
 
-  //Wait for client to get disconnected
-  do{
-    waitForSeconds(2);
+  //Wait for client to complete it's job
+  debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for BLE Client to provide WiFi Config Details / Skip WiFi Config");
+  while(bleClientConnected) {
     bleClientConnected = bleService->isBLEClientConnected();
-    if(bleClientConnected)
-      debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for BLE Client to disconnect...");
-    else
-      debugI("\nSDKWrapper :: pairAndActivateDevice: BLE Client connected from BLE Server...");
-    } while(bleClientConnected);
+  }
 
-  //Release memory used by BLE Service once BLE Client gets disconnected
+  //Release memory used by BLE Service
   debugI("\nSDKWrapper :: pairAndActivateDevice: Stopping BLE Service as the BLE Client disconnected");
   bleService->deInitializeBLE();
   debugD("\nSDKWrapper :: pairAndActivateDevice: Free Heap after BLE deInit: %u", ESP.getFreeHeap());
@@ -95,18 +91,14 @@ bool SDKWrapper :: pairAndActivateDevice(){
   //Deallocate bleService memory
   delete bleService;
 
-  //Restart the board if device doesnot get paired from FINN Application within 2 minutes
-  debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for Device pairing from FINN Application");
-  waitForSeconds(2*60);
-  if(!isDevicePaired()){
-    debugI("\nSDKWrapper :: pairAndActivateDevice: Device doesn't get pairind from FINN Application, restarting the board");
-    waitForSeconds(5);
-    ESP.restart();
-  }
-
   //Proceed with configuring the device
   configService->configureDevice();
+ }
 
+ //Wait till device gets paired from FINN Application
+ while(!isDevicePaired()){
+   debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for device pairing get completed from FINN Application");
+   waitForSeconds(5);
  }
 
  //Call pairing service pairDevice method to activate the device

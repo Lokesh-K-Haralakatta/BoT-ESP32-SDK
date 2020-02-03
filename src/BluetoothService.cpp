@@ -7,18 +7,10 @@ Released into the repository BoT-ESP32-SDK.
 #include "BluetoothService.h"
 
 bool BluetoothService :: clientConnected = false;
-/*BluetoothService* BluetoothService::botBLEService = NULL;
-
-BluetoothService* BluetoothService:: getBluetoothServiceInstance(){
-  if(botBLEService == NULL){
-    botBLEService = new BluetoothService();
-  }
-  return botBLEService;
-}*/
+KeyStore* BluetoothService :: store = KeyStore :: getKeyStoreInstance();
 
 BluetoothService :: BluetoothService(){
   deviceName = NULL;
-  store = KeyStore :: getKeyStoreInstance();
   bleServer = NULL;
   bleService = NULL;
   bleDeviceCharacteristic = NULL;
@@ -27,12 +19,21 @@ BluetoothService :: BluetoothService(){
   bleConfigureCharacteristic = NULL;
 }
 
+void BluetoothService :: updateWiFiConfig(const char* ssid, const char* passwd){
+  if(store->updateWiFiConfiguration(ssid,passwd)){
+    debugI("\nBluetoothService :: updateWiFiConfig: WiFi Config Details update sucessful");
+  }
+  else {
+    debugE("\nBluetoothService :: updateWiFiConfig: WiFi Config Details update failed");
+  }
+}
+
 void BluetoothService :: setClientConnected(bool status){
   clientConnected = status;
 }
 
 bool BluetoothService :: isBLEClientConnected(){
-  return ((clientConnected)?true:false);
+  return ((clientConnected || (bleServer->getConnectedCount() > 0))?true:false);
 }
 
 void BluetoothService :: initializeBLE(const char* dName){
