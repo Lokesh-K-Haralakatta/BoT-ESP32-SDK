@@ -16,11 +16,13 @@
   To use the ESP-32 SDK, include BoT-ESP32-SDK.zip through Arduino IDE
 */
 
-/*
-   Change Partition Scheme to No OTA (Large APP) in Arduino IDE -> Tools after connecting ESP-32 board
-   to avoid the error message saying "Sketch is too big" before compiling and uploading Sketch to ESP-32 */
+/* Change Partition Scheme to Minimal SPIFFS (1.9 MB App with OTA/190 KB SPIFFS)
+   in Arduino IDE -> Tools after connecting ESP-32 board to facilitate OTA through
+   Arduino IDE / Webserver onto ESP32 board
+*/
 
 /*
+
    Sketch also has the feature of Web OTA Update for the firmware and deep sleep
 
    For Web OTA Update, please make sure to providde the valid web server URL where
@@ -263,7 +265,7 @@ void print_wakeup_reason(){
           // save the firmware update trigger time
           currentEpochTime = timeClient->getEpochTime();
           previousOTAUpdateEpoch = currentEpochTime;
-          elapsedSecondsSinceLastOTAUpdate = currentEpochTime - previousOTAUpdateEpoch;      
+          elapsedSecondsSinceLastOTAUpdate = currentEpochTime - previousOTAUpdateEpoch;
         }
         debugI("\nAvailable free heap after firmware update trigger: %lu",ESP.getFreeHeap());
      }
