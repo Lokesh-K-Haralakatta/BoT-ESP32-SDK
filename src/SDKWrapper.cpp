@@ -98,7 +98,7 @@ bool SDKWrapper :: pairAndActivateDevice(){
  //Wait till device gets paired from FINN Application
  while(!isDevicePaired()){
    debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for device pairing get completed from FINN Application");
-   waitForSeconds(5);
+   waitForSeconds(20);
  }
 
  //Call pairing service pairDevice method to activate the device
