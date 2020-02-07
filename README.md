@@ -13,6 +13,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
    |        4      | Remote Debug                               | :thumbsup: | Enable to access the ESP-32 board through telnet client. This can be disabled for production |
    |        5      | Logging                                    | :thumbsup: | There are 4 different log levels supported for SDK - BoT_INFO, BoT_WARN, BoT_DEBUG and BoT_ERROR |
    |        6      | Offline Actions                            | :thumbsup: | Enables saving the actions when there is no internet connectivity available and processing with following request. Supported only in SDK Module as Library |
+   |        7      | Configure IoT WiFi                         | :thumbsup: | Enables the ESP32 board to switch to provided WiFi Configuration from FINN Application at runtime and saves the WiFi Configuration onto SPIFFS for further board restarts |
    
 ## Getting Started instructions for ESP-32 Dev Kit Module
 - **Setting up of ESP-32 Dev Module**
@@ -32,6 +33,7 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Download Zip [NTP Client](https://github.com/taranais/NTPClient/releases) and include in Arduino IDE
   - Download Zip [ESP32Ping](https://github.com/marian-craciunescu/ESP32Ping) and include in Arduino IDE
   - Install [RemoteDebug](https://www.arduinolibraries.info/libraries/remote-debug) either through Arduino IDE Libraries or by downloading latest ZIP and including in Arduino IDE
+  - Install [ESP32HttpUpdate](https://github.com/suculent/esp32-http-update) either through Arduino IDE Libraries or by downloading latest ZIP and including in Arduino IDE
 
 - **Setting up of BoT-ESP32-SDK Library on Arduino IDE**
   - Download ZIP from repository and install through Arduino IDE
@@ -62,12 +64,15 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Open Serial Monitor Window in Arduino IDE to observe the sketch flow or SDK also supports RemoteDebug feature use `telnet ipAddr`
   - FInally, the sketch displays the Websrever URL and available end points to be consumed by any client application
   
-- **Steps to execute sdkWrapperSample as it's purpose is to directly call SDKWrapper methods to getActions and triggerAction for every 1 minute without using Async Webserver end points**
+- **Steps to execute sdkWrapperSample as it's purpose is to directly call SDKWrapper methods to getActions and triggerAction for every 5 minutes without using Async Webserver end points and also check for new firmware update over-the-air for every 10 minutes**
   - Copy over the contents of `Arduino/libraries/BoT-ESP32-SDK/examples/sdkWrapperSample` into Arduino IDE Sketches directory
   - Copy over `Arduino/libraries/BoT-ESP32-SDK/data` into sdkWrapperSample sketch data directory
   - Update the configuration details and key-pair details in the files present in data directory
-  - Change Partition Scheme from `Default` to `No OTA(Large APP)` in Arduino IDE -> Tools to avoid compilation error
+  - Change Partition Scheme from `Default` to `Minimal SPIFFS (1.9 MB App with OTA/190 KB SPIFFS)` in Arduino IDE -> Tools to to facilitate OTA through Arduino IDE / Webserver onto ESP32 board
   - Define the actions in [Maker Portal](https://maker.bankingofthings.io/login), update the actionID properly before executing the sketch
+  - Sketch also has the features of Firmware Web OTA Update and the Deep Sleep Mode
+    - For Web OTA Update, please make sure to providde the valid web server URL where the required firmware is available otherwise comment out the lines in the sketch to skip using firmware update through OTA feature
+    - For Deep Sleep Mode, please make sure to connect Push Button / Capacitive Button to GPIO33 Pin. ESP32 board gets wake up when the button is pressed, performs the required actions provided and goes back to sleep until the button gets pressed again.
   - Compile and Upload sketch to ESP32 board using Arduino IDE
   - Upload data directory contents using `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` option onto ESP-32 board
   - Wait for couple of seconds, the sketch should start running and connect to specified WiFi Network present in Sketch / Configuration
