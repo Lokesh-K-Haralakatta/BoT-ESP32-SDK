@@ -123,7 +123,66 @@ bool KeyStore :: isJSONConfigLoaded(){
   return((jsonCfgLoadStatus == LOADED)?true:false);
 }
 
-void KeyStore :: loadJSONConfiguration(){
+bool KeyStore :: updateWiFiConfiguration(const char* ssid, const char* passwd){
+  if(!SPIFFS.begin(true)){
+      debugE("\nKeyStore :: updateWiFiConfiguration: An Error has occurred while mounting SPIFFS");
+      return false;
+  }
+
+  if(SPIFFS.exists(JSON_CONFIG_FILE)){
+      File file = SPIFFS.open(JSON_CONFIG_FILE);
+      if(!file){
+        debugE("\nKeyStore :: updateWiFiConfiguration: Failed to open file - %s for reading configuration",JSON_CONFIG_FILE);
+        return false;
+    }
+
+    size_t size = file.size();
+    char *buffer = new char[size];
+    file.readBytes(buffer,size);
+    file.close();
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& json = jsonBuffer.parseObject(buffer);
+    if(! json.success()){
+      debugE("\nKeyStore :: updateWiFiConfiguration: Failed to parse json configuration data");
+      return false;
+    }
+
+    if(ssid == NULL || passwd == NULL){
+      debugE("\nKeyStore :: updateWiFiConfiguration: Either SSID or Password can not be NULL");
+      return false;
+    }
+
+    json["wifi_ssid"] = ssid;
+    json["wifi_passwd"] = passwd;
+
+    file = SPIFFS.open(JSON_CONFIG_FILE, "w");
+    if(!file){
+      debugE("\nKeyStore :: updateWiFiConfiguration: Failed to open file - %s for writing configuration",JSON_CONFIG_FILE);
+      return false;
+    }
+
+    // Serialize JSON to file
+    if (json.printTo(file) == 0) {
+      debugE("\nKeyStore :: updateWiFiConfiguration: Failed to write to file - %s",JSON_CONFIG_FILE);
+      file.close();
+      return false;
+    }
+
+    file.close();
+
+    delete buffer;
+    jsonBuffer.clear();
+
+    return true;
+  }
+  else {
+    debugE("\nKeyStore :: updateWiFiConfiguration: Configuration File %s is missing on SPIFFS",JSON_CONFIG_FILE);
+    return false;
+  }
+ }
+
+ void KeyStore :: loadJSONConfiguration(){
   if(!isJSONConfigLoaded()){
     LOG("\nKeyStore :: loadJSONConfiguration: Loading given configuration from file - %s",JSON_CONFIG_FILE);
     if(!SPIFFS.begin(true)){

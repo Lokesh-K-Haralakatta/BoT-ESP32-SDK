@@ -26,6 +26,19 @@ bool SDKWrapper :: isDevicePaired(){
     return false;
 }
 
+void SDKWrapper :: waitForSeconds(const int seconds){
+  unsigned long currentMillis = millis();
+  unsigned long previousMillis = currentMillis;
+  unsigned long elapsedMillis = currentMillis - previousMillis;
+  unsigned long interval = seconds * 1000;
+
+  do {
+       currentMillis = millis();
+       elapsedMillis = currentMillis - previousMillis;
+    } while(elapsedMillis < interval);
+
+}
+
 bool SDKWrapper :: pairAndActivateDevice(){
   bool deviceStatus = false;
   //Device is already paired, check for device validity
@@ -56,7 +69,7 @@ bool SDKWrapper :: pairAndActivateDevice(){
   bool bleClientConnected = false;
   //Wait till device gets paired from FINN APP through BLE
   do {
-    delay(2000);
+    waitForSeconds(2);
     bleClientConnected = bleService->isBLEClientConnected();
     if(!bleClientConnected)
       debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for BLE Client to connect...");
@@ -64,15 +77,15 @@ bool SDKWrapper :: pairAndActivateDevice(){
       debugI("\nSDKWrapper :: pairAndActivateDevice: BLE Client connected to BLE Server...");
   }while(!bleClientConnected);
 
-  //Wait till BLE Client disconnects from BLE Server
-  while(bleClientConnected){
-    debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for BLE Client to disconnect from BLE Server");
+  //Wait for client to complete it's job
+  debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for BLE Client to provide WiFi Config Details / Skip WiFi Config");
+  while(bleClientConnected) {
     bleClientConnected = bleService->isBLEClientConnected();
-    delay(2000);
   }
 
-  //Release memory used by BLE Service once BLE Client gets disconnected
-  if(!bleClientConnected) bleService->deInitializeBLE();
+  //Release memory used by BLE Service
+  debugI("\nSDKWrapper :: pairAndActivateDevice: Stopping BLE Service as the BLE Client disconnected");
+  bleService->deInitializeBLE();
   debugD("\nSDKWrapper :: pairAndActivateDevice: Free Heap after BLE deInit: %u", ESP.getFreeHeap());
 
   //Deallocate bleService memory
@@ -80,13 +93,12 @@ bool SDKWrapper :: pairAndActivateDevice(){
 
   //Proceed with configuring the device
   configService->configureDevice();
-
  }
 
  //Wait till device gets paired from FINN Application
  while(!isDevicePaired()){
    debugI("\nSDKWrapper :: pairAndActivateDevice: Waiting for device pairing get completed from FINN Application");
-   delay(2000);
+   waitForSeconds(20);
  }
 
  //Call pairing service pairDevice method to activate the device

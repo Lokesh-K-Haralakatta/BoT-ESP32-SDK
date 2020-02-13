@@ -19,6 +19,7 @@ class SDKWrapper {
           String* getActions();
           bool pairAndActivateDevice();
           bool triggerAction(const char* actionID, const char* value = NULL, const char* altID = NULL);
+          void waitForSeconds(const int seconds);
   private:
     KeyStore* store;
     PairingService* pairService;
