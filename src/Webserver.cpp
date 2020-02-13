@@ -53,15 +53,16 @@ void Webserver :: connectWiFi(){
   }
 
   LOG("\nWebserver :: connectWiFi: Connecting to WiFi SSID: %s", WiFi_SSID->c_str());
-  if(WiFi_SSID != NULL && WiFi_Passwd != NULL){
-    //WiFi.disconnect(true);
+  if(!isWiFiConnected()){
+    WiFi.mode(WIFI_STA);
     WiFi.begin(WiFi_SSID->c_str(), WiFi_Passwd->c_str());
 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        LOG("\nWebserver :: connectWiFi: Trying to Connect to WiFi SSID: %s", WiFi_SSID->c_str());
+    while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+        LOG("\nWebserver :: connectWiFi: Trying to Connect to WiFi SSID: %s failed, rebooting the board", WiFi_SSID->c_str());
+        delay(5000);
+        ESP.restart();
     }
-
+  }
     LOG("\nWebserver :: connectWiFi: Board Connected to WiFi SSID: %s, assigned IP: %s", WiFi_SSID->c_str(), (getBoardIP().toString()).c_str());
     blinkLED();
     //Remote Debug Setup if DEBUG ENABLED
@@ -80,8 +81,7 @@ void Webserver :: connectWiFi(){
       Debug.showProfiler(true);
       Debug.showColors(true);
     #endif
-  }
-}
+ }
 
 IPAddress Webserver :: getBoardIP(){
   if(isWiFiConnected() == true){

@@ -59,6 +59,7 @@ class KeyStore {
     bool saveOfflineActions(std::vector <struct OfflineActionMetadata> aList);
     bool saveOfflineAction(const char* actionID, const char* value, const unsigned long paymentTime);
     bool clearOfflineActions();
+    bool updateWiFiConfiguration(const char* ssid, const char* passwd);
   private:
     static KeyStore *store;
     String *wifiSSID;

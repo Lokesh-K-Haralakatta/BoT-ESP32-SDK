@@ -7,10 +7,10 @@ Released into the repository BoT-ESP32-SDK.
 #include "BluetoothService.h"
 
 bool BluetoothService :: clientConnected = false;
+KeyStore* BluetoothService :: store = KeyStore :: getKeyStoreInstance();
 
 BluetoothService :: BluetoothService(){
   deviceName = NULL;
-  store = KeyStore :: getKeyStoreInstance();
   bleServer = NULL;
   bleService = NULL;
   bleDeviceCharacteristic = NULL;
@@ -19,12 +19,21 @@ BluetoothService :: BluetoothService(){
   bleConfigureCharacteristic = NULL;
 }
 
+void BluetoothService :: updateWiFiConfig(const char* ssid, const char* passwd){
+  if(store->updateWiFiConfiguration(ssid,passwd)){
+    debugI("\nBluetoothService :: updateWiFiConfig: WiFi Config Details update sucessful");
+  }
+  else {
+    debugE("\nBluetoothService :: updateWiFiConfig: WiFi Config Details update failed");
+  }
+}
+
 void BluetoothService :: setClientConnected(bool status){
   clientConnected = status;
 }
 
 bool BluetoothService :: isBLEClientConnected(){
-  return ((clientConnected)?true:false);
+  return ((clientConnected || (bleServer->getConnectedCount() > 0))?true:false);
 }
 
 void BluetoothService :: initializeBLE(const char* dName){
@@ -44,6 +53,7 @@ void BluetoothService :: initializeBLE(const char* dName){
   debugD("\nBluetoothService :: initializeBLE: DeviceName set to %s", deviceName);
 
   BLEDevice::init(deviceName);
+  BLEDevice::setPower(ESP_PWR_LVL_P7);
   debugD("\nBluetoothService :: initializeBLE: BLEDevice::init done");
 
   bleServer = BLEDevice::createServer();
@@ -76,6 +86,7 @@ void BluetoothService :: initializeBLE(const char* dName){
   bleConfigureCharacteristic = bleService->createCharacteristic(CONFIGURE_CHARACTERISTIC_UUID,
                                                                                 BLECharacteristic::PROPERTY_READ |
                                                                                 BLECharacteristic::PROPERTY_WRITE);
+  bleConfigureCharacteristic->setCallbacks(new ConfigureCharacteristicsCallbacks());
   bleConfigureCharacteristic->setValue("{}");
   debugD("\nBluetoothService :: initializeBLE: Setting Configuration Characteristic is done");
 
