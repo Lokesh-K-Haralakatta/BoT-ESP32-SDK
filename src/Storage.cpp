@@ -123,63 +123,118 @@ bool KeyStore :: isJSONConfigLoaded(){
   return((jsonCfgLoadStatus == LOADED)?true:false);
 }
 
-bool KeyStore :: updateWiFiConfiguration(const char* ssid, const char* passwd){
+char* KeyStore :: configRead(){
   if(!SPIFFS.begin(true)){
-      debugE("\nKeyStore :: updateWiFiConfiguration: An Error has occurred while mounting SPIFFS");
-      return false;
+      debugE("\nKeyStore :: configRead: An Error has occurred while mounting SPIFFS");
+      return NULL;
   }
 
   if(SPIFFS.exists(JSON_CONFIG_FILE)){
       File file = SPIFFS.open(JSON_CONFIG_FILE);
       if(!file){
-        debugE("\nKeyStore :: updateWiFiConfiguration: Failed to open file - %s for reading configuration",JSON_CONFIG_FILE);
-        return false;
+        debugE("\nKeyStore :: configRead: Failed to open file - %s for reading configuration",JSON_CONFIG_FILE);
+        return NULL;
+      }
+
+      size_t size = file.size();
+      char *buffer = new char[size];
+      file.readBytes(buffer,size);
+      file.close();
+
+      return buffer;
     }
+    else {
+      debugE("\nKeyStore :: configRead: Configuration File %s is missing on SPIFFS",JSON_CONFIG_FILE);
+      return NULL;
+    }
+}
 
-    size_t size = file.size();
-    char *buffer = new char[size];
-    file.readBytes(buffer,size);
-    file.close();
-
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject& json = jsonBuffer.parseObject(buffer);
-    if(! json.success()){
-      debugE("\nKeyStore :: updateWiFiConfiguration: Failed to parse json configuration data");
+bool KeyStore :: configWrite(const JsonObject& json){
+  if(!SPIFFS.begin(true)){
+      debugE("\nKeyStore :: configWrite: An Error has occurred while mounting SPIFFS");
       return false;
-    }
+  }
 
-    if(ssid == NULL || passwd == NULL){
-      debugE("\nKeyStore :: updateWiFiConfiguration: Either SSID or Password can not be NULL");
-      return false;
-    }
-
-    json["wifi_ssid"] = ssid;
-    json["wifi_passwd"] = passwd;
-
-    file = SPIFFS.open(JSON_CONFIG_FILE, "w");
+  if(SPIFFS.exists(JSON_CONFIG_FILE)){
+    File file = SPIFFS.open(JSON_CONFIG_FILE, "w");
     if(!file){
-      debugE("\nKeyStore :: updateWiFiConfiguration: Failed to open file - %s for writing configuration",JSON_CONFIG_FILE);
+      debugE("\nKeyStore :: configWrite: Failed to open file - %s for writing configuration",JSON_CONFIG_FILE);
       return false;
     }
 
     // Serialize JSON to file
     if (json.printTo(file) == 0) {
-      debugE("\nKeyStore :: updateWiFiConfiguration: Failed to write to file - %s",JSON_CONFIG_FILE);
+      debugE("\nKeyStore :: configWrite: Failed to write to file - %s",JSON_CONFIG_FILE);
       file.close();
       return false;
     }
 
     file.close();
-
-    delete buffer;
-    jsonBuffer.clear();
-
     return true;
   }
   else {
-    debugE("\nKeyStore :: updateWiFiConfiguration: Configuration File %s is missing on SPIFFS",JSON_CONFIG_FILE);
+    debugE("\nKeyStore :: configWrite: Configuration File %s is missing on SPIFFS",JSON_CONFIG_FILE);
     return false;
   }
+}
+
+bool KeyStore :: resetBoard(){
+  bool resetStatus = false;
+
+  char* config = configRead();
+
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& json = jsonBuffer.parseObject(config);
+
+  if(! json.success()){
+    debugE("\nKeyStore :: resetBoard: Failed to parse json configuration data");
+    resetStatus = false;
+  }
+  else {
+    json["device_id"] = generateUuid4();
+    resetStatus = configWrite(json);
+  }
+
+  jsonBuffer.clear();
+  if(config != NULL) {
+    delete config;
+  }
+
+  if(resetStatus){
+    debugE("\nKeyStore :: resetBoard: Restarting the board after config update...");
+    delay(5000);
+    ESP.restart();
+  }
+  return resetStatus;
+}
+
+bool KeyStore :: updateWiFiConfiguration(const char* ssid, const char* passwd){
+  bool updateStatus = false;
+
+  char* config = configRead();
+
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& json = jsonBuffer.parseObject(config);
+
+  if(! json.success()){
+    debugE("\nKeyStore :: updateWiFiConfiguration: Failed to parse json configuration data");
+    updateStatus = false;
+  }
+  else if(ssid == NULL || passwd == NULL){
+    debugE("\nKeyStore :: updateWiFiConfiguration: Either SSID or Password can not be NULL");
+    updateStatus = false;
+  }
+  else {
+    json["wifi_ssid"] = ssid;
+    json["wifi_passwd"] = passwd;
+    updateStatus = configWrite(json);
+  }
+
+  jsonBuffer.clear();
+  if(config != NULL) {
+    delete config;
+  }
+  return updateStatus;
  }
 
  void KeyStore :: loadJSONConfiguration(){
