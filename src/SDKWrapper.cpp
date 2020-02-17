@@ -17,8 +17,8 @@ SDKWrapper :: SDKWrapper(){
 bool SDKWrapper :: isDevicePaired(){
   //Check pairing status for the device
   String* psResponse = pairService->getPairingStatus();
-  debugI("\nSDKWrapper :: isDevicePaired: Pairing Status Response: %s",psResponse->c_str());
-  debugI("\nSDKWrapper :: isDevicePaired: Device State -> %s",store->getDeviceStatusMsg());
+  debugD("\nSDKWrapper :: isDevicePaired: Pairing Status Response: %s",psResponse->c_str());
+  debugD("\nSDKWrapper :: isDevicePaired: Device State -> %s",store->getDeviceStatusMsg());
 
   if(psResponse->indexOf("true") != -1)
     return true;

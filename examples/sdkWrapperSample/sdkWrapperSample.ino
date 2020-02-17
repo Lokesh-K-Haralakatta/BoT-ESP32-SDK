@@ -22,15 +22,18 @@
 */
 
 /*
-
    Sketch also has the feature of Web OTA Update for the firmware and deep sleep
 
    For Web OTA Update, please make sure to providde the valid web server URL where
    the required firmware is available otherwise comment out the lines in the sketch
 
-   For Deep Sleep Mode, please make sure to connect Push Button / Capacitive Button
-   to GPIO33 Pin. ESP32 board gets wake up when the button is pressed, does the required
-   actions provided and goes back to sleep until the button gets pressed again.
+   For Deep Sleep Mode, please make sure to connect 2 Push Buttons, one to GPIO32 Pin
+   and other to GPIO33 Pin. ESP32 board gets wake up when either one of the button is pressed.
+
+   If the wake up is due to GPIO32, then the code updates the configuration, restarts the board
+
+   If the wake up is due to GPIO33, then the code checks the elapsed interval values to
+   either trigger payment or request for firmware update
 */
 
 /*
@@ -44,6 +47,7 @@
 /*
   Here is the sketch flow:
 
+  0. Check wakeup reason, if it's GPIO_NUM_32 then reset the board
   1. Gets makerID from the provided configuration
   2. Initializes the configuration, connects to given WiFi Network, initialize NTPClient
   3. Get current time in Epoch Seconds and initialize action trigger and OTA update epoch times
@@ -69,13 +73,18 @@
   #define WIFI_SSID "FINN"
   #define WIFI_PASSWD "xxxxxxxxxxxxxxx"
 
+  //Button Bitmask to connect 2 push buttons
+  // First button to GPIO 32
+  // Second button to GPIO 33
+  #define BUTTON_PIN_BITMASK 0x300000000
+
   //Declare service variables
   KeyStore *store = NULL;
   Webserver *server = NULL;
   SDKWrapper *sdk = NULL;
 
-  //Action ID with frequency as "minutely"
-  String actionIDMinutely = String("81F6011A-9AF0-45AE-91CD-9A0CDA81FA1F");
+  //Action ID defined in Maker Portal
+  String actionIDMinutely = String("C257DB70-AE57-4409-B94E-678CB1567FA6");
 
   //Variable to hold given deviceID value
   const char* deviceID = NULL;
@@ -99,39 +108,46 @@
   WiFiUDP ntpUDP;
   NTPClient *timeClient;
 
+  //Reset button pin
+  int resetPin = GPIO_NUM_0;
+
   // Method to retrieve new firmware from remote server
   bool requestNewFirmware() {
     if((WiFi.status() == WL_CONNECTED)) {
         t_httpUpdate_return ret = ESPhttpUpdate.update("http://10.26.16.181:8080/ota");
         switch(ret) {
             case HTTP_UPDATE_FAILED:
-                debugE("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+                debugE("\nsdkWrapperSample: HTTP_UPDATE_FAILD Error (%d): %s",
+                ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
                 return false;
                 break;
             case HTTP_UPDATE_NO_UPDATES:
-                debugW("HTTP_UPDATE_NO_UPDATES");
+                debugW("\nsdkWrapperSample: HTTP_UPDATE_NO_UPDATES");
                 return false;
                 break;
             case HTTP_UPDATE_OK:
-                debugI("HTTP_UPDATE_OK");
+                debugI("\nsdkWrapperSample: HTTP_UPDATE_OK");
                 return true;
                 break;
         }
     }
   }
 
-//Function that prints the reason by which ESP32 has been awaken from sleep
-void print_wakeup_reason(){
+//Function that checks the reason by which ESP32 has been awaken from deep sleep
+void check_wakeup_reason(){
   esp_sleep_wakeup_cause_t wakeup_reason;
   wakeup_reason = esp_sleep_get_wakeup_cause();
   switch(wakeup_reason)
   {
-    case 1  : debugI("\nWakeup caused by external signal using RTC_IO"); break;
-    case 2  : debugI("\nWakeup caused by external signal using RTC_CNTL"); break;
-    case 3  : debugI("\nWakeup caused by timer"); break;
-    case 4  : debugI("\nWakeup caused by touchpad"); break;
-    case 5  : debugI("\nWakeup caused by ULP program"); break;
-    default : debugI("\nWakeup was not caused by deep sleep"); break;
+    case ESP_SLEEP_WAKEUP_EXT0  : debugI("\nsdkWrapperSample: Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1  : debugI("\nsdkWrapperSample: Wakeup caused by external signal using RTC_CNTL");
+                                  resetPin = (log(esp_sleep_get_ext1_wakeup_status()))/log(2);
+                                  debugI("\nsdkWrapperSample: GPIO that triggered the wake up: GPIO %d", resetPin);
+                                  break;
+    case ESP_SLEEP_WAKEUP_TIMER : debugI("\nsdkWrapperSample: Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : debugI("\nsdkWrapperSample: Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : debugI("\nsdkWrapperSample: Wakeup caused by ULP program"); break;
+    default : debugI("\nsdkWrapperSample: Wakeup was caused either by Power UP or On board RST"); break;
   }
 }
 
@@ -182,7 +198,15 @@ void print_wakeup_reason(){
            previousActionTriggerEpoch = timeClient->getEpochTime();
            previousOTAUpdateEpoch = previousActionTriggerEpoch;
         }
-     }
+      }
+
+      //If the board wake up source is GPIO_32, reset the board
+      check_wakeup_reason();
+      if(resetPin == GPIO_NUM_32){
+        debugI("\nsdkWrapperSample: Board wake up source is GPIO_NUM_32, resetting the board configuration...");
+        store->resetBoard();
+      }
+
 
       //Pair and Activate the device for first time
       if(sdk->pairAndActivateDevice()){
@@ -282,16 +306,16 @@ void print_wakeup_reason(){
      Debug.handle();
    #endif
 
-   //Print the wakeup reason for ESP32
-   print_wakeup_reason();
-
    debugI("\n Boot Count: %ld", bootCount);
    bootCount++;
 
    //Configure GPIO33 as ext0 wake up source for HIGH logic level
-   esp_sleep_enable_ext0_wakeup(GPIO_NUM_33,1);
+   //esp_sleep_enable_ext0_wakeup(GPIO_NUM_33,1);
 
-   //Go to sleep now
+   //Configure GPIO32 and GPIO33 as ext1 wake up source for HIGH logic level
+   esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ANY_HIGH);
+
+   //Go to deep sleep now
    esp_deep_sleep_start();
 
  }

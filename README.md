@@ -72,7 +72,9 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Define the actions in [Maker Portal](https://maker.bankingofthings.io/login), update the actionID properly before executing the sketch
   - Sketch also has the features of Firmware Web OTA Update and the Deep Sleep Mode
     - For Web OTA Update, please make sure to providde the valid web server URL where the required firmware is available otherwise comment out the lines in the sketch to skip using firmware update through OTA feature
-    - For Deep Sleep Mode, please make sure to connect Push Button / Capacitive Button to GPIO33 Pin. ESP32 board gets wake up when the button is pressed, performs the required actions provided and goes back to sleep until the button gets pressed again.
+    - For Deep Sleep Mode, please make sure to connect 2 Push Buttons, one to GPIO32 Pin and other to GPIO33 Pin. ESP32 board gets wake up when either one of the button is pressed.
+      - If the wake up is due to GPIO32, then the code updates the configuration, restarts the board
+      - If the wake up is due to GPIO33, then the code checks the elapsed interval values to either trigger payment or request for firmware update
   - Compile and Upload sketch to ESP32 board using Arduino IDE
   - Upload data directory contents using `Arduino IDE -> Tools -> ESP32 Sketch Data Upload` option onto ESP-32 board
   - Wait for couple of seconds, the sketch should start running and connect to specified WiFi Network present in Sketch / Configuration
@@ -81,7 +83,9 @@ This read me contains the detailed steps to work with **FINN - Banking of Things
   - Pair the new device through [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) using BLE feature
   - Add service in [FINN Mobile Application](https://docs.bankingofthings.io/mobile-app) for the device to enable action trigger
   - Open Serial Monitor Window in Arduino IDE to observe the sketch flow or SDK also supports RemoteDebug feature use `telnet ipAddr`
-  - Once device is paired, observe the action getting triggered for every 1 minute
+  - Once device is paired, observe the action getting triggered for every 5 minutes
+  - When the board wake up due to GPIO33 and the elapsed interval seconds are more than 10 mins, firmware update is requested
+  - When the board wake up due to GPIO32, then sketch resets configuration and restarts the board as new device 
 
 ### Guidelines to develop sketch using ESP-32 SDK
 - **Configuration Format**

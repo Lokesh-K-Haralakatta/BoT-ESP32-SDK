@@ -60,6 +60,7 @@ class KeyStore {
     bool saveOfflineAction(const char* actionID, const char* value, const unsigned long paymentTime);
     bool clearOfflineActions();
     bool updateWiFiConfiguration(const char* ssid, const char* passwd);
+    bool resetBoard();
   private:
     static KeyStore *store;
     String *wifiSSID;
@@ -92,6 +93,8 @@ class KeyStore {
     bool saveQRCode(qrcodegen::QrCode qr);
     void clearActionsList();
     void clearOfflineActionsList();
+    char* configRead();
+    bool configWrite(const JsonObject&);
 };
 
 #endif
