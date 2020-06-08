@@ -19,7 +19,7 @@ bool ActivationService :: pollActivationStatus(){
   do {
     debugD("\nActivationService :: pollActivationStatus: Checking activation status, attempt %d of %d", counter,MAXIMUM_TRIES);
     response = sendActivationRequest();
-    if(response->equals("")){
+    if(response->indexOf("deviceID") != -1){
       return true;
     }
     ++counter;
