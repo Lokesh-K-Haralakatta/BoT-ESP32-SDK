@@ -25,7 +25,6 @@ class MessagesService {
     static MessagesService* getMessagesServiceInstance();
     String* getMessages();
   private:
-    KeyStore *store;
     BoTService *bot;
     MessagesService();
     static MessagesService* instance;
