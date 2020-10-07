@@ -11,7 +11,7 @@
 #include "base64url.h"
 #include "Storage.h"
 
-#define HOST "iot.bankingofthings.io"
+#define HOST "iot-dev.bankingofthings.io"
 #define URI ""
 #define HTTP_PORT 80
 #define HTTPS_PORT 443

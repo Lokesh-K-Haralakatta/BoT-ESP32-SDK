@@ -66,8 +66,8 @@
   #include <ESP32httpUpdate.h>
 
   //Custom WiFi Credentials
-  #define WIFI_SSID "FINN"
-  #define WIFI_PASSWD "xxxxxxxxxxxxxxx"
+  #define WIFI_SSID "H369A375065"
+  #define WIFI_PASSWD "C3AE572C7D33"
 
   //Declare service variables
   KeyStore *store = NULL;
