@@ -32,6 +32,7 @@
  **/
 MessagesService :: MessagesService(){
         bot = BoTService :: getBoTServiceInstance();
+        store = KeyStore :: getKeyStoreInstance();
 }
 /**
  * @returns pair with actionID and customerID
@@ -55,6 +56,9 @@ String* MessagesService :: getMessages(){
                                 const char* deviceID = messagesArray[i]["deviceID"];
                                 const char* event = messagesArray[i]["event"];
                                 debugD("\nID: action: %s customer: %s device: %s event: %s", actionID, customerID, deviceID, event);
+                                //Trigger Offline Action
+                                String* actionResponse = triggerAction(actionID,0);
+
                         }
                         debugI("\nActionService :: getMessages: Added %d messages returned from server ");
                         return messages;
@@ -73,4 +77,35 @@ String* MessagesService :: getMessages(){
                 return NULL;
         }
 }
+
+String* MessagesService :: triggerAction(const char* actionID,  const double value){
+        //Action triggering logic goes here
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& doc = jsonBuffer.createObject();
+        JsonObject& botData = doc.createNestedObject("bot");
+        botData["deviceID"] = store->getDeviceID();
+        botData["actionID"] = actionID;
+
+        if (store->isDeviceMultipair()) {
+                botData["alternativeID"] = store->getAlternateDeviceID();
+        }
+
+        if (value > 0.0) {
+                botData["value"] = value;
+        }
+
+        char payload[200];
+        doc.printTo(payload);
+        jsonBuffer.clear();
+        debugI("\nActionService : triggerAction: Minified JSON payload to trigger action: %s", payload);
+        String* postResponse = bot->post(ACTIONS_END_POINT,payload);
+        if(postResponse != NULL) {
+                debugI("\nActionService : triggerAction: Post response %s",postResponse->c_str());
+        }
+        else {
+                debugI("\nActionService : triggerAction: Post response is NULL");
+        }
+        return(postResponse);
+}
+
 

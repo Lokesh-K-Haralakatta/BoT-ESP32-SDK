@@ -24,8 +24,11 @@ class MessagesService {
     ~MessagesService();
     static MessagesService* getMessagesServiceInstance();
     String* getMessages();
+    String* triggerAction(const char* actionID, const double value);
+    
   private:
     BoTService *bot;
+    KeyStore *store;
     MessagesService();
     static MessagesService* instance;
 };
