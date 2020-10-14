@@ -22,14 +22,15 @@
 class MessagesService {
   public:
     ~MessagesService();
+    MessagesService();
     static MessagesService* getMessagesServiceInstance();
-    String* getMessages();
+    void getMessages();
     String* triggerAction(const char* actionID, const double value);
-    
   private:
     BoTService *bot;
     KeyStore *store;
-    MessagesService();
+    ActionService* actionService;
     static MessagesService* instance;
+    
 };
 #endif

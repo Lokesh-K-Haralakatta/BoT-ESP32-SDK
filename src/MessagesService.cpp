@@ -11,6 +11,7 @@
  */
 
 #include "MessagesService.h"
+#include "ActionService.h"
 
 /**
  * Payload structure
@@ -31,68 +32,73 @@
    }
  **/
 MessagesService :: MessagesService(){
-        bot = BoTService :: getBoTServiceInstance();
+
         store = KeyStore :: getKeyStoreInstance();
+        bot = BoTService :: getBoTServiceInstance();
+        actionService = ActionService :: getActionServiceInstance();
+        debugI("\nMessagesService :: getMessages : init");
 }
 /**
  * @returns pair with actionID and customerID
  * TODO in the future, CORE is going to send list of messages (queued). Now it expects object, single message.
  */
-String* MessagesService :: getMessages(){
-        String* messages = bot->get(MESSAGES_END_POINT);
-        debugD("\nMessagesService :: getMessages : %s", messages->c_str());
-        if(messages->indexOf("[") != -1 && messages->indexOf("]") != -1) {
+void MessagesService :: getMessages(){
+        debugI("\nMessagesService :: getMessages : start");
+        String* message = bot->get(MESSAGES_END_POINT);
+        debugI("\nMessagesService :: getMessages : %s", message->c_str());
+        if(message->indexOf("{") != -1 && message->indexOf("}") != -1) {
                 DynamicJsonBuffer jsonBuffer;
-                JsonArray& messagesArray = jsonBuffer.parseArray(*messages);
-                if(messagesArray.success()) {
-                        int messagesCount = messagesArray.size();
-                        debugD("\MessagesService :: getMessages: JSON Messages array parsed successfully");
-                        debugD("\MessagesService :: getMessages: Number of messages returned: %d", messagesCount);
+                JsonObject& messageJson = jsonBuffer.parseObject(*message);
+                const char*  event = messageJson["event"];
+                const char* payload = messageJson["payload"];
+                const char* deviceID = messageJson["deviceID"];
+                const char* messageID = messageJson["messageID"];
+                debugI("\nMessagesService :: Message: %s, Event %s, deviceID: %s", messageID, event, deviceID);
 
-                        //Process the new set of messages
-                        for(byte i=0; i < messagesCount; i++) {
-                                const char* actionID = messagesArray[i]["actionID"];
-                                const char* customerID = messagesArray[i]["customerID"];
-                                const char* deviceID = messagesArray[i]["deviceID"];
-                                const char* event = messagesArray[i]["event"];
-                                debugD("\nID: action: %s customer: %s device: %s event: %s", actionID, customerID, deviceID, event);
-                                //Trigger Offline Action
-                                String* actionResponse = triggerAction(actionID,0);
+                JsonObject& payloadJson = jsonBuffer.parseObject(payload);
+                const char* actionID = payloadJson["actionID"];
+                const char* customerID = payloadJson["customerID"];
+                deviceID = payloadJson["deviceID"];
+                debugI("\nMessagesService :: Payload actionID %s, customerID %s, deviceID: %s", actionID, customerID, deviceID);
 
+                bool triggerResult = false;
+                String* response = actionService->triggerAction(actionID,"");
+                if(response != NULL) {
+                        debugD("\nMessagesService :: triggerAction: Response: %s", response->c_str());
+                        if(response->indexOf("OK") != -1) {
+                                debugI("\nMessagesService :: triggerAction: Action triggered successful");
+                                triggerResult = true;
                         }
-                        debugI("\nActionService :: getMessages: Added %d messages returned from server ");
-                        return messages;
+                        else if(response->indexOf("Action not found") != -1) {
+                                debugW("\nMessagesService :: triggerAction: Action not triggered as its not found");
+                                triggerResult = false;
+                        }
+                        else {
+                                debugE("\nMessagesService :: triggerAction: Action triggerring failed, check parameters and try again");
+                                triggerResult = false;
+                        }
                 }
                 else {
-                        debugE("\MessagesService :: getMessages: JSON Messages array parsed failed!");
-                        debugW("\MessagesService :: getMessages: use locally stored actions, if available");
-                        debugW("\nActionService :: getMessages: Local messages count: %d", messagesArray.size());
-                        return NULL;
+                        debugW("\nMessagesService :: triggerAction: Action not triggered as there is no Internet Available but saved as Offline Action");
+                        triggerResult = true;
                 }
+
         }
         else {
                 debugE("\MessagesService :: getMessages: Could not retrieve messages from server");
-                debugW("\MessagesService :: getMessages: use locally stored messages, if available");
 
-                return NULL;
+                return;
         }
 }
 
-String* MessagesService :: triggerAction(const char* actionID,  const double value){
+String* MessagesService :: triggerMessageAction(const char* payload){
         //Action triggering logic goes here
         DynamicJsonBuffer jsonBuffer;
         JsonObject& doc = jsonBuffer.createObject();
         JsonObject& botData = doc.createNestedObject("bot");
-        botData["deviceID"] = store->getDeviceID();
-        botData["actionID"] = actionID;
+        botData["bot"] = payload;
+      
 
-        if (store->isDeviceMultipair()) {
-                botData["alternativeID"] = store->getAlternateDeviceID();
-        }
-
-        if (value > 0.0) {
-                botData["value"] = value;
-        }
 
         char payload[200];
         doc.printTo(payload);
