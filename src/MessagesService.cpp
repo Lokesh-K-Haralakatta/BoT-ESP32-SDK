@@ -91,27 +91,6 @@ void MessagesService :: getMessages(){
         }
 }
 
-String* MessagesService :: triggerMessageAction(const char* payload){
-        //Action triggering logic goes here
-        DynamicJsonBuffer jsonBuffer;
-        JsonObject& doc = jsonBuffer.createObject();
-        JsonObject& botData = doc.createNestedObject("bot");
-        botData["bot"] = payload;
-      
 
-
-        char payload[200];
-        doc.printTo(payload);
-        jsonBuffer.clear();
-        debugI("\nActionService : triggerAction: Minified JSON payload to trigger action: %s", payload);
-        String* postResponse = bot->post(ACTIONS_END_POINT,payload);
-        if(postResponse != NULL) {
-                debugI("\nActionService : triggerAction: Post response %s",postResponse->c_str());
-        }
-        else {
-                debugI("\nActionService : triggerAction: Post response is NULL");
-        }
-        return(postResponse);
-}
 
 

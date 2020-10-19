@@ -25,7 +25,6 @@ class MessagesService {
     MessagesService();
     static MessagesService* getMessagesServiceInstance();
     void getMessages();
-    String* triggerAction(const char* actionID, const double value);
   private:
     BoTService *bot;
     KeyStore *store;
